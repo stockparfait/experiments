@@ -113,13 +113,14 @@ func TestConfig(t *testing.T) {
 
 		Convey("x log-scale for timeseries is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`{
-		  "groups": [{
-        "timeseries": true,
-        "name": "time", "x_log_scale": true,
-        "graphs": [{"name": "g"}]
-      }]
-		}`))
+			err := c.Init(testJSON(`
+{
+  "groups": [{
+    "timeseries": true,
+    "name": "time", "x_log_scale": true,
+    "graphs": [{"name": "g"}]
+  }]
+}`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring,
 				"timeseries group 'time' cannot have log-scale X")
@@ -127,12 +128,13 @@ func TestConfig(t *testing.T) {
 
 		Convey("duplicate group name is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`{
+			err := c.Init(testJSON(`
+{
   "groups": [
     {"name": "gp1", "graphs": [{"name": "r1"}, {"name": "r2"}]},
     {"name": "gp1", "graphs": [{"name": "r2"}]}
   ]
-		}`))
+}`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring,
 				"group[1] has a duplicate name 'gp1'")
@@ -140,12 +142,13 @@ func TestConfig(t *testing.T) {
 
 		Convey("duplicate graph names across groups is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`{
+			err := c.Init(testJSON(`
+{
   "groups": [
     {"name": "gp1", "graphs": [{"name": "r1"}, {"name": "r2"}]},
     {"name": "gp2", "graphs": [{"name": "r1"}]}
   ]
-		}`))
+}`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring,
 				"graph[0] in group 'gp2' has a duplicate name 'r1'")
@@ -167,10 +170,11 @@ func TestConfig(t *testing.T) {
 
 		Convey("multi-key experiment map is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`{
-        "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
-        "experiments": [{"test": {}, "extra": {}}]
-      }`))
+			err := c.Init(testJSON(`
+{
+  "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
+  "experiments": [{"test": {}, "extra": {}}]
+}`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring,
 				"experiment must be a single-element map")
@@ -178,10 +182,11 @@ func TestConfig(t *testing.T) {
 
 		Convey("unknown experiment is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`{
-        "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
-        "experiments": [{"foobar": {}}]
-      }`))
+			err := c.Init(testJSON(`
+{
+  "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
+  "experiments": [{"foobar": {}}]
+}`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "unknown experiment foobar")
 		})
