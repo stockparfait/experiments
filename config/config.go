@@ -40,7 +40,7 @@ func (t *TestExperimentConfig) Name() string { return "test" }
 
 // Init implements message.Message.
 func (t *TestExperimentConfig) Init(js interface{}) error {
-	return message.Init(t, js)
+	return errors.Annotate(message.Init(t, js), "failed to parse test config")
 }
 
 // ExpMap represents a Message which reads a single-element map {name:
@@ -64,7 +64,8 @@ func (e *ExpMap) Init(js interface{}) error {
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}
-		return e.Config.Init(jsConfig)
+		return errors.Annotate(e.Config.Init(jsConfig),
+			"failed to parse experiment config")
 	}
 	return nil
 }
@@ -110,7 +111,8 @@ func (g *Group) Init(js interface{}) error {
 		return errors.Reason("group must have a name")
 	}
 	if len(g.Graphs) < 1 {
-		return errors.Reason("at least one graph is required")
+		return errors.Reason("at least one graph is required in group '%s'",
+			g.Name)
 	}
 	if g.Timeseries && g.XLogScale {
 		return errors.Reason("timeseries group '%s' cannot have log-scale X",

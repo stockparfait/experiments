@@ -111,7 +111,7 @@ func TestConfig(t *testing.T) {
 			So(c.Experiments[0].Config.Name(), ShouldEqual, "test")
 		})
 
-		Convey("x log-scale for timeseries", func() {
+		Convey("x log-scale for timeseries is an error", func() {
 			var c Config
 			err := c.Init(testJSON(`{
 		  "groups": [{
@@ -125,7 +125,7 @@ func TestConfig(t *testing.T) {
 				"timeseries group 'time' cannot have log-scale X")
 		})
 
-		Convey("duplicate group name", func() {
+		Convey("duplicate group name is an error", func() {
 			var c Config
 			err := c.Init(testJSON(`{
   "groups": [
@@ -138,7 +138,7 @@ func TestConfig(t *testing.T) {
 				"group[1] has a duplicate name 'gp1'")
 		})
 
-		Convey("duplicate graph names across groups", func() {
+		Convey("duplicate graph names across groups is an error", func() {
 			var c Config
 			err := c.Init(testJSON(`{
   "groups": [
@@ -151,5 +151,39 @@ func TestConfig(t *testing.T) {
 				"graph[0] in group 'gp2' has a duplicate name 'r1'")
 		})
 
+		Convey("unnamed group is an error", func() {
+			var c Config
+			err := c.Init(testJSON(`{"groups": [{"graphs": [{"name": "r1"}]}]}`))
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "group must have a name")
+		})
+
+		Convey("unnamed graph is an error", func() {
+			var c Config
+			err := c.Init(testJSON(`{"groups": [{"name": "g", "graphs": [{}]}]}`))
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "graph must have a name")
+		})
+
+		Convey("multi-key experiment map is an error", func() {
+			var c Config
+			err := c.Init(testJSON(`{
+        "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
+        "experiments": [{"test": {}, "extra": {}}]
+      }`))
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring,
+				"experiment must be a single-element map")
+		})
+
+		Convey("unknown experiment is an error", func() {
+			var c Config
+			err := c.Init(testJSON(`{
+        "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
+        "experiments": [{"foobar": {}}]
+      }`))
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "unknown experiment foobar")
+		})
 	})
 }
