@@ -38,8 +38,8 @@ var _ ExperimentConfig = &TestExperimentConfig{}
 // Name implements ExperimentConfig.
 func (t *TestExperimentConfig) Name() string { return "test" }
 
-// Init implements message.Message.
-func (t *TestExperimentConfig) Init(js interface{}) error {
+// InitMessage implements message.Message.
+func (t *TestExperimentConfig) InitMessage(js interface{}) error {
 	return errors.Annotate(message.Init(t, js), "failed to parse test config")
 }
 
@@ -52,7 +52,7 @@ type ExpMap struct {
 
 var _ message.Message = &ExpMap{}
 
-func (e *ExpMap) Init(js interface{}) error {
+func (e *ExpMap) InitMessage(js interface{}) error {
 	m, ok := js.(map[string]interface{})
 	if !ok || len(m) != 1 {
 		return errors.Reason("experiment must be a single-element map: %v", js)
@@ -64,7 +64,7 @@ func (e *ExpMap) Init(js interface{}) error {
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}
-		return errors.Annotate(e.Config.Init(jsConfig),
+		return errors.Annotate(e.Config.InitMessage(jsConfig),
 			"failed to parse experiment config")
 	}
 	return nil
@@ -81,8 +81,8 @@ type Graph struct {
 
 var _ message.Message = &Graph{}
 
-// Init implements message.Message.
-func (g *Graph) Init(js interface{}) error {
+// InitMessage implements message.Message.
+func (g *Graph) InitMessage(js interface{}) error {
 	if err := message.Init(g, js); err != nil {
 		return errors.Annotate(err, "cannot parse graph")
 	}
@@ -102,8 +102,8 @@ type Group struct {
 
 var _ message.Message = &Group{}
 
-// Init implements message.Message.
-func (g *Group) Init(js interface{}) error {
+// InitMessage implements message.Message.
+func (g *Group) InitMessage(js interface{}) error {
 	if err := message.Init(g, js); err != nil {
 		return errors.Annotate(err, "cannot parse group")
 	}
@@ -129,7 +129,7 @@ type Config struct {
 
 var _ message.Message = &Config{}
 
-func (c *Config) Init(js interface{}) error {
+func (c *Config) InitMessage(js interface{}) error {
 	if err := message.Init(c, js); err != nil {
 		return errors.Annotate(err, "failed to parse top-level config")
 	}

@@ -50,8 +50,8 @@ github.com/stockparfait/fetch v0.0.4/go.mod h1:/S1bOJSDKl6WuKEn+HQlrJpiJjkHQWV3u
 github.com/stockparfait/logging v0.0.4 h1:ds+sVkyJP5mE0PjEeHBN9+gMHx67XduL0Xg/ykkAgPI=
 github.com/stockparfait/logging v0.0.4/go.mod h1:wLrsscPazhCAjC/sGmqSA+GghnWUwiSDT/kDwxC0XEI=
 github.com/stockparfait/parallel v0.0.2/go.mod h1:tbZ3EkWvXo9qbqC2UHr6FynuIaRL9vSBARqFHug7hxA=
-github.com/stockparfait/stockparfait v0.0.1 h1:vVcRgR5mTi+YF61SObEAbJrxsSLw7QkXeZmWeZQ5Ud0=
-github.com/stockparfait/stockparfait v0.0.1/go.mod h1:/mcMcK8090oSl+PyBfV8zhfO/FDgOVf423NxQWgnSEE=
+github.com/stockparfait/stockparfait v0.0.3 h1:QGF8g6ctz1xIPB1R4APuQph83lQU5aenOBP0p+nKGK4=
+github.com/stockparfait/stockparfait v0.0.3/go.mod h1:/mcMcK8090oSl+PyBfV8zhfO/FDgOVf423NxQWgnSEE=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
@@ -67,6 +67,7 @@ golang.org/x/exp v0.0.0-20180807140117-3d87b88a115f/go.mod h1:CJ0aWSM057203Lf6IL
 golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20191002040644-a1355ae1e2c3/go.mod h1:NOZ3BPKG0ec/BKJQgnvsSFpcKLM5xXVWnvZS97DWHgE=
+golang.org/x/exp v0.0.0-20220602145555-4a0574d9293f h1:KK6mxegmt5hGJRcAnEDjSNLxIRhZxDcgwMbcO/lMCRM=
 golang.org/x/exp v0.0.0-20220602145555-4a0574d9293f/go.mod h1:yh0Ynu2b5ZUe3MQfp2nM0ecK7wsgouWTDN0FNeJuIys=
 golang.org/x/image v0.0.0-20180708004352-c73c2afc3b81/go.mod h1:ux5Hcp/YLpHSI86hEcLt0YII63i6oz57MZXIpbrjZUs=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
@@ -127,6 +128,7 @@ golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1/go.mod h1:I/5z698sn9Ka8T
 gonum.org/v1/gonum v0.0.0-20180816165407-929014505bf4/go.mod h1:Y+Yx5eoAFn32cQvJDxZx5Dpnq+c3wtXuadVZAcxbbBo=
 gonum.org/v1/gonum v0.8.2/go.mod h1:oe/vMfY3deqTw+1EZJhuvEW2iwGF1bW9wwu7XCu0+v0=
 gonum.org/v1/gonum v0.9.3/go.mod h1:TZumC3NeyVQskjXqmyWt4S3bINhy7B4eYwW69EbyX+0=
+gonum.org/v1/gonum v0.11.0 h1:f1IJhK4Km5tBJmaiJXtk/PkL4cdVX6J+tGiM187uT5E=
 gonum.org/v1/gonum v0.11.0/go.mod h1:fSG4YDCxxUZQJ7rKsQrj0gMOg00Il0Z96/qMA4bVQhA=
 gonum.org/v1/netlib v0.0.0-20190313105609-8cb42192e0e0/go.mod h1:wa6Ws7BG/ESfp6dHfk7C6KdzKA7wR7u/rKwOGE66zvw=
 gonum.org/v1/plot v0.0.0-20190515093506-e2840ee46a6b/go.mod h1:Wt8AAjI+ypCyYX3nZBvf6cAIx93T+c/OS2HFAYskSZc=
