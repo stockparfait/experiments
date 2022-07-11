@@ -36,7 +36,7 @@ func TestConfig(t *testing.T) {
 	Convey("Config works correctly", t, func() {
 		Convey("top-level config, the usual case", func() {
 			var c Config
-			So(c.Init(testJSON(`{
+			So(c.InitMessage(testJSON(`{
   "groups": [
     {
        "name": "real",
@@ -113,7 +113,7 @@ func TestConfig(t *testing.T) {
 
 		Convey("x log-scale for timeseries is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`
+			err := c.InitMessage(testJSON(`
 {
   "groups": [{
     "timeseries": true,
@@ -128,7 +128,7 @@ func TestConfig(t *testing.T) {
 
 		Convey("duplicate group name is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`
+			err := c.InitMessage(testJSON(`
 {
   "groups": [
     {"name": "gp1", "graphs": [{"name": "r1"}, {"name": "r2"}]},
@@ -142,7 +142,7 @@ func TestConfig(t *testing.T) {
 
 		Convey("duplicate graph names across groups is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`
+			err := c.InitMessage(testJSON(`
 {
   "groups": [
     {"name": "gp1", "graphs": [{"name": "r1"}, {"name": "r2"}]},
@@ -156,21 +156,21 @@ func TestConfig(t *testing.T) {
 
 		Convey("unnamed group is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`{"groups": [{"graphs": [{"name": "r1"}]}]}`))
+			err := c.InitMessage(testJSON(`{"groups": [{"graphs": [{"name": "r1"}]}]}`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "group must have a name")
 		})
 
 		Convey("unnamed graph is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`{"groups": [{"name": "g", "graphs": [{}]}]}`))
+			err := c.InitMessage(testJSON(`{"groups": [{"name": "g", "graphs": [{}]}]}`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "graph must have a name")
 		})
 
 		Convey("multi-key experiment map is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`
+			err := c.InitMessage(testJSON(`
 {
   "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
   "experiments": [{"test": {}, "extra": {}}]
@@ -182,7 +182,7 @@ func TestConfig(t *testing.T) {
 
 		Convey("unknown experiment is an error", func() {
 			var c Config
-			err := c.Init(testJSON(`
+			err := c.InitMessage(testJSON(`
 {
   "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
   "experiments": [{"foobar": {}}]
