@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package experiments implements the common experiments' API.
 package experiments
 
 import (
@@ -48,6 +47,9 @@ func GetValues(ctx context.Context) Values {
 	return v
 }
 
+// AddValue adds (or overwrites) a key:value pair to the Values in the context.
+// These pairs are intended to be printed on the terminal at the end of the run
+// of all the experiments.
 func AddValue(ctx context.Context, key, value string) error {
 	v := GetValues(ctx)
 	if v == nil {
@@ -57,7 +59,9 @@ func AddValue(ctx context.Context, key, value string) error {
 	return nil
 }
 
-// Experiment is a generic experiment interface.
+// Experiment is a generic experiment interface. Each implementation is expected
+// to add key:value pairs using AddValue, plots using plot.AddLeft/AddRight, or
+// save data in files.
 type Experiment interface {
 	Run(ctx context.Context, cfg config.ExperimentConfig) error
 }
