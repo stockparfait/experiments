@@ -133,9 +133,6 @@ func (c *Config) InitMessage(js interface{}) error {
 	if err := message.Init(c, js); err != nil {
 		return errors.Annotate(err, "failed to parse top-level config")
 	}
-	if len(c.Groups) < 1 {
-		return errors.Reason("at least one group is required")
-	}
 	groups := make(map[string]struct{})
 	graphs := make(map[string]struct{})
 	for i, g := range c.Groups {

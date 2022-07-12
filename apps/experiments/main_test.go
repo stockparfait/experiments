@@ -31,7 +31,7 @@ import (
 
 func TestMain(t *testing.T) {
 	t.Parallel()
-	tmpdir, tmpdirErr := ioutil.TempDir("", "testdb")
+	tmpdir, tmpdirErr := ioutil.TempDir("", "test_exp")
 	defer os.RemoveAll(tmpdir)
 
 	Convey("Test setup succeeded", t, func() {
@@ -60,9 +60,9 @@ func TestMain(t *testing.T) {
 		(func() {
 			f, err := os.OpenFile(confPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 			So(err, ShouldBeNil)
+			defer f.Close()
 			_, err = f.WriteString(confJSON)
 			So(err, ShouldBeNil)
-			defer f.Close()
 		})()
 
 		dataJs := filepath.Join(tmpdir, "data.js")
@@ -93,7 +93,8 @@ func TestMain(t *testing.T) {
 		var JSONbuf bytes.Buffer
 		_, err = JSONbuf.ReadFrom(jsonFile)
 		So(err, ShouldBeNil)
-		So(JSONbuf.String(), ShouldContainSubstring, `{"Groups":[{"Kind":"KindXY","XLogScale":false,"Graphs":[{"Kind":"KindXY","Title":"","XLabel":"","YLogScale":false,"PlotsRight":[{"Kind":"KindXY","X":[1,2],"Y":[21.5,42],"YLabel":"values","Legend":"Unnamed","ChartType":"ChartLine"}],"PlotsLeft":null}],"MinX":1,"MaxX":2}]}`)
+		expectedJSON := `{"Groups":[{"Kind":"KindXY","XLogScale":false,"Graphs":[{"Kind":"KindXY","Title":"","XLabel":"","YLogScale":false,"PlotsRight":[{"Kind":"KindXY","X":[1,2],"Y":[21.5,42],"YLabel":"values","Legend":"Unnamed","ChartType":"ChartLine"}],"PlotsLeft":null}],"MinX":1,"MaxX":2}]}`
+		So(JSONbuf.String(), ShouldContainSubstring, expectedJSON)
 
 		jsFile, err := os.Open(dataJs)
 		So(err, ShouldBeNil)
@@ -102,7 +103,7 @@ func TestMain(t *testing.T) {
 		var jsBuf bytes.Buffer
 		_, err = jsBuf.ReadFrom(jsFile)
 		So(err, ShouldBeNil)
-		So(jsBuf.String(), ShouldContainSubstring, `var DATA = {"Groups":[{"Kind":"KindXY","XLogScale":false,"Graphs":[{"Kind":"KindXY","Title":"","XLabel":"","YLogScale":false,"PlotsRight":[{"Kind":"KindXY","X":[1,2],"Y":[21.5,42],"YLabel":"values","Legend":"Unnamed","ChartType":"ChartLine"}],"PlotsLeft":null}],"MinX":1,"MaxX":2}]}`)
+		So(jsBuf.String(), ShouldContainSubstring, "var DATA = "+expectedJSON)
 
 	})
 }

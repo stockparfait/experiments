@@ -119,23 +119,7 @@ func runExperiment(ctx context.Context, ec config.ExperimentConfig) error {
 	return nil
 }
 
-func run(ctx context.Context, flags *Flags) error {
-	cfg, err := loadConfig(flags.Config)
-	if err != nil {
-		return errors.Annotate(err, "failed to load config")
-	}
-
-	if err := addGroups(ctx, cfg.Groups); err != nil {
-		return errors.Annotate(err, "failed to add groups")
-	}
-
-	for _, e := range cfg.Experiments {
-		if err := runExperiment(ctx, e.Config); err != nil {
-			return errors.Annotate(err, "failed to run experiment '%s'",
-				e.Config.Name())
-		}
-	}
-
+func printValues(ctx context.Context) error {
 	keys := []string{}
 	values := experiments.GetValues(ctx)
 	if values == nil {
@@ -148,6 +132,10 @@ func run(ctx context.Context, flags *Flags) error {
 	for _, k := range keys {
 		fmt.Printf("%s: %s\n", k, values[k])
 	}
+	return nil
+}
+
+func writePlots(ctx context.Context, flags *Flags) error {
 	if flags.DataJsPath != "" {
 		f, err := os.OpenFile(flags.DataJsPath,
 			os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
@@ -173,6 +161,29 @@ func run(ctx context.Context, flags *Flags) error {
 		if err := plot.WriteJSON(ctx, f); err != nil {
 			return errors.Annotate(err, "failed to write '%s'", flags.DataJSONPath)
 		}
+	}
+	return nil
+}
+
+func run(ctx context.Context, flags *Flags) error {
+	cfg, err := loadConfig(flags.Config)
+	if err != nil {
+		return errors.Annotate(err, "failed to load config")
+	}
+	if err := addGroups(ctx, cfg.Groups); err != nil {
+		return errors.Annotate(err, "failed to add groups")
+	}
+	for _, e := range cfg.Experiments {
+		if err := runExperiment(ctx, e.Config); err != nil {
+			return errors.Annotate(err, "failed to run experiment '%s'",
+				e.Config.Name())
+		}
+	}
+	if err := printValues(ctx); err != nil {
+		return errors.Annotate(err, "failed to print values")
+	}
+	if err := writePlots(ctx, flags); err != nil {
+		return errors.Annotate(err, "failed to write plots")
 	}
 	return nil
 }
