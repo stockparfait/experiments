@@ -17,6 +17,7 @@ package config
 
 import (
 	"github.com/stockparfait/errors"
+	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/message"
 )
 
@@ -41,6 +42,39 @@ func (t *TestExperimentConfig) Name() string { return "test" }
 // InitMessage implements message.Message.
 func (t *TestExperimentConfig) InitMessage(js interface{}) error {
 	return errors.Annotate(message.Init(t, js), "failed to parse test config")
+}
+
+// HoldPosition configures a single position within the Hold portfolio. Exactly
+// one of "shares" (possibly fractional) or "start value" (the initial market
+// value at Hold.Data.Start date) must be non-zero.
+type HoldPosition struct {
+	Ticker     string  `json:"ticker" required:"true"`
+	Shares     float64 `json:"shares"`
+	StartValue float64 `json:"start value"`
+}
+
+func (p *HoldPosition) InitMessage(js interface{}) error {
+	if err := message.Init(p, js); err != nil {
+		return errors.Annotate(err, "failed to parse HoldPosition")
+	}
+	if (p.Shares == 0.0) == (p.StartValue == 0.0) {
+		return errors.Reason(
+			`exactly one of "shares" or "start value" must be non-zero for ticker %s`,
+			p.Ticker)
+	}
+	return nil
+}
+
+// Hold "experiment" configuration.
+type Hold struct {
+	Data           db.DataConfig  `json:"data" required:"true"`
+	Positions      []HoldPosition `json:"positions"`
+	PositionsGraph string         `json:"positions graph"` // plots per position
+	TotalGraph     string         `json:"total graph"`     // plot portfolio value
+}
+
+func (h *Hold) InitMessage(js interface{}) error {
+	return errors.Annotate(message.Init(h, js), "failed to parse Hold config")
 }
 
 // ExpMap represents a Message which reads a single-element map {name:

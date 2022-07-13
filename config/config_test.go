@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stockparfait/stockparfait/db"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -189,6 +191,50 @@ func TestConfig(t *testing.T) {
 }`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "unknown experiment foobar")
+		})
+	})
+
+	Convey("Individual Experiment configs work", t, func() {
+
+		Convey("Hold", func() {
+			Convey("normal case", func() {
+				var h Hold
+				js := `
+{
+  "data": {},
+  "positions": [
+    {"ticker": "A", "shares": 2.5},
+    {"ticker": "B", "start value": 1000.0}
+  ],
+  "positions graph": "positions",
+  "total graph": "total"
+}`
+				So(h.InitMessage(testJSON(js)), ShouldBeNil)
+				var data db.DataConfig
+				So(data.InitMessage(testJSON(`{}`)), ShouldBeNil)
+				So(h, ShouldResemble, Hold{
+					Data: data, // must be initialized with its default values
+					Positions: []HoldPosition{
+						{
+							Ticker: "A",
+							Shares: 2.5,
+						},
+						{
+							Ticker:     "B",
+							StartValue: 1000.0,
+						},
+					},
+					PositionsGraph: "positions",
+					TotalGraph:     "total",
+				})
+			})
+
+			Convey("shares and start value are checked", func() {
+				var p HoldPosition
+				So(p.InitMessage(testJSON(`{"ticker": "A"}`)), ShouldNotBeNil)
+				So(p.InitMessage(testJSON(
+					`{"ticker": "A", "shares": 1, "start value": 1}`)), ShouldNotBeNil)
+			})
 		})
 	})
 }
