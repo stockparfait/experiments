@@ -57,8 +57,14 @@ func TestConfig(t *testing.T) {
        ]
     }
   ],
-  "experiments": [{"test": {"passed": true, "graph": "r1"}}]
+  "experiments": [
+    {"test": {"passed": true, "graph": "r1"}},
+    {"hold": {"data": {}}}
+  ]
   }`)), ShouldBeNil)
+
+			var defaultData db.DataConfig
+			So(defaultData.InitMessage(testJSON(`{}`)), ShouldBeNil)
 
 			So(c, ShouldResemble, Config{
 				Groups: []*Group{
@@ -106,6 +112,9 @@ func TestConfig(t *testing.T) {
 						Grade:  2.0,
 						Passed: true,
 						Graph:  "r1",
+					}},
+					{Config: &Hold{
+						Data: defaultData,
 					}},
 				},
 			})

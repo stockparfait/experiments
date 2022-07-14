@@ -73,9 +73,13 @@ type Hold struct {
 	TotalGraph     string         `json:"total graph"`     // plot portfolio value
 }
 
+var _ ExperimentConfig = &Hold{}
+
 func (h *Hold) InitMessage(js interface{}) error {
 	return errors.Annotate(message.Init(h, js), "failed to parse Hold config")
 }
+
+func (h *Hold) Name() string { return "hold" }
 
 // ExpMap represents a Message which reads a single-element map {name:
 // Experiment} and knows how to populate specific implementations of the
@@ -95,6 +99,8 @@ func (e *ExpMap) InitMessage(js interface{}) error {
 		switch name { // add specific experiment implementations here
 		case "test":
 			e.Config = &TestExperimentConfig{}
+		case "hold":
+			e.Config = &Hold{}
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}
