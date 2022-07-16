@@ -81,6 +81,68 @@ func (h *Hold) InitMessage(js interface{}) error {
 
 func (h *Hold) Name() string { return "hold" }
 
+// AnalyticalDistribution configures the type and parameters of a distibution.
+type AnalyticalDistribution struct {
+	Name  string  `json:"name" required:"true" choices:"t,normal"`
+	Mean  float64 `json:"mean" default:"0.0"`
+	MAD   float64 `json:"MAD" default:"1.0"`
+	Alpha float64 `json:"alpha" default:"3.0"` // T dist. parameter
+}
+
+var _ message.Message = &AnalyticalDistribution{}
+
+func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
+	if err := message.Init(d, js); err != nil {
+		return errors.Annotate(err, "failed to init AnalyticalDistribution")
+	}
+	if d.Name == "t" && d.Alpha <= 1.0 {
+		return errors.Reason("T-distribution requires alpha=%f > 1.0", d.Alpha)
+	}
+	if d.MAD <= 0.0 {
+		return errors.Reason("MAD=%f must be positive", d.MAD)
+	}
+	return nil
+}
+
+// Buckets configuration for a histogram.
+type Buckets struct {
+	Buckets int     `json:"buckets" default:"101"`
+	MinVal  float64 `json:"minval" default:"-50"`
+	MaxVal  float64 `json:"maxval" default:"50"`
+	// See stockparfait/stats.Buckets for the meaning of spacing values.
+	Spacing string `json:"spacing" default:"linear" choices:"linear,exponential,symmetric exponential"`
+}
+
+var _ message.Message = &Buckets{}
+
+func (b *Buckets) InitMessage(js interface{}) error {
+	return errors.Annotate(message.Init(b, js), "failed to init Buckets")
+}
+
+// Distribution is the experiment config for deriving the distribution of
+// log-profits. By default, it normalizes the log-profits to have 0.0 mean and
+// 1.0 MAD; set "normalize" to false for the original distribution.  When
+// plotting the reference (analytical) distribution for non-normalized samples,
+// setting "adjust reference distribution" flag sets the mean and MAD of the
+// reference to that of the sample.
+type Distribution struct {
+	Data      db.DataConfig           `json:"data" required:"true"`
+	Buckets   Buckets                 `json:"buckets"`
+	Graph     string                  `json:"graph" required:"true"`
+	Normalize bool                    `json:"normalize" default:"true"`
+	RefDist   *AnalyticalDistribution `json:"reference distribution"`
+	AdjustRef bool                    `json:"adjust reference distribution"`
+}
+
+var _ message.Message = &Distribution{}
+var _ ExperimentConfig = &Distribution{}
+
+func (e *Distribution) InitMessage(js interface{}) error {
+	return errors.Annotate(message.Init(e, js), "failed to init Distribution")
+}
+
+func (e *Distribution) Name() string { return "distribution" }
+
 // ExpMap represents a Message which reads a single-element map {name:
 // Experiment} and knows how to populate specific implementations of the
 // Experiment interface.
@@ -101,6 +163,8 @@ func (e *ExpMap) InitMessage(js interface{}) error {
 			e.Config = &TestExperimentConfig{}
 		case "hold":
 			e.Config = &Hold{}
+		case "distribution":
+			e.Config = &Distribution{}
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}

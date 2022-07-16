@@ -59,12 +59,15 @@ func TestConfig(t *testing.T) {
   ],
   "experiments": [
     {"test": {"passed": true, "graph": "r1"}},
-    {"hold": {"data": {}}}
+    {"hold": {"data": {"DB": "test"}}},
+    {"distribution": {"data": {"DB": "test"}, "graph": "dist"}}
   ]
   }`)), ShouldBeNil)
 
 			var defaultData db.DataConfig
-			So(defaultData.InitMessage(testJSON(`{}`)), ShouldBeNil)
+			So(defaultData.InitMessage(testJSON(`{"DB": "test"}`)), ShouldBeNil)
+			var defaultBuckets Buckets
+			So(defaultBuckets.InitMessage(testJSON(`{}`)), ShouldBeNil)
 
 			So(c, ShouldResemble, Config{
 				Groups: []*Group{
@@ -115,6 +118,12 @@ func TestConfig(t *testing.T) {
 					}},
 					{Config: &Hold{
 						Data: defaultData,
+					}},
+					{Config: &Distribution{
+						Data:      defaultData,
+						Buckets:   defaultBuckets,
+						Graph:     "dist",
+						Normalize: true,
 					}},
 				},
 			})
@@ -210,7 +219,7 @@ func TestConfig(t *testing.T) {
 				var h Hold
 				js := `
 {
-  "data": {},
+  "data": {"DB": "test"},
   "positions": [
     {"ticker": "A", "shares": 2.5},
     {"ticker": "B", "start value": 1000.0}
@@ -220,7 +229,7 @@ func TestConfig(t *testing.T) {
 }`
 				So(h.InitMessage(testJSON(js)), ShouldBeNil)
 				var data db.DataConfig
-				So(data.InitMessage(testJSON(`{}`)), ShouldBeNil)
+				So(data.InitMessage(testJSON(`{"DB": "test"}`)), ShouldBeNil)
 				So(h, ShouldResemble, Hold{
 					Data: data, // must be initialized with its default values
 					Positions: []HoldPosition{
