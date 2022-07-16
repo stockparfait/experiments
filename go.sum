@@ -50,8 +50,8 @@ github.com/stockparfait/fetch v0.0.4/go.mod h1:/S1bOJSDKl6WuKEn+HQlrJpiJjkHQWV3u
 github.com/stockparfait/logging v0.0.4 h1:ds+sVkyJP5mE0PjEeHBN9+gMHx67XduL0Xg/ykkAgPI=
 github.com/stockparfait/logging v0.0.4/go.mod h1:wLrsscPazhCAjC/sGmqSA+GghnWUwiSDT/kDwxC0XEI=
 github.com/stockparfait/parallel v0.0.2/go.mod h1:tbZ3EkWvXo9qbqC2UHr6FynuIaRL9vSBARqFHug7hxA=
-github.com/stockparfait/stockparfait v0.0.3 h1:QGF8g6ctz1xIPB1R4APuQph83lQU5aenOBP0p+nKGK4=
-github.com/stockparfait/stockparfait v0.0.3/go.mod h1:/mcMcK8090oSl+PyBfV8zhfO/FDgOVf423NxQWgnSEE=
+github.com/stockparfait/stockparfait v0.0.4 h1:cTtUrKRKx4gkuaLzUH7cqxGs7fxY7czkkO7hUlZon9U=
+github.com/stockparfait/stockparfait v0.0.4/go.mod h1:/mcMcK8090oSl+PyBfV8zhfO/FDgOVf423NxQWgnSEE=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
