@@ -134,7 +134,6 @@ type Distribution struct {
 	AdjustRef bool                    `json:"adjust reference distribution"`
 }
 
-var _ message.Message = &Distribution{}
 var _ ExperimentConfig = &Distribution{}
 
 func (e *Distribution) InitMessage(js interface{}) error {
