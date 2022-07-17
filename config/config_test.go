@@ -41,19 +41,20 @@ func TestConfig(t *testing.T) {
 			So(c.InitMessage(testJSON(`{
   "groups": [
     {
-       "name": "real",
+       "id": "real",
+       "title": "Real Group",
        "x_log_scale": true,
        "graphs": [
-         {"name": "r1", "title": "Real One", "x_label": "points"},
-         {"name": "r2", "x_label": "points", "y_log_scale": true}
+         {"id": "r1", "title": "Real One", "x_label": "points"},
+         {"id": "r2", "x_label": "points", "y_log_scale": true}
        ]
     },
     {
-       "name": "time",
+       "id": "time",
        "timeseries": true,
        "graphs": [
-         {"name": "t1", "title": "Time One", "x_label": "dates"},
-         {"name": "t2", "x_label": "dates", "y_log_scale": true}
+         {"id": "t1", "title": "Time One", "x_label": "dates"},
+         {"id": "t2", "x_label": "dates", "y_log_scale": true}
        ]
     }
   ],
@@ -73,17 +74,18 @@ func TestConfig(t *testing.T) {
 				Groups: []*Group{
 					{
 						Timeseries: false,
-						Name:       "real",
+						ID:         "real",
+						Title:      "Real Group",
 						XLogScale:  true,
 						Graphs: []*Graph{
 							{
-								Name:      "r1",
+								ID:        "r1",
 								Title:     "Real One",
 								XLabel:    "points",
 								YLogScale: false,
 							},
 							{
-								Name:      "r2",
+								ID:        "r2",
 								Title:     "",
 								XLabel:    "points",
 								YLogScale: true,
@@ -92,17 +94,18 @@ func TestConfig(t *testing.T) {
 					},
 					{
 						Timeseries: true,
-						Name:       "time",
+						ID:         "time",
+						Title:      "time",
 						XLogScale:  false,
 						Graphs: []*Graph{
 							{
-								Name:      "t1",
+								ID:        "t1",
 								Title:     "Time One",
 								XLabel:    "dates",
 								YLogScale: false,
 							},
 							{
-								Name:      "t2",
+								ID:        "t2",
 								Title:     "",
 								XLabel:    "dates",
 								YLogScale: true,
@@ -137,8 +140,8 @@ func TestConfig(t *testing.T) {
 {
   "groups": [{
     "timeseries": true,
-    "name": "time", "x_log_scale": true,
-    "graphs": [{"name": "g"}]
+    "id": "time", "x_log_scale": true,
+    "graphs": [{"id": "g"}]
   }]
 }`))
 			So(err, ShouldNotBeNil)
@@ -146,53 +149,53 @@ func TestConfig(t *testing.T) {
 				"timeseries group 'time' cannot have log-scale X")
 		})
 
-		Convey("duplicate group name is an error", func() {
+		Convey("duplicate group id is an error", func() {
 			var c Config
 			err := c.InitMessage(testJSON(`
 {
   "groups": [
-    {"name": "gp1", "graphs": [{"name": "r1"}, {"name": "r2"}]},
-    {"name": "gp1", "graphs": [{"name": "r2"}]}
+    {"id": "gp1", "graphs": [{"id": "r1"}, {"id": "r2"}]},
+    {"id": "gp1", "graphs": [{"id": "r2"}]}
   ]
 }`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring,
-				"group[1] has a duplicate name 'gp1'")
+				"group[1] has a duplicate id 'gp1'")
 		})
 
-		Convey("duplicate graph names across groups is an error", func() {
+		Convey("duplicate graph IDs across groups is an error", func() {
 			var c Config
 			err := c.InitMessage(testJSON(`
 {
   "groups": [
-    {"name": "gp1", "graphs": [{"name": "r1"}, {"name": "r2"}]},
-    {"name": "gp2", "graphs": [{"name": "r1"}]}
+    {"id": "gp1", "graphs": [{"id": "r1"}, {"id": "r2"}]},
+    {"id": "gp2", "graphs": [{"id": "r1"}]}
   ]
 }`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring,
-				"graph[0] in group 'gp2' has a duplicate name 'r1'")
+				"graph[0] in group 'gp2' has a duplicate id 'r1'")
 		})
 
-		Convey("unnamed group is an error", func() {
+		Convey("group without ID is an error", func() {
 			var c Config
-			err := c.InitMessage(testJSON(`{"groups": [{"graphs": [{"name": "r1"}]}]}`))
+			err := c.InitMessage(testJSON(`{"groups": [{"graphs": [{"id": "r1"}]}]}`))
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "group must have a name")
+			So(err.Error(), ShouldContainSubstring, "group must have a non-empty ID")
 		})
 
-		Convey("unnamed graph is an error", func() {
+		Convey("graph without ID is an error", func() {
 			var c Config
-			err := c.InitMessage(testJSON(`{"groups": [{"name": "g", "graphs": [{}]}]}`))
+			err := c.InitMessage(testJSON(`{"groups": [{"id": "g", "graphs": [{}]}]}`))
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "graph must have a name")
+			So(err.Error(), ShouldContainSubstring, "graph must have a non-empty ID")
 		})
 
 		Convey("multi-key experiment map is an error", func() {
 			var c Config
 			err := c.InitMessage(testJSON(`
 {
-  "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
+  "groups": [{"id": "g", "graphs": [{"id": "a"}]}],
   "experiments": [{"test": {}, "extra": {}}]
 }`))
 			So(err, ShouldNotBeNil)
@@ -204,7 +207,7 @@ func TestConfig(t *testing.T) {
 			var c Config
 			err := c.InitMessage(testJSON(`
 {
-  "groups": [{"name": "g", "graphs": [{"name": "a"}]}],
+  "groups": [{"id": "g", "graphs": [{"id": "a"}]}],
   "experiments": [{"foobar": {}}]
 }`))
 			So(err, ShouldNotBeNil)

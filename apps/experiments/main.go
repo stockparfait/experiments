@@ -88,15 +88,16 @@ func addGroups(ctx context.Context, groups []*config.Group) error {
 		if gc.Timeseries {
 			kind = plot.KindSeries
 		}
-		group := plot.NewGroup(kind, gc.Name).SetXLogScale(gc.XLogScale)
+		group := plot.NewGroup(kind, gc.ID).SetXLogScale(gc.XLogScale)
+		group.SetTitle(gc.Title)
 		if err := plot.AddGroup(ctx, group); err != nil {
-			return errors.Annotate(err, "cannot add group '%s'", gc.Name)
+			return errors.Annotate(err, "cannot add group '%s'", gc.ID)
 		}
 		for _, gpc := range gc.Graphs {
-			graph, err := plot.EnsureGraph(ctx, kind, gpc.Name, gc.Name)
+			graph, err := plot.EnsureGraph(ctx, kind, gpc.ID, gc.ID)
 			if err != nil {
 				return errors.Annotate(err, "cannot ensure graph '%s' in group '%s'",
-					gpc.Name, gc.Name)
+					gpc.ID, gc.ID)
 			}
 			graph.SetTitle(gpc.Title).
 				SetXLabel(gpc.XLabel).

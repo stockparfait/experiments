@@ -176,7 +176,7 @@ func (e *ExpMap) InitMessage(js interface{}) error {
 // Graph is a config for a plot graph, a single canvas holding potentially
 // multiple plots.
 type Graph struct {
-	Name      string `json:"name"`
+	ID        string `json:"id"`
 	Title     string `json:"title"`
 	XLabel    string `json:"x_label"`
 	YLogScale bool   `json:"y_log_scale"`
@@ -189,8 +189,8 @@ func (g *Graph) InitMessage(js interface{}) error {
 	if err := message.Init(g, js); err != nil {
 		return errors.Annotate(err, "cannot parse graph")
 	}
-	if g.Name == "" {
-		return errors.Reason("graph must have a name")
+	if g.ID == "" {
+		return errors.Reason("graph must have a non-empty ID")
 	}
 	return nil
 }
@@ -198,7 +198,8 @@ func (g *Graph) InitMessage(js interface{}) error {
 // Group is a config for a group of plots with a common X axis.
 type Group struct {
 	Timeseries bool     `json:"timeseries"`
-	Name       string   `json:"name"`
+	ID         string   `json:"id"`
+	Title      string   `json:"title"` // default: same as ID
 	XLogScale  bool     `json:"x_log_scale"`
 	Graphs     []*Graph `json:"graphs"`
 }
@@ -210,16 +211,19 @@ func (g *Group) InitMessage(js interface{}) error {
 	if err := message.Init(g, js); err != nil {
 		return errors.Annotate(err, "cannot parse group")
 	}
-	if g.Name == "" {
-		return errors.Reason("group must have a name")
+	if g.ID == "" {
+		return errors.Reason("group must have a non-empty ID")
+	}
+	if g.Title == "" {
+		g.Title = g.ID
 	}
 	if len(g.Graphs) < 1 {
 		return errors.Reason("at least one graph is required in group '%s'",
-			g.Name)
+			g.ID)
 	}
 	if g.Timeseries && g.XLogScale {
 		return errors.Reason("timeseries group '%s' cannot have log-scale X",
-			g.Name)
+			g.ID)
 	}
 	return nil
 }
@@ -239,17 +243,17 @@ func (c *Config) InitMessage(js interface{}) error {
 	groups := make(map[string]struct{})
 	graphs := make(map[string]struct{})
 	for i, g := range c.Groups {
-		if _, ok := groups[g.Name]; ok {
-			return errors.Reason("group[%d] has a duplicate name '%s'", i, g.Name)
+		if _, ok := groups[g.ID]; ok {
+			return errors.Reason("group[%d] has a duplicate id '%s'", i, g.ID)
 		}
-		groups[g.Name] = struct{}{}
+		groups[g.ID] = struct{}{}
 		for j, gr := range g.Graphs {
-			if _, ok := graphs[gr.Name]; ok {
+			if _, ok := graphs[gr.ID]; ok {
 				return errors.Reason(
-					"graph[%d] in group '%s' has a duplicate name '%s'",
-					j, g.Name, gr.Name)
+					"graph[%d] in group '%s' has a duplicate id '%s'",
+					j, g.ID, gr.ID)
 			}
-			graphs[gr.Name] = struct{}{}
+			graphs[gr.ID] = struct{}{}
 		}
 	}
 	return nil
