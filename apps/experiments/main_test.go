@@ -50,7 +50,7 @@ func TestMain(t *testing.T) {
 	Convey("run a test experiment end to end", t, func() {
 		confJSON := `
 {
-  "groups": [{"name": "xy", "graphs": [{"name": "r1"}]}],
+  "groups": [{"id": "xy", "graphs": [{"id": "r1"}]}],
   "experiments": [{"test": {"graph": "r1"}}]
 }`
 		confPath := filepath.Join(tmpdir, "config.json")
@@ -93,7 +93,7 @@ func TestMain(t *testing.T) {
 		var JSONbuf bytes.Buffer
 		_, err = JSONbuf.ReadFrom(jsonFile)
 		So(err, ShouldBeNil)
-		expectedJSON := `{"Groups":[{"Kind":"KindXY","XLogScale":false,"Graphs":[{"Kind":"KindXY","Title":"","XLabel":"","YLogScale":false,"PlotsRight":[{"Kind":"KindXY","X":[1,2],"Y":[21.5,42],"YLabel":"values","Legend":"Unnamed","ChartType":"ChartLine"}],"PlotsLeft":null}],"MinX":1,"MaxX":2}]}`
+		expectedJSON := `{"Groups":[{"Kind":"KindXY","Title":"xy","XLogScale":false,"Graphs":[{"Kind":"KindXY","Title":"","XLabel":"","YLogScale":false,"PlotsRight":[{"Kind":"KindXY","X":[1,2],"Y":[21.5,42],"YLabel":"values","Legend":"Unnamed","ChartType":"ChartLine"}],"PlotsLeft":null}],"MinX":1,"MaxX":2}]}`
 		So(JSONbuf.String(), ShouldContainSubstring, expectedJSON)
 
 		jsFile, err := os.Open(dataJs)
