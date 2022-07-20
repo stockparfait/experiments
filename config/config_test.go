@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stockparfait/stockparfait/db"
+	"github.com/stockparfait/stockparfait/stats"
 	"github.com/stockparfait/testutil"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -57,9 +58,9 @@ func TestConfig(t *testing.T) {
   ]
   }`)), ShouldBeNil)
 
-			var defaultData db.DataConfig
-			So(defaultData.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
-			var defaultBuckets Buckets
+			var defaultReader db.Reader
+			So(defaultReader.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
+			var defaultBuckets stats.Buckets
 			So(defaultBuckets.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
 
 			So(c, ShouldResemble, Config{
@@ -112,10 +113,10 @@ func TestConfig(t *testing.T) {
 						Graph:  "r1",
 					}},
 					{Config: &Hold{
-						Data: defaultData,
+						Reader: &defaultReader,
 					}},
 					{Config: &Distribution{
-						Data:      defaultData,
+						Reader:    &defaultReader,
 						Buckets:   defaultBuckets,
 						Graph:     "dist",
 						Normalize: true,
@@ -223,10 +224,10 @@ func TestConfig(t *testing.T) {
   "total graph": "total"
 }`
 				So(h.InitMessage(testutil.JSON(js)), ShouldBeNil)
-				var data db.DataConfig
+				var data db.Reader
 				So(data.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
 				So(h, ShouldResemble, Hold{
-					Data: data, // must be initialized with its default values
+					Reader: &data, // must be initialized with its default values
 					Positions: []HoldPosition{
 						{
 							Ticker: "A",

@@ -19,6 +19,7 @@ import (
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/message"
+	"github.com/stockparfait/stockparfait/stats"
 )
 
 // ExperimentConfig is a custom configuration for an experiment.
@@ -67,7 +68,7 @@ func (p *HoldPosition) InitMessage(js interface{}) error {
 
 // Hold "experiment" configuration.
 type Hold struct {
-	Data           db.DataConfig  `json:"data" required:"true"`
+	Reader         *db.Reader     `json:"data" required:"true"`
 	Positions      []HoldPosition `json:"positions"`
 	PositionsGraph string         `json:"positions graph"` // plots per position
 	TotalGraph     string         `json:"total graph"`     // plot portfolio value
@@ -104,21 +105,6 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 	return nil
 }
 
-// Buckets configuration for a histogram.
-type Buckets struct {
-	Buckets int     `json:"buckets" default:"101"`
-	MinVal  float64 `json:"minval" default:"-50"`
-	MaxVal  float64 `json:"maxval" default:"50"`
-	// See stockparfait/stats.Buckets for the meaning of spacing values.
-	Spacing string `json:"spacing" default:"linear" choices:"linear,exponential,symmetric exponential"`
-}
-
-var _ message.Message = &Buckets{}
-
-func (b *Buckets) InitMessage(js interface{}) error {
-	return errors.Annotate(message.Init(b, js), "failed to init Buckets")
-}
-
 // Distribution is the experiment config for deriving the distribution of
 // log-profits. By default, it normalizes the log-profits to have 0.0 mean and
 // 1.0 MAD; set "normalize" to false for the original distribution.  When
@@ -126,8 +112,8 @@ func (b *Buckets) InitMessage(js interface{}) error {
 // setting "adjust reference distribution" flag sets the mean and MAD of the
 // reference to that of the sample.
 type Distribution struct {
-	Data      db.DataConfig           `json:"data" required:"true"`
-	Buckets   Buckets                 `json:"buckets"`
+	Reader    *db.Reader              `json:"data" required:"true"`
+	Buckets   stats.Buckets           `json:"buckets"`
 	Graph     string                  `json:"graph" required:"true"`
 	Normalize bool                    `json:"normalize" default:"true"`
 	RefDist   *AnalyticalDistribution `json:"reference distribution"`

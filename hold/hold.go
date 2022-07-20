@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package hold implements a  "buy and hold" experiment.
+// Package hold implements a "buy and hold" experiment.
 //
 // Its primary purpose is to display price series for a set of stocks or a
 // porftolio.
@@ -37,7 +37,6 @@ type Hold struct {
 	config    *config.Hold
 	positions []*stats.Timeseries
 	total     *stats.Timeseries
-	db        *db.Reader
 }
 
 var _ experiments.Experiment = &Hold{}
@@ -48,7 +47,6 @@ func (h *Hold) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	if h.config, ok = cfg.(*config.Hold); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
-	h.db = db.NewReaderFromConfig(&h.config.Data)
 	if h.config.PositionsGraph != "" {
 		for _, p := range h.config.Positions {
 			if err := h.AddPosition(ctx, p); err != nil {
@@ -65,7 +63,7 @@ func (h *Hold) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 }
 
 func (h *Hold) AddPosition(ctx context.Context, p config.HoldPosition) error {
-	rows, err := h.db.Prices(p.Ticker)
+	rows, err := h.config.Reader.Prices(p.Ticker)
 	if err != nil {
 		return errors.Annotate(err, "cannot load prices for '%s'", p.Ticker)
 	}

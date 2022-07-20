@@ -18,7 +18,6 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stockparfait/experiments"
@@ -47,7 +46,7 @@ func TestHold(t *testing.T) {
 		ctx = plot.Use(ctx, canvas)
 		ctx = experiments.UseValues(ctx, values)
 
-		dbPath := filepath.Join(tmpdir, "db")
+		dbName := "db"
 		tickers := map[string]db.TickerRow{
 			"A": {},
 			"B": {},
@@ -74,7 +73,7 @@ func TestHold(t *testing.T) {
 			},
 		}
 
-		w := db.NewWriter(dbPath)
+		w := db.NewWriter(tmpdir, dbName)
 		So(w.WriteTickers(tickers), ShouldBeNil)
 		So(w.WriteActions(actions), ShouldBeNil)
 		for t, p := range prices {
@@ -88,7 +87,7 @@ func TestHold(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		cfg := &config.Hold{
-			Data: db.DataConfig{DBPath: dbPath},
+			Reader: db.NewReader(tmpdir, dbName),
 			Positions: []config.HoldPosition{
 				{Ticker: "A", Shares: 2.0},
 				{Ticker: "B", StartValue: 100.0},
