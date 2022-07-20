@@ -16,21 +16,13 @@
 package config
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stockparfait/stockparfait/db"
+	"github.com/stockparfait/testutil"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
-
-func testJSON(js string) interface{} {
-	var res interface{}
-	if err := json.Unmarshal([]byte(js), &res); err != nil {
-		panic(err)
-	}
-	return res
-}
 
 func TestConfig(t *testing.T) {
 	t.Parallel()
@@ -38,7 +30,7 @@ func TestConfig(t *testing.T) {
 	Convey("Config works correctly", t, func() {
 		Convey("top-level config, the usual case", func() {
 			var c Config
-			So(c.InitMessage(testJSON(`{
+			So(c.InitMessage(testutil.JSON(`{
   "groups": [
     {
        "id": "real",
@@ -66,9 +58,9 @@ func TestConfig(t *testing.T) {
   }`)), ShouldBeNil)
 
 			var defaultData db.DataConfig
-			So(defaultData.InitMessage(testJSON(`{"DB": "test"}`)), ShouldBeNil)
+			So(defaultData.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
 			var defaultBuckets Buckets
-			So(defaultBuckets.InitMessage(testJSON(`{}`)), ShouldBeNil)
+			So(defaultBuckets.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
 
 			So(c, ShouldResemble, Config{
 				Groups: []*Group{
@@ -136,7 +128,7 @@ func TestConfig(t *testing.T) {
 
 		Convey("x log-scale for timeseries is an error", func() {
 			var c Config
-			err := c.InitMessage(testJSON(`
+			err := c.InitMessage(testutil.JSON(`
 {
   "groups": [{
     "timeseries": true,
@@ -151,7 +143,7 @@ func TestConfig(t *testing.T) {
 
 		Convey("duplicate group id is an error", func() {
 			var c Config
-			err := c.InitMessage(testJSON(`
+			err := c.InitMessage(testutil.JSON(`
 {
   "groups": [
     {"id": "gp1", "graphs": [{"id": "r1"}, {"id": "r2"}]},
@@ -165,7 +157,7 @@ func TestConfig(t *testing.T) {
 
 		Convey("duplicate graph IDs across groups is an error", func() {
 			var c Config
-			err := c.InitMessage(testJSON(`
+			err := c.InitMessage(testutil.JSON(`
 {
   "groups": [
     {"id": "gp1", "graphs": [{"id": "r1"}, {"id": "r2"}]},
@@ -179,21 +171,21 @@ func TestConfig(t *testing.T) {
 
 		Convey("group without ID is an error", func() {
 			var c Config
-			err := c.InitMessage(testJSON(`{"groups": [{"graphs": [{"id": "r1"}]}]}`))
+			err := c.InitMessage(testutil.JSON(`{"groups": [{"graphs": [{"id": "r1"}]}]}`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "group must have a non-empty ID")
 		})
 
 		Convey("graph without ID is an error", func() {
 			var c Config
-			err := c.InitMessage(testJSON(`{"groups": [{"id": "g", "graphs": [{}]}]}`))
+			err := c.InitMessage(testutil.JSON(`{"groups": [{"id": "g", "graphs": [{}]}]}`))
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "graph must have a non-empty ID")
 		})
 
 		Convey("multi-key experiment map is an error", func() {
 			var c Config
-			err := c.InitMessage(testJSON(`
+			err := c.InitMessage(testutil.JSON(`
 {
   "groups": [{"id": "g", "graphs": [{"id": "a"}]}],
   "experiments": [{"test": {}, "extra": {}}]
@@ -205,7 +197,7 @@ func TestConfig(t *testing.T) {
 
 		Convey("unknown experiment is an error", func() {
 			var c Config
-			err := c.InitMessage(testJSON(`
+			err := c.InitMessage(testutil.JSON(`
 {
   "groups": [{"id": "g", "graphs": [{"id": "a"}]}],
   "experiments": [{"foobar": {}}]
@@ -230,9 +222,9 @@ func TestConfig(t *testing.T) {
   "positions graph": "positions",
   "total graph": "total"
 }`
-				So(h.InitMessage(testJSON(js)), ShouldBeNil)
+				So(h.InitMessage(testutil.JSON(js)), ShouldBeNil)
 				var data db.DataConfig
-				So(data.InitMessage(testJSON(`{"DB": "test"}`)), ShouldBeNil)
+				So(data.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
 				So(h, ShouldResemble, Hold{
 					Data: data, // must be initialized with its default values
 					Positions: []HoldPosition{
@@ -252,8 +244,8 @@ func TestConfig(t *testing.T) {
 
 			Convey("shares and start value are checked", func() {
 				var p HoldPosition
-				So(p.InitMessage(testJSON(`{"ticker": "A"}`)), ShouldNotBeNil)
-				So(p.InitMessage(testJSON(
+				So(p.InitMessage(testutil.JSON(`{"ticker": "A"}`)), ShouldNotBeNil)
+				So(p.InitMessage(testutil.JSON(
 					`{"ticker": "A", "shares": 1, "start value": 1}`)), ShouldNotBeNil)
 			})
 		})
