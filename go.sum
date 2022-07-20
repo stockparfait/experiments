@@ -52,6 +52,8 @@ github.com/stockparfait/logging v0.0.4/go.mod h1:wLrsscPazhCAjC/sGmqSA+GghnWUwiS
 github.com/stockparfait/parallel v0.0.2/go.mod h1:tbZ3EkWvXo9qbqC2UHr6FynuIaRL9vSBARqFHug7hxA=
 github.com/stockparfait/stockparfait v0.0.5 h1:hVgeFOONy1yDJtUZzfgdybmx4c5/KkUrFNxZBaXRuK0=
 github.com/stockparfait/stockparfait v0.0.5/go.mod h1:/mcMcK8090oSl+PyBfV8zhfO/FDgOVf423NxQWgnSEE=
+github.com/stockparfait/testutil v0.0.1 h1:Qq4RzSl+pA0y+3Jr1fF9CbjTJBwHOWZy8c4RLomHVpc=
+github.com/stockparfait/testutil v0.0.1/go.mod h1:Tr0oAxbuEQ+XjD0BlQLG2wkKDhE2EotCuPAchxH6zew=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
