@@ -85,7 +85,10 @@ func (h *Hold) AddPosition(ctx context.Context, p config.HoldPosition) error {
 
 	plt := plot.NewSeriesPlot(ts).SetYLabel("price")
 	plt.SetLegend(fmt.Sprintf("%.6g*%s", factor, p.Ticker))
-	err = plot.AddRight(ctx, plt, h.config.PositionsGraph)
+	if h.config.PositionsAxis == "left" {
+		plt.SetLeftAxis(true)
+	}
+	err = plot.Add(ctx, plt, h.config.PositionsGraph)
 	if err != nil {
 		return errors.Annotate(err, "failed to add a position plot for '%s'",
 			p.Ticker)
@@ -116,6 +119,9 @@ func (h *Hold) AddTotal(ctx context.Context) error {
 	}
 	h.total = stats.NewTimeseries().Init(dates, data)
 	p := plot.NewSeriesPlot(h.total).SetYLabel("price").SetLegend("Portfolio")
-	err := plot.AddRight(ctx, p, h.config.TotalGraph)
+	if h.config.TotalAxis == "left" {
+		p.SetLeftAxis(true)
+	}
+	err := plot.Add(ctx, p, h.config.TotalGraph)
 	return errors.Annotate(err, "failed to add a plot for portfolio total")
 }

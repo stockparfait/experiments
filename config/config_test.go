@@ -113,7 +113,9 @@ func TestConfig(t *testing.T) {
 						Graph:  "r1",
 					}},
 					{Config: &Hold{
-						Reader: &defaultReader,
+						Reader:        &defaultReader,
+						PositionsAxis: "right",
+						TotalAxis:     "right",
 					}},
 					{Config: &Distribution{
 						Reader:    &defaultReader,
@@ -221,7 +223,8 @@ func TestConfig(t *testing.T) {
     {"ticker": "B", "start value": 1000.0}
   ],
   "positions graph": "positions",
-  "total graph": "total"
+  "total graph": "total",
+  "total axis": "left"
 }`
 				So(h.InitMessage(testutil.JSON(js)), ShouldBeNil)
 				var data db.Reader
@@ -239,7 +242,9 @@ func TestConfig(t *testing.T) {
 						},
 					},
 					PositionsGraph: "positions",
+					PositionsAxis:  "right",
 					TotalGraph:     "total",
+					TotalAxis:      "left",
 				})
 			})
 

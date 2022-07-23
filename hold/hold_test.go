@@ -98,7 +98,7 @@ func TestHold(t *testing.T) {
 
 		var h Hold
 		So(h.Run(ctx, cfg), ShouldBeNil)
-		So(pg.PlotsRight, ShouldResemble, []*plot.Plot{
+		So(pg.Plots, ShouldResemble, []*plot.Plot{
 			{
 				Kind:      plot.KindSeries,
 				Dates:     []db.Date{db.NewDate(2019, 1, 1), db.NewDate(2019, 1, 2), db.NewDate(2019, 1, 3)},
@@ -116,7 +116,7 @@ func TestHold(t *testing.T) {
 				ChartType: plot.ChartLine,
 			},
 		})
-		So(tg.PlotsRight, ShouldResemble, []*plot.Plot{
+		So(tg.Plots, ShouldResemble, []*plot.Plot{
 			{
 				Kind:      plot.KindSeries,
 				Dates:     []db.Date{db.NewDate(2019, 1, 1), db.NewDate(2019, 1, 2), db.NewDate(2019, 1, 3)},

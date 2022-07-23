@@ -71,7 +71,9 @@ type Hold struct {
 	Reader         *db.Reader     `json:"data" required:"true"`
 	Positions      []HoldPosition `json:"positions"`
 	PositionsGraph string         `json:"positions graph"` // plots per position
-	TotalGraph     string         `json:"total graph"`     // plot portfolio value
+	PositionsAxis  string         `json:"positions axis" choices:"left,right" default:"right"`
+	TotalGraph     string         `json:"total graph"` // plot portfolio value
+	TotalAxis      string         `json:"total axis" choices:"left,right" default:"right"`
 }
 
 var _ ExperimentConfig = &Hold{}
