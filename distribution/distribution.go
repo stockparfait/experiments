@@ -18,7 +18,6 @@ package distribution
 import (
 	"context"
 	"fmt"
-	"runtime"
 
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
@@ -42,6 +41,24 @@ type Distribution struct {
 var _ experiments.Experiment = &Distribution{}
 var _ parallel.JobsIter = &Distribution{}
 
+// skipZeros removes (x, y) elements where y < 1e-300. Strictly speaking, we're
+// trying to avoid zeros, but in practice anything below this number may be
+// printed or interpreted as 0 in plots.
+func skipZeros(xs, ys []float64) ([]float64, []float64) {
+	if len(xs) != len(ys) {
+		panic(errors.Reason("len(xs) [%d] != len(ys) [%d]", len(xs), len(ys)))
+	}
+	xs1 := []float64{}
+	ys1 := []float64{}
+	for i, x := range xs {
+		if ys[i] >= 1.0e-300 {
+			xs1 = append(xs1, x)
+			ys1 = append(ys1, ys[i])
+		}
+	}
+	return xs1, ys1
+}
+
 func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	var ok bool
 	if d.config, ok = cfg.(*config.Distribution); !ok {
@@ -53,17 +70,18 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	if err != nil {
 		return errors.Annotate(err, "failed to list tickers")
 	}
-	d.numTickers = len(tickers)
 	if err := d.processTickers(tickers); err != nil {
 		return errors.Annotate(err, "failed to process tickers")
 	}
-	var xs []float64
+	var xs0 []float64
 	if d.config.UseMeans {
-		xs = d.histogram.Xs()
+		xs0 = d.histogram.Xs()
 	} else {
-		xs = d.histogram.Buckets().Xs(0.5)
+		xs0 = d.histogram.Buckets().Xs(0.5)
 	}
-	plt := plot.NewXYPlot(xs, d.histogram.PDFs())
+	ys := d.histogram.PDFs()
+	xs, ys := skipZeros(xs0, ys)
+	plt := plot.NewXYPlot(xs, ys)
 	plt.SetLegend("Sample p.d.f.")
 	plt.SetYLabel("p.d.f.")
 	if d.config.ChartType == "bars" {
@@ -80,6 +98,7 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 		for i, c := range d.histogram.Counts() {
 			ys[i] = float64(c)
 		}
+		xs, ys := skipZeros(xs0, ys)
 		plt := plot.NewXYPlot(xs, ys).SetLegend("Num samples").SetYLabel("count")
 		plt.SetLeftAxis(!d.config.SamplesRightAxis)
 		if err := plot.Add(ctx, plt, d.config.SamplesGraph); err != nil {
@@ -95,7 +114,13 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	return nil
 }
 
-func (d *Distribution) processTicker(ticker string, h *stats.Histogram) error {
+type jobResult struct {
+	Histogram  *stats.Histogram
+	NumTickers int
+	Err        error
+}
+
+func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 	rows, err := d.config.Reader.Prices(ticker)
 	if err != nil {
 		logging.Warningf(d.context, err.Error())
@@ -113,13 +138,9 @@ func (d *Distribution) processTicker(ticker string, h *stats.Histogram) error {
 			return errors.Annotate(err, "failed to normalize log-profits")
 		}
 	}
-	h.Add(sample.Data()...)
+	res.Histogram.Add(sample.Data()...)
+	res.NumTickers++
 	return nil
-}
-
-type jobResult struct {
-	Histogram *stats.Histogram
-	Err       error
 }
 
 // Next implements parallel.JobsIter for processing tickers.
@@ -136,7 +157,7 @@ func (d *Distribution) Next() (parallel.Job, error) {
 	f := func() interface{} {
 		res := &jobResult{Histogram: stats.NewHistogram(d.histogram.Buckets())}
 		for _, t := range ts {
-			if err := d.processTicker(t, res.Histogram); err != nil {
+			if err := d.processTicker(t, res); err != nil {
 				res.Err = errors.Annotate(err, "failed to process ticker %s", t)
 				return res
 			}
@@ -148,7 +169,7 @@ func (d *Distribution) Next() (parallel.Job, error) {
 
 func (d *Distribution) processTickers(tickers []string) error {
 	d.tickers = tickers
-	pm := parallel.Map(d.context, runtime.NumCPU(), d)
+	pm := parallel.Map(d.context, d.config.Workers, d)
 	for {
 		v, err := pm.Next()
 		if err == parallel.Done {
@@ -165,6 +186,7 @@ func (d *Distribution) processTickers(tickers []string) error {
 			return errors.Annotate(jr.Err, "job failed")
 		}
 		d.histogram.AddHistogram(jr.Histogram)
+		d.numTickers += jr.NumTickers
 	}
 	return nil
 }
@@ -202,6 +224,7 @@ func (d *Distribution) plotAnalytical(ctx context.Context) error {
 	for i, x := range xs {
 		ys[i] = dist.Prob(x)
 	}
+	xs, ys = skipZeros(xs, ys)
 	plt := plot.NewXYPlot(xs, ys)
 	plt.SetLegend(distName).SetChartType(plot.ChartDashed)
 	plt.SetYLabel("p.d.f.")

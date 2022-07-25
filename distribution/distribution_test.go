@@ -125,7 +125,8 @@ func TestDistribution(t *testing.T) {
 			})
 			So(len(g.Plots), ShouldEqual, 2)
 			So(len(sg.Plots), ShouldEqual, 1)
-			So(sg.Plots[0].Y, ShouldResemble, []float64{0, 2, 2})
+			// The first value is skipped due to 0 count.
+			So(sg.Plots[0].Y, ShouldResemble, []float64{2, 2})
 		})
 	})
 }

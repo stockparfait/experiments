@@ -16,6 +16,8 @@
 package config
 
 import (
+	"runtime"
+
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/message"
@@ -125,6 +127,7 @@ type Distribution struct {
 	RefDist          *AnalyticalDistribution `json:"reference distribution"`
 	AdjustRef        bool                    `json:"adjust reference distribution"`
 	BatchSize        int                     `json:"batch size" default:"10"` // must be >0
+	Workers          int                     `json:"parallel workers"`        // >0; default = 2*runtime.NumCPU()
 }
 
 var _ ExperimentConfig = &Distribution{}
@@ -135,6 +138,9 @@ func (e *Distribution) InitMessage(js interface{}) error {
 	}
 	if e.BatchSize <= 0 {
 		return errors.Reason("batch size = %d must be positive", e.BatchSize)
+	}
+	if e.Workers <= 0 {
+		e.Workers = 2 * runtime.NumCPU()
 	}
 	return nil
 }
