@@ -121,7 +121,9 @@ func TestConfig(t *testing.T) {
 						Reader:    &defaultReader,
 						Buckets:   defaultBuckets,
 						Graph:     "dist",
+						ChartType: "line",
 						Normalize: true,
+						BatchSize: 10,
 					}},
 				},
 			})

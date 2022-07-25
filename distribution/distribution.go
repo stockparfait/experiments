@@ -18,10 +18,13 @@ package distribution
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
+	"github.com/stockparfait/logging"
+	"github.com/stockparfait/parallel"
 	"github.com/stockparfait/stockparfait/plot"
 	"github.com/stockparfait/stockparfait/stats"
 )
@@ -30,60 +33,139 @@ import (
 // distributions of log-profits.
 type Distribution struct {
 	config     *config.Distribution
+	context    context.Context
 	histogram  *stats.Histogram
 	numTickers int
-	numSamples int
+	tickers    []string
 }
 
 var _ experiments.Experiment = &Distribution{}
+var _ parallel.JobsIter = &Distribution{}
 
 func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	var ok bool
 	if d.config, ok = cfg.(*config.Distribution); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
+	d.context = ctx
 	d.histogram = stats.NewHistogram(&d.config.Buckets)
 	tickers, err := d.config.Reader.Tickers()
 	if err != nil {
 		return errors.Annotate(err, "failed to list tickers")
 	}
 	d.numTickers = len(tickers)
-	for _, t := range tickers {
-		if err := d.processTicker(t); err != nil {
-			return errors.Annotate(err, "failed to process ticker '%s'", t)
-		}
+	if err := d.processTickers(tickers); err != nil {
+		return errors.Annotate(err, "failed to process tickers")
 	}
-	plt := plot.NewXYPlot(d.histogram.Buckets().Xs(0.5), d.histogram.PDFs())
-	plt.SetLegend("Sample p.d.f.").SetChartType(plot.ChartBars)
+	var xs []float64
+	if d.config.UseMeans {
+		xs = d.histogram.Xs()
+	} else {
+		xs = d.histogram.Buckets().Xs(0.5)
+	}
+	plt := plot.NewXYPlot(xs, d.histogram.PDFs())
+	plt.SetLegend("Sample p.d.f.")
 	plt.SetYLabel("p.d.f.")
-	plot.AddRight(ctx, plt, d.config.Graph)
+	if d.config.ChartType == "bars" {
+		plt.SetChartType(plot.ChartBars)
+	}
+	if err := plot.Add(ctx, plt, d.config.Graph); err != nil {
+		return errors.Annotate(err, "failed to add p.d.f. plot")
+	}
 	if err := d.plotAnalytical(ctx); err != nil {
 		return errors.Annotate(err, "failed to plot analytical distribution")
+	}
+	if d.config.SamplesGraph != "" {
+		ys := make([]float64, len(d.histogram.Counts()))
+		for i, c := range d.histogram.Counts() {
+			ys[i] = float64(c)
+		}
+		plt := plot.NewXYPlot(xs, ys).SetLegend("Num samples").SetYLabel("count")
+		plt.SetLeftAxis(!d.config.SamplesRightAxis)
+		if err := plot.Add(ctx, plt, d.config.SamplesGraph); err != nil {
+			return errors.Annotate(err, "failed to add samples plot")
+		}
 	}
 	if err := experiments.AddValue(ctx, "tickers", fmt.Sprintf("%d", d.numTickers)); err != nil {
 		return errors.Annotate(err, "failed to add tickers value")
 	}
-	if err := experiments.AddValue(ctx, "samples", fmt.Sprintf("%d", d.numSamples)); err != nil {
+	if err := experiments.AddValue(ctx, "samples", fmt.Sprintf("%d", d.histogram.Size())); err != nil {
 		return errors.Annotate(err, "failed to add samples value")
 	}
 	return nil
 }
 
-func (d *Distribution) processTicker(ticker string) error {
+func (d *Distribution) processTicker(ticker string, h *stats.Histogram) error {
 	rows, err := d.config.Reader.Prices(ticker)
 	if err != nil {
-		return errors.Annotate(err, "cannot load prices for '%s'", ticker)
+		logging.Warningf(d.context, err.Error())
+		return nil
+	}
+	if len(rows) == 0 {
+		logging.Warningf(d.context, "no prices for %s", ticker)
+		return nil
 	}
 	ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
 	sample := ts.LogProfits()
-	if d.config.Normalize {
+	if d.config.Normalize && sample.MAD() != 0.0 {
 		sample, err = sample.Normalize()
 		if err != nil {
 			return errors.Annotate(err, "failed to normalize log-profits")
 		}
 	}
-	d.histogram.Add(sample.Data()...)
-	d.numSamples += len(sample.Data())
+	h.Add(sample.Data()...)
+	return nil
+}
+
+type jobResult struct {
+	Histogram *stats.Histogram
+	Err       error
+}
+
+// Next implements parallel.JobsIter for processing tickers.
+func (d *Distribution) Next() (parallel.Job, error) {
+	if len(d.tickers) == 0 {
+		return nil, parallel.Done
+	}
+	batch := d.config.BatchSize
+	if batch > len(d.tickers) {
+		batch = len(d.tickers)
+	}
+	ts := d.tickers[:batch]
+	d.tickers = d.tickers[batch:]
+	f := func() interface{} {
+		res := &jobResult{Histogram: stats.NewHistogram(d.histogram.Buckets())}
+		for _, t := range ts {
+			if err := d.processTicker(t, res.Histogram); err != nil {
+				res.Err = errors.Annotate(err, "failed to process ticker %s", t)
+				return res
+			}
+		}
+		return res
+	}
+	return f, nil
+}
+
+func (d *Distribution) processTickers(tickers []string) error {
+	d.tickers = tickers
+	pm := parallel.Map(d.context, runtime.NumCPU(), d)
+	for {
+		v, err := pm.Next()
+		if err == parallel.Done {
+			break
+		}
+		if err != nil {
+			return errors.Annotate(err, "failed to process tickers")
+		}
+		jr, ok := v.(*jobResult)
+		if !ok {
+			return errors.Reason("unexpected result: %T", v)
+		}
+		if jr.Err != nil {
+			return errors.Annotate(jr.Err, "job failed")
+		}
+		d.histogram.AddHistogram(jr.Histogram)
+	}
 	return nil
 }
 
@@ -95,7 +177,7 @@ func (d *Distribution) plotAnalytical(ctx context.Context) error {
 	mad := d.config.RefDist.MAD
 	if !d.config.Normalize {
 		mean = d.histogram.Mean()
-		// TODO: mad = d.histogram.MAD()
+		mad = d.histogram.MAD()
 	}
 	var dist stats.Distribution
 	distName := ""
@@ -110,14 +192,21 @@ func (d *Distribution) plotAnalytical(ctx context.Context) error {
 		return errors.Reason("unsuppoted distribution type: '%s'",
 			d.config.RefDist.Name)
 	}
-	xs := d.histogram.Buckets().Xs(0.5)
+	var xs []float64
+	if d.config.UseMeans {
+		xs = d.histogram.Xs()
+	} else {
+		xs = d.histogram.Buckets().Xs(0.5)
+	}
 	ys := make([]float64, len(xs))
 	for i, x := range xs {
 		ys[i] = dist.Prob(x)
 	}
 	plt := plot.NewXYPlot(xs, ys)
-	plt.SetLegend(distName).SetChartType(plot.ChartLine)
+	plt.SetLegend(distName).SetChartType(plot.ChartDashed)
 	plt.SetYLabel("p.d.f.")
-	plot.AddRight(ctx, plt, d.config.Graph)
+	if err := plot.Add(ctx, plt, d.config.Graph); err != nil {
+		return errors.Annotate(err, "failed to add analytical plot")
+	}
 	return nil
 }
