@@ -54,7 +54,11 @@ func TestConfig(t *testing.T) {
   "experiments": [
     {"test": {"passed": true, "graph": "r1"}},
     {"hold": {"data": {"DB": "test"}}},
-    {"distribution": {"data": {"DB": "test"}, "graph": "dist"}}
+    {"distribution": {
+      "data": {"DB": "test"},
+      "graph": "dist",
+      "parallel workers": 1
+    }}
   ]
   }`)), ShouldBeNil)
 
@@ -121,7 +125,10 @@ func TestConfig(t *testing.T) {
 						Reader:    &defaultReader,
 						Buckets:   defaultBuckets,
 						Graph:     "dist",
+						ChartType: "line",
 						Normalize: true,
+						BatchSize: 10,
+						Workers:   1,
 					}},
 				},
 			})

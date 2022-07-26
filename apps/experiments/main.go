@@ -27,6 +27,7 @@ import (
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
+	"github.com/stockparfait/experiments/distribution"
 	"github.com/stockparfait/experiments/hold"
 	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/plot"
@@ -114,6 +115,8 @@ func runExperiment(ctx context.Context, ec config.ExperimentConfig) error {
 		e = &experiments.TestExperiment{}
 	case "hold":
 		e = &hold.Hold{}
+	case "distribution":
+		e = &distribution.Distribution{}
 	default:
 		return errors.Reason("unsupported experiment '%s'", ec.Name())
 	}

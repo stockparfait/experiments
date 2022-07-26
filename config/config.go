@@ -16,6 +16,8 @@
 package config
 
 import (
+	"runtime"
+
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/message"
@@ -114,18 +116,35 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 // setting "adjust reference distribution" flag sets the mean and MAD of the
 // reference to that of the sample.
 type Distribution struct {
-	Reader    *db.Reader              `json:"data" required:"true"`
-	Buckets   stats.Buckets           `json:"buckets"`
-	Graph     string                  `json:"graph" required:"true"`
-	Normalize bool                    `json:"normalize" default:"true"`
-	RefDist   *AnalyticalDistribution `json:"reference distribution"`
-	AdjustRef bool                    `json:"adjust reference distribution"`
+	ID               string                  `json:"id"` // experiment ID, for multiple instances
+	Reader           *db.Reader              `json:"data" required:"true"`
+	Buckets          stats.Buckets           `json:"buckets"`
+	UseMeans         bool                    `json:"use means"`  // use bucket means rather than middles
+	KeepZeros        bool                    `json:"keep zeros"` // by default, skip y==0 points
+	Graph            string                  `json:"graph" required:"true"`
+	ChartType        string                  `json:"chart type" choices:"line,bars" default:"line"`
+	SamplesGraph     string                  `json:"samples graph"`
+	SamplesRightAxis bool                    `json:"samples right axis"`
+	Normalize        bool                    `json:"normalize" default:"true"`
+	RefDist          *AnalyticalDistribution `json:"reference distribution"`
+	AdjustRef        bool                    `json:"adjust reference distribution"`
+	BatchSize        int                     `json:"batch size" default:"10"` // must be >0
+	Workers          int                     `json:"parallel workers"`        // >0; default = 2*runtime.NumCPU()
 }
 
 var _ ExperimentConfig = &Distribution{}
 
 func (e *Distribution) InitMessage(js interface{}) error {
-	return errors.Annotate(message.Init(e, js), "failed to init Distribution")
+	if err := message.Init(e, js); err != nil {
+		return errors.Annotate(err, "failed to init Distribution")
+	}
+	if e.BatchSize <= 0 {
+		return errors.Reason("batch size = %d must be positive", e.BatchSize)
+	}
+	if e.Workers <= 0 {
+		e.Workers = 2 * runtime.NumCPU()
+	}
+	return nil
 }
 
 func (e *Distribution) Name() string { return "distribution" }
