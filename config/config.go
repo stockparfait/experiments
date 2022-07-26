@@ -118,7 +118,8 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 type Distribution struct {
 	Reader           *db.Reader              `json:"data" required:"true"`
 	Buckets          stats.Buckets           `json:"buckets"`
-	UseMeans         bool                    `json:"use means"` // use bucket means rather than middles
+	UseMeans         bool                    `json:"use means"`  // use bucket means rather than middles
+	KeepZeros        bool                    `json:"keep zeros"` // by default, skip y==0 points
 	Graph            string                  `json:"graph" required:"true"`
 	ChartType        string                  `json:"chart type" choices:"line,bars" default:"line"`
 	SamplesGraph     string                  `json:"samples graph"`

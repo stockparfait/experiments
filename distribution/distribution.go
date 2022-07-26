@@ -41,12 +41,15 @@ type Distribution struct {
 var _ experiments.Experiment = &Distribution{}
 var _ parallel.JobsIter = &Distribution{}
 
-// skipZeros removes (x, y) elements where y < 1e-300. Strictly speaking, we're
-// trying to avoid zeros, but in practice anything below this number may be
-// printed or interpreted as 0 in plots.
-func skipZeros(xs, ys []float64) ([]float64, []float64) {
+// maybeSkipZeros removes (x, y) elements where y < 1e-300, if so configured.
+// Strictly speaking, we're trying to avoid zeros, but in practice anything
+// below this number may be printed or interpreted as 0 in plots.
+func (d *Distribution) maybeSkipZeros(xs, ys []float64) ([]float64, []float64) {
 	if len(xs) != len(ys) {
 		panic(errors.Reason("len(xs) [%d] != len(ys) [%d]", len(xs), len(ys)))
+	}
+	if d.config.KeepZeros {
+		return xs, ys
 	}
 	xs1 := []float64{}
 	ys1 := []float64{}
@@ -80,7 +83,7 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 		xs0 = d.histogram.Buckets().Xs(0.5)
 	}
 	ys := d.histogram.PDFs()
-	xs, ys := skipZeros(xs0, ys)
+	xs, ys := d.maybeSkipZeros(xs0, ys)
 	plt := plot.NewXYPlot(xs, ys)
 	plt.SetLegend("Sample p.d.f.")
 	plt.SetYLabel("p.d.f.")
@@ -98,7 +101,7 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 		for i, c := range d.histogram.Counts() {
 			ys[i] = float64(c)
 		}
-		xs, ys := skipZeros(xs0, ys)
+		xs, ys := d.maybeSkipZeros(xs0, ys)
 		plt := plot.NewXYPlot(xs, ys).SetLegend("Num samples").SetYLabel("count")
 		plt.SetLeftAxis(!d.config.SamplesRightAxis)
 		if err := plot.Add(ctx, plt, d.config.SamplesGraph); err != nil {
@@ -224,7 +227,7 @@ func (d *Distribution) plotAnalytical(ctx context.Context) error {
 	for i, x := range xs {
 		ys[i] = dist.Prob(x)
 	}
-	xs, ys = skipZeros(xs, ys)
+	xs, ys = d.maybeSkipZeros(xs, ys)
 	plt := plot.NewXYPlot(xs, ys)
 	plt.SetLegend(distName).SetChartType(plot.ChartDashed)
 	plt.SetYLabel("p.d.f.")
