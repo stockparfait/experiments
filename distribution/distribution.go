@@ -85,7 +85,7 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	ys := d.histogram.PDFs()
 	xs, ys := d.maybeSkipZeros(xs0, ys)
 	plt := plot.NewXYPlot(xs, ys)
-	plt.SetLegend("Sample p.d.f.")
+	plt.SetLegend(d.config.ID + " Sample p.d.f.")
 	plt.SetYLabel("p.d.f.")
 	if d.config.ChartType == "bars" {
 		plt.SetChartType(plot.ChartBars)
@@ -102,16 +102,16 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 			ys[i] = float64(c)
 		}
 		xs, ys := d.maybeSkipZeros(xs0, ys)
-		plt := plot.NewXYPlot(xs, ys).SetLegend("Num samples").SetYLabel("count")
-		plt.SetLeftAxis(!d.config.SamplesRightAxis)
+		plt := plot.NewXYPlot(xs, ys).SetLegend(d.config.ID + " Num samples")
+		plt.SetYLabel("count").SetLeftAxis(!d.config.SamplesRightAxis)
 		if err := plot.Add(ctx, plt, d.config.SamplesGraph); err != nil {
 			return errors.Annotate(err, "failed to add samples plot")
 		}
 	}
-	if err := experiments.AddValue(ctx, "tickers", fmt.Sprintf("%d", d.numTickers)); err != nil {
+	if err := experiments.AddValue(ctx, d.config.ID+" tickers", fmt.Sprintf("%d", d.numTickers)); err != nil {
 		return errors.Annotate(err, "failed to add tickers value")
 	}
-	if err := experiments.AddValue(ctx, "samples", fmt.Sprintf("%d", d.histogram.Size())); err != nil {
+	if err := experiments.AddValue(ctx, d.config.ID+" samples", fmt.Sprintf("%d", d.histogram.Size())); err != nil {
 		return errors.Annotate(err, "failed to add samples value")
 	}
 	return nil
@@ -229,7 +229,7 @@ func (d *Distribution) plotAnalytical(ctx context.Context) error {
 	}
 	xs, ys = d.maybeSkipZeros(xs, ys)
 	plt := plot.NewXYPlot(xs, ys)
-	plt.SetLegend(distName).SetChartType(plot.ChartDashed)
+	plt.SetLegend(d.config.ID + " " + distName).SetChartType(plot.ChartDashed)
 	plt.SetYLabel("p.d.f.")
 	if err := plot.Add(ctx, plt, d.config.Graph); err != nil {
 		return errors.Annotate(err, "failed to add analytical plot")

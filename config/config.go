@@ -116,6 +116,7 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 // setting "adjust reference distribution" flag sets the mean and MAD of the
 // reference to that of the sample.
 type Distribution struct {
+	ID               string                  `json:"id"` // experiment ID, for multiple instances
 	Reader           *db.Reader              `json:"data" required:"true"`
 	Buckets          stats.Buckets           `json:"buckets"`
 	UseMeans         bool                    `json:"use means"`  // use bucket means rather than middles
