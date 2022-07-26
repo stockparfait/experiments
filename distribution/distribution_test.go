@@ -92,15 +92,14 @@ func TestDistribution(t *testing.T) {
 		Convey("defaults", func() {
 			var cfg config.Distribution
 			So(cfg.InitMessage(testutil.JSON(fmt.Sprintf(`{
-  "id": "test",
   "data": {"DB path": "%s", "DB": "%s"},
   "graph": "g"
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
 			So(values, ShouldResemble, experiments.Values{
-				"test samples": "4",
-				"test tickers": "2",
+				"samples": "4",
+				"tickers": "2",
 			})
 			So(len(sg.Plots), ShouldEqual, 0)
 			So(len(g.Plots), ShouldEqual, 1)
