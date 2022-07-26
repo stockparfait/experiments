@@ -54,15 +54,6 @@ func TestDistribution(t *testing.T) {
 			"A": {},
 			"B": {},
 		}
-		actions := map[string][]db.ActionRow{
-			"A": {
-				db.TestAction(db.NewDate(2019, 1, 1), 1.0, 1.0, true),
-			},
-			"B": {
-				db.TestAction(db.NewDate(2019, 1, 1), 1.0, 1.0, true),
-				db.TestAction(db.NewDate(2020, 1, 1), 1.0, 1.0, false),
-			},
-		}
 		prices := map[string][]db.PriceRow{
 			"A": {
 				db.TestPrice(db.NewDate(2019, 1, 1), 10.0, 10.0, 1000.0, true),
@@ -78,11 +69,9 @@ func TestDistribution(t *testing.T) {
 
 		w := db.NewWriter(tmpdir, dbName)
 		So(w.WriteTickers(tickers), ShouldBeNil)
-		So(w.WriteActions(actions), ShouldBeNil)
 		for t, p := range prices {
 			So(w.WritePrices(t, p), ShouldBeNil)
 		}
-		So(w.WriteMetadata(), ShouldBeNil)
 
 		g, err := canvas.EnsureGraph(plot.KindXY, "g", "dist")
 		So(err, ShouldBeNil)
@@ -105,7 +94,7 @@ func TestDistribution(t *testing.T) {
 			So(len(g.Plots), ShouldEqual, 1)
 		})
 
-		Convey("with analytical and samples", func() {
+		Convey("with ID, analytical and samples", func() {
 			var cfg config.Distribution
 			So(cfg.InitMessage(testutil.JSON(fmt.Sprintf(`{
   "id": "test",
