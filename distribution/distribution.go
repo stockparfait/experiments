@@ -217,7 +217,7 @@ func (d *Distribution) plotAnalytical(ctx context.Context) error {
 	switch d.config.RefDist.Name {
 	case "t":
 		dist = stats.NewStudentsTDistribution(d.config.RefDist.Alpha, mean, mad)
-		distName = "Student's T distribution"
+		distName = fmt.Sprintf("T distribution a=%.2f", d.config.RefDist.Alpha)
 	case "normal":
 		dist = stats.NewNormalDistribution(mean, mad)
 		distName = "Normal distribution"
