@@ -92,14 +92,16 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	}
 	ys := d.histogram.PDFs()
 	xs, ys := d.maybeSkipZeros(xs0, ys)
-	plt := plot.NewXYPlot(xs, ys)
-	plt.SetLegend(d.prefix("Sample p.d.f."))
-	plt.SetYLabel("p.d.f.")
-	if d.config.ChartType == "bars" {
-		plt.SetChartType(plot.ChartBars)
-	}
-	if err := plot.Add(ctx, plt, d.config.Graph); err != nil {
-		return errors.Annotate(err, "failed to add p.d.f. plot")
+	if d.config.DistGraph != "" {
+		plt := plot.NewXYPlot(xs, ys)
+		plt.SetLegend(d.prefix("Sample p.d.f."))
+		plt.SetYLabel("p.d.f.")
+		if d.config.ChartType == "bars" {
+			plt.SetChartType(plot.ChartBars)
+		}
+		if err := plot.Add(ctx, plt, d.config.DistGraph); err != nil {
+			return errors.Annotate(err, "failed to add p.d.f. plot")
+		}
 	}
 	if err := d.plotAnalytical(ctx); err != nil {
 		return errors.Annotate(err, "failed to plot analytical distribution")
@@ -137,8 +139,7 @@ func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 		logging.Warningf(d.context, err.Error())
 		return nil
 	}
-	if len(rows) == 0 {
-		logging.Warningf(d.context, "no prices for %s", ticker)
+	if len(rows) <= 1 {
 		return nil
 	}
 	ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
@@ -203,7 +204,7 @@ func (d *Distribution) processTickers(tickers []string) error {
 }
 
 func (d *Distribution) plotAnalytical(ctx context.Context) error {
-	if d.config.RefDist == nil {
+	if d.config.RefDist == nil || d.config.RefGraph == "" {
 		return nil
 	}
 	mean := d.config.RefDist.Mean
@@ -239,7 +240,7 @@ func (d *Distribution) plotAnalytical(ctx context.Context) error {
 	plt := plot.NewXYPlot(xs, ys)
 	plt.SetLegend(d.prefix(distName)).SetChartType(plot.ChartDashed)
 	plt.SetYLabel("p.d.f.")
-	if err := plot.Add(ctx, plt, d.config.Graph); err != nil {
+	if err := plot.Add(ctx, plt, d.config.RefGraph); err != nil {
 		return errors.Annotate(err, "failed to add analytical plot")
 	}
 	return nil

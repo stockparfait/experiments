@@ -121,12 +121,13 @@ type Distribution struct {
 	Buckets          stats.Buckets           `json:"buckets"`
 	UseMeans         bool                    `json:"use means"`  // use bucket means rather than middles
 	KeepZeros        bool                    `json:"keep zeros"` // by default, skip y==0 points
-	Graph            string                  `json:"graph" required:"true"`
+	DistGraph        string                  `json:"distribution graph"`
 	ChartType        string                  `json:"chart type" choices:"line,bars" default:"line"`
 	SamplesGraph     string                  `json:"samples graph"`
 	SamplesRightAxis bool                    `json:"samples right axis"`
 	Normalize        bool                    `json:"normalize" default:"true"`
 	RefDist          *AnalyticalDistribution `json:"reference distribution"`
+	RefGraph         string                  `json:"reference graph"`
 	AdjustRef        bool                    `json:"adjust reference distribution"`
 	BatchSize        int                     `json:"batch size" default:"10"` // must be >0
 	Workers          int                     `json:"parallel workers"`        // >0; default = 2*runtime.NumCPU()
