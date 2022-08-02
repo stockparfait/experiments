@@ -82,7 +82,7 @@ func TestDistribution(t *testing.T) {
 			var cfg config.Distribution
 			So(cfg.InitMessage(testutil.JSON(fmt.Sprintf(`{
   "data": {"DB path": "%s", "DB": "%s"},
-  "graph": "g"
+  "distribution graph": "g"
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
@@ -101,10 +101,11 @@ func TestDistribution(t *testing.T) {
   "data": {"DB path": "%s", "DB": "%s"},
   "buckets": {"n": 3, "minval": -0.4, "maxval": 0.4},
   "use means": true,
-  "graph": "g",
+  "distribution graph": "g",
   "chart type": "bars",
   "normalize": false,
   "samples graph": "sg",
+  "reference graph": "g",
   "reference distribution": {"name": "t"}
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution

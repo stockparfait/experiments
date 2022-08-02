@@ -56,7 +56,7 @@ func TestConfig(t *testing.T) {
     {"hold": {"data": {"DB": "test"}}},
     {"distribution": {
       "data": {"DB": "test"},
-      "graph": "dist",
+      "distribution graph": "dist",
       "parallel workers": 1
     }}
   ]
@@ -124,7 +124,7 @@ func TestConfig(t *testing.T) {
 					{Config: &Distribution{
 						Reader:    &defaultReader,
 						Buckets:   defaultBuckets,
-						Graph:     "dist",
+						DistGraph: "dist",
 						ChartType: "line",
 						Normalize: true,
 						BatchSize: 10,
