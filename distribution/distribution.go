@@ -77,7 +77,7 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	}
 	d.context = ctx
 	d.histogram = stats.NewHistogram(&d.config.Buckets)
-	tickers, err := d.config.Reader.Tickers()
+	tickers, err := d.config.Reader.Tickers(ctx)
 	if err != nil {
 		return errors.Annotate(err, "failed to list tickers")
 	}
