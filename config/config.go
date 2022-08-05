@@ -121,6 +121,7 @@ type Distribution struct {
 	Buckets          stats.Buckets           `json:"buckets"`
 	UseMeans         bool                    `json:"use means"`  // use bucket means rather than middles
 	KeepZeros        bool                    `json:"keep zeros"` // by default, skip y==0 points
+	LogPDF           bool                    `json:"log pdf"`    // plot log10(p.d.f.)
 	DistGraph        string                  `json:"distribution graph"`
 	ChartType        string                  `json:"chart type" choices:"line,bars" default:"line"`
 	SamplesGraph     string                  `json:"samples graph"`
