@@ -103,6 +103,7 @@ func TestDistribution(t *testing.T) {
   "use means": true,
   "distribution graph": "g",
   "chart type": "bars",
+  "log pdf": true,
   "normalize": false,
   "samples graph": "sg",
   "reference graph": "g",

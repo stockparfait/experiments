@@ -18,6 +18,7 @@ package distribution
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
@@ -70,6 +71,18 @@ func (d *Distribution) prefix(s string) string {
 	return d.config.ID + " " + s
 }
 
+// maybeLog10 computes log10 for the slice of values if LogPDF is true.
+func (d *Distribution) maybeLog10(ys []float64) []float64 {
+	if !d.config.LogPDF {
+		return ys
+	}
+	res := make([]float64, len(ys))
+	for i, y := range ys {
+		res[i] = math.Log10(y)
+	}
+	return res
+}
+
 func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	var ok bool
 	if d.config, ok = cfg.(*config.Distribution); !ok {
@@ -92,10 +105,15 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	}
 	ys := d.histogram.PDFs()
 	xs, ys := d.maybeSkipZeros(xs0, ys)
+	ys = d.maybeLog10(ys)
 	if d.config.DistGraph != "" {
 		plt := plot.NewXYPlot(xs, ys)
 		plt.SetLegend(d.prefix("Sample p.d.f."))
-		plt.SetYLabel("p.d.f.")
+		if d.config.LogPDF {
+			plt.SetYLabel("log10(p.d.f.)")
+		} else {
+			plt.SetYLabel("p.d.f.")
+		}
 		if d.config.ChartType == "bars" {
 			plt.SetChartType(plot.ChartBars)
 		}
@@ -237,9 +255,14 @@ func (d *Distribution) plotAnalytical(ctx context.Context) error {
 		ys[i] = dist.Prob(x)
 	}
 	xs, ys = d.maybeSkipZeros(xs, ys)
+	ys = d.maybeLog10(ys)
 	plt := plot.NewXYPlot(xs, ys)
 	plt.SetLegend(d.prefix(distName)).SetChartType(plot.ChartDashed)
-	plt.SetYLabel("p.d.f.")
+	if d.config.LogPDF {
+		plt.SetYLabel("log10(p.d.f.)")
+	} else {
+		plt.SetYLabel("p.d.f.")
+	}
 	if err := plot.Add(ctx, plt, d.config.RefGraph); err != nil {
 		return errors.Annotate(err, "failed to add analytical plot")
 	}
