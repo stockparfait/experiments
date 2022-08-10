@@ -37,6 +37,8 @@ type Distribution struct {
 	histogram  *stats.Histogram
 	numTickers int
 	tickers    []string
+	yMin       float64 // for vertical lines such as percentiles
+	yMax       float64
 }
 
 var _ experiments.Experiment = &Distribution{}
@@ -83,6 +85,134 @@ func (d *Distribution) maybeLog10(ys []float64) []float64 {
 	return res
 }
 
+// filterXY optionally skips zeros, computes log10 if configured, and stores the
+// Y range for vertical lines.
+func (d *Distribution) filterXY(xs, ys []float64) ([]float64, []float64) {
+	xs, ys = d.maybeSkipZeros(xs, ys)
+	ys = d.maybeLog10(ys)
+	for _, y := range ys {
+		if y < d.yMin {
+			d.yMin = y
+		}
+		if y > d.yMax {
+			d.yMax = y
+		}
+	}
+	return xs, ys
+}
+
+func (d *Distribution) xs() []float64 {
+	if d.config.UseMeans {
+		return d.histogram.Xs()
+	}
+	return d.histogram.Buckets().Xs(0.5)
+}
+
+func (d *Distribution) plotSamplePDF(ctx context.Context) error {
+	if d.config.DistGraph == "" {
+		return nil
+	}
+	ys := d.histogram.PDFs()
+	xs, ys := d.filterXY(d.xs(), ys)
+	plt := plot.NewXYPlot(xs, ys)
+	plt.SetLegend(d.prefix("sample p.d.f."))
+	if d.config.LogPDF {
+		plt.SetYLabel("log10(p.d.f.)")
+	} else {
+		plt.SetYLabel("p.d.f.")
+	}
+	if d.config.ChartType == "bars" {
+		plt.SetChartType(plot.ChartBars)
+	}
+	if err := plot.Add(ctx, plt, d.config.DistGraph); err != nil {
+		return errors.Annotate(err, "failed to add p.d.f. plot")
+	}
+	return nil
+}
+
+func (d *Distribution) plotNumSamples(ctx context.Context) error {
+	if d.config.SamplesGraph == "" {
+		return nil
+	}
+	ys := make([]float64, len(d.histogram.Counts()))
+	for i, c := range d.histogram.Counts() {
+		ys[i] = float64(c)
+	}
+	xs, ys := d.maybeSkipZeros(d.xs(), ys)
+	plt := plot.NewXYPlot(xs, ys).SetLegend(d.prefix("num samples"))
+	plt.SetYLabel("count").SetLeftAxis(!d.config.SamplesRightAxis)
+	if err := plot.Add(ctx, plt, d.config.SamplesGraph); err != nil {
+		return errors.Annotate(err, "failed to add samples plot")
+	}
+	return nil
+}
+
+func (d *Distribution) plotPercentiles(ctx context.Context) error {
+	if len(d.config.Percentiles) == 0 {
+		return nil
+	}
+	if d.config.DistGraph == "" {
+		return nil
+	}
+	for _, p := range d.config.Percentiles {
+		x := d.histogram.Quantile(p / 100.0)
+		plt := plot.NewXYPlot([]float64{x, x}, []float64{d.yMin, d.yMax})
+		plt.SetLegend(d.prefix(fmt.Sprintf("%gth %%-ile=%.3g", p, x)))
+		plt.SetYLabel("")
+		if err := plot.Add(ctx, plt, d.config.DistGraph); err != nil {
+			return errors.Annotate(err, "failed to add %gth percentile plot", p)
+		}
+	}
+	return nil
+}
+
+func (d *Distribution) plotAnalytical(ctx context.Context) error {
+	if d.config.RefDist == nil || d.config.RefGraph == "" {
+		return nil
+	}
+	mean := d.config.RefDist.Mean
+	mad := d.config.RefDist.MAD
+	if !d.config.Normalize {
+		mean = d.histogram.Mean()
+		mad = d.histogram.MAD()
+	}
+	var dist stats.Distribution
+	distName := ""
+	switch d.config.RefDist.Name {
+	case "t":
+		dist = stats.NewStudentsTDistribution(d.config.RefDist.Alpha, mean, mad)
+		distName = fmt.Sprintf("T distribution a=%.2f", d.config.RefDist.Alpha)
+	case "normal":
+		dist = stats.NewNormalDistribution(mean, mad)
+		distName = "Normal distribution"
+	default:
+		return errors.Reason("unsuppoted distribution type: '%s'",
+			d.config.RefDist.Name)
+	}
+	var xs []float64
+	if d.config.UseMeans {
+		xs = d.histogram.Xs()
+	} else {
+		xs = d.histogram.Buckets().Xs(0.5)
+	}
+	ys := make([]float64, len(xs))
+	for i, x := range xs {
+		ys[i] = dist.Prob(x)
+	}
+	xs, ys = d.filterXY(xs, ys)
+	plt := plot.NewXYPlot(xs, ys)
+	plt.SetLegend(d.prefix(distName)).SetChartType(plot.ChartDashed)
+	if d.config.LogPDF {
+		plt.SetYLabel("log10(p.d.f.)")
+	} else {
+		plt.SetYLabel("p.d.f.")
+	}
+	if err := plot.Add(ctx, plt, d.config.RefGraph); err != nil {
+		return errors.Annotate(err, "failed to add analytical plot")
+	}
+	return nil
+}
+
 func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	var ok bool
 	if d.config, ok = cfg.(*config.Distribution); !ok {
@@ -97,44 +227,17 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	if err := d.processTickers(tickers); err != nil {
 		return errors.Annotate(err, "failed to process tickers")
 	}
-	var xs0 []float64
-	if d.config.UseMeans {
-		xs0 = d.histogram.Xs()
-	} else {
-		xs0 = d.histogram.Buckets().Xs(0.5)
-	}
-	ys := d.histogram.PDFs()
-	xs, ys := d.maybeSkipZeros(xs0, ys)
-	ys = d.maybeLog10(ys)
-	if d.config.DistGraph != "" {
-		plt := plot.NewXYPlot(xs, ys)
-		plt.SetLegend(d.prefix("Sample p.d.f."))
-		if d.config.LogPDF {
-			plt.SetYLabel("log10(p.d.f.)")
-		} else {
-			plt.SetYLabel("p.d.f.")
-		}
-		if d.config.ChartType == "bars" {
-			plt.SetChartType(plot.ChartBars)
-		}
-		if err := plot.Add(ctx, plt, d.config.DistGraph); err != nil {
-			return errors.Annotate(err, "failed to add p.d.f. plot")
-		}
+	if err := d.plotSamplePDF(ctx); err != nil {
+		return errors.Annotate(err, "failed to plot sample p.d.f.")
 	}
 	if err := d.plotAnalytical(ctx); err != nil {
 		return errors.Annotate(err, "failed to plot analytical distribution")
 	}
-	if d.config.SamplesGraph != "" {
-		ys := make([]float64, len(d.histogram.Counts()))
-		for i, c := range d.histogram.Counts() {
-			ys[i] = float64(c)
-		}
-		xs, ys := d.maybeSkipZeros(xs0, ys)
-		plt := plot.NewXYPlot(xs, ys).SetLegend(d.prefix("Num samples"))
-		plt.SetYLabel("count").SetLeftAxis(!d.config.SamplesRightAxis)
-		if err := plot.Add(ctx, plt, d.config.SamplesGraph); err != nil {
-			return errors.Annotate(err, "failed to add samples plot")
-		}
+	if err := d.plotNumSamples(ctx); err != nil {
+		return errors.Annotate(err, "failed to plot number of samples graph")
+	}
+	if err := d.plotPercentiles(ctx); err != nil {
+		return errors.Annotate(err, "failed to plot percenciles")
 	}
 	if err := experiments.AddValue(ctx, d.prefix("tickers"), fmt.Sprintf("%d", d.numTickers)); err != nil {
 		return errors.Annotate(err, "failed to add tickers value")
@@ -217,54 +320,6 @@ func (d *Distribution) processTickers(tickers []string) error {
 		}
 		d.histogram.AddHistogram(jr.Histogram)
 		d.numTickers += jr.NumTickers
-	}
-	return nil
-}
-
-func (d *Distribution) plotAnalytical(ctx context.Context) error {
-	if d.config.RefDist == nil || d.config.RefGraph == "" {
-		return nil
-	}
-	mean := d.config.RefDist.Mean
-	mad := d.config.RefDist.MAD
-	if !d.config.Normalize {
-		mean = d.histogram.Mean()
-		mad = d.histogram.MAD()
-	}
-	var dist stats.Distribution
-	distName := ""
-	switch d.config.RefDist.Name {
-	case "t":
-		dist = stats.NewStudentsTDistribution(d.config.RefDist.Alpha, mean, mad)
-		distName = fmt.Sprintf("T distribution a=%.2f", d.config.RefDist.Alpha)
-	case "normal":
-		dist = stats.NewNormalDistribution(mean, mad)
-		distName = "Normal distribution"
-	default:
-		return errors.Reason("unsuppoted distribution type: '%s'",
-			d.config.RefDist.Name)
-	}
-	var xs []float64
-	if d.config.UseMeans {
-		xs = d.histogram.Xs()
-	} else {
-		xs = d.histogram.Buckets().Xs(0.5)
-	}
-	ys := make([]float64, len(xs))
-	for i, x := range xs {
-		ys[i] = dist.Prob(x)
-	}
-	xs, ys = d.maybeSkipZeros(xs, ys)
-	ys = d.maybeLog10(ys)
-	plt := plot.NewXYPlot(xs, ys)
-	plt.SetLegend(d.prefix(distName)).SetChartType(plot.ChartDashed)
-	if d.config.LogPDF {
-		plt.SetYLabel("log10(p.d.f.)")
-	} else {
-		plt.SetYLabel("p.d.f.")
-	}
-	if err := plot.Add(ctx, plt, d.config.RefGraph); err != nil {
-		return errors.Annotate(err, "failed to add analytical plot")
 	}
 	return nil
 }

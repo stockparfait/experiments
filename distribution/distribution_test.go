@@ -106,6 +106,7 @@ func TestDistribution(t *testing.T) {
   "log pdf": true,
   "normalize": false,
   "samples graph": "sg",
+  "percentiles": [5, 95],
   "reference graph": "g",
   "reference distribution": {"name": "t"}
 }`, tmpdir, dbName))), ShouldBeNil)
@@ -115,7 +116,7 @@ func TestDistribution(t *testing.T) {
 				"test samples": "4",
 				"test tickers": "2",
 			})
-			So(len(g.Plots), ShouldEqual, 2)
+			So(len(g.Plots), ShouldEqual, 4)
 			So(len(sg.Plots), ShouldEqual, 1)
 			// The first value is skipped due to 0 count.
 			So(sg.Plots[0].Y, ShouldResemble, []float64{2, 2})
