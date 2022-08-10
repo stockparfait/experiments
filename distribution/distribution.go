@@ -218,6 +218,8 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	if d.config, ok = cfg.(*config.Distribution); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
+	d.yMin = math.Inf(1)
+	d.yMax = math.Inf(-1)
 	d.context = ctx
 	d.histogram = stats.NewHistogram(&d.config.Buckets)
 	tickers, err := d.config.Reader.Tickers(ctx)
