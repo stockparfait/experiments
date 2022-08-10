@@ -130,6 +130,7 @@ type Distribution struct {
 	RefDist          *AnalyticalDistribution `json:"reference distribution"`
 	RefGraph         string                  `json:"reference graph"`
 	AdjustRef        bool                    `json:"adjust reference distribution"`
+	Percentiles      []float64               `json:"percentiles"`             // in [0..100]
 	BatchSize        int                     `json:"batch size" default:"10"` // must be >0
 	Workers          int                     `json:"parallel workers"`        // >0; default = 2*runtime.NumCPU()
 }
@@ -145,6 +146,11 @@ func (e *Distribution) InitMessage(js interface{}) error {
 	}
 	if e.Workers <= 0 {
 		e.Workers = 2 * runtime.NumCPU()
+	}
+	for _, p := range e.Percentiles {
+		if p < 0.0 || 100.0 < p {
+			return errors.Reason("percentile=%g must be in [0..100]", p)
+		}
 	}
 	return nil
 }
