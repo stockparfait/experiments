@@ -141,8 +141,28 @@ func (d *Distribution) plotNumSamples(ctx context.Context) error {
 	xs, ys := d.maybeSkipZeros(d.xs(), ys)
 	plt := plot.NewXYPlot(xs, ys).SetLegend(d.prefix("num samples"))
 	plt.SetYLabel("count").SetLeftAxis(!d.config.SamplesRightAxis)
+	if d.config.SamplesChartType == "bars" {
+		plt.SetChartType(plot.ChartBars)
+	}
 	if err := plot.Add(ctx, plt, d.config.SamplesGraph); err != nil {
 		return errors.Annotate(err, "failed to add samples plot")
+	}
+	return nil
+}
+
+func (d *Distribution) plotMean(ctx context.Context) error {
+	if !d.config.PlotMean {
+		return nil
+	}
+	if d.config.DistGraph == "" {
+		return nil
+	}
+	x := d.histogram.Mean()
+	plt := plot.NewXYPlot([]float64{x, x}, []float64{d.yMin, d.yMax})
+	plt.SetLegend(d.prefix(fmt.Sprintf("mean=%.4g", x)))
+	plt.SetYLabel("").SetChartType(plot.ChartDashed)
+	if err := plot.Add(ctx, plt, d.config.DistGraph); err != nil {
+		return errors.Annotate(err, "failed to add mean plot")
 	}
 	return nil
 }
@@ -158,7 +178,7 @@ func (d *Distribution) plotPercentiles(ctx context.Context) error {
 		x := d.histogram.Quantile(p / 100.0)
 		plt := plot.NewXYPlot([]float64{x, x}, []float64{d.yMin, d.yMax})
 		plt.SetLegend(d.prefix(fmt.Sprintf("%gth %%-ile=%.3g", p, x)))
-		plt.SetYLabel("")
+		plt.SetYLabel("").SetChartType(plot.ChartDashed)
 		if err := plot.Add(ctx, plt, d.config.DistGraph); err != nil {
 			return errors.Annotate(err, "failed to add %gth percentile plot", p)
 		}
@@ -237,6 +257,9 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	}
 	if err := d.plotNumSamples(ctx); err != nil {
 		return errors.Annotate(err, "failed to plot number of samples graph")
+	}
+	if err := d.plotMean(ctx); err != nil {
+		return errors.Annotate(err, "failed to plot the mean")
 	}
 	if err := d.plotPercentiles(ctx); err != nil {
 		return errors.Annotate(err, "failed to plot percenciles")
