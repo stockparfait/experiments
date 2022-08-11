@@ -125,11 +125,13 @@ type Distribution struct {
 	DistGraph        string                  `json:"distribution graph"`
 	ChartType        string                  `json:"chart type" choices:"line,bars" default:"line"`
 	SamplesGraph     string                  `json:"samples graph"`
+	SamplesChartType string                  `json:"samples chart type" choices:"line,bars" default:"line"`
 	SamplesRightAxis bool                    `json:"samples right axis"`
 	Normalize        bool                    `json:"normalize" default:"true"`
 	RefDist          *AnalyticalDistribution `json:"reference distribution"`
 	RefGraph         string                  `json:"reference graph"`
 	AdjustRef        bool                    `json:"adjust reference distribution"`
+	PlotMean         bool                    `json:"plot mean"`
 	Percentiles      []float64               `json:"percentiles"`             // in [0..100]
 	BatchSize        int                     `json:"batch size" default:"10"` // must be >0
 	Workers          int                     `json:"parallel workers"`        // >0; default = 2*runtime.NumCPU()
