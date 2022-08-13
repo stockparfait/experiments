@@ -16,6 +16,9 @@
 package config
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stockparfait/stockparfait/db"
@@ -28,10 +31,17 @@ import (
 func TestConfig(t *testing.T) {
 	t.Parallel()
 
+	tmpdir, tmpdirErr := ioutil.TempDir("", "test_config")
+	defer os.RemoveAll(tmpdir)
+
+	Convey("Test setup succeeded", t, func() {
+		So(tmpdirErr, ShouldBeNil)
+	})
+
 	Convey("Config works correctly", t, func() {
 		Convey("top-level config, the usual case", func() {
-			var c Config
-			So(c.InitMessage(testutil.JSON(`{
+			confJSON := `
+{
   "groups": [
     {
        "id": "real",
@@ -60,14 +70,29 @@ func TestConfig(t *testing.T) {
       "parallel workers": 1
     }}
   ]
-  }`)), ShouldBeNil)
+}`
+
+			confPath := filepath.Join(tmpdir, "config.json")
+
+			// Run in a function closure to ensure the written file is closed before
+			// reading it.
+			(func() {
+				f, err := os.OpenFile(confPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+				So(err, ShouldBeNil)
+				defer f.Close()
+				_, err = f.WriteString(confJSON)
+				So(err, ShouldBeNil)
+			})()
+
+			c, err := Load(confPath)
+			So(err, ShouldBeNil)
 
 			var defaultReader db.Reader
 			So(defaultReader.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
 			var defaultBuckets stats.Buckets
 			So(defaultBuckets.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
 
-			So(c, ShouldResemble, Config{
+			So(c, ShouldResemble, &Config{
 				Groups: []*Group{
 					{
 						Timeseries: false,
