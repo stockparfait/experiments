@@ -12,7 +12,7 @@ various equities.
 A very simple way to visualize the shape of a continuous distribution from a
 given sample, that is to say, it's _p.d.f._ (probability density function), is
 to plot a _histogram_ of the samples. Further normalizing the plot so it
-integrates to `1.0` yields an actual approximation of the p.d.f.
+integrates to `1.0` yields an approximation of the actual p.d.f.
 
 A histogram is simply a collection of counters respresenting the number of
 samples that fall into certain subranges. In the simplest case, we take a range
@@ -62,7 +62,7 @@ Conclusion so far: we need more data. A _lot_ more.
 ## Preparing the Data
 
 As I mentioned before, the dataset I use comes from [Nasdaq Data Link], and for
-the time period from January 1998 till July 2022 it contains a little over 40M
+the time period from January 1998 to July 2022 it contains a little over 40M
 daily closing prices for over 20K equities that at some point during this period
 were listed on the major US stock exchanges (NASDAQ, NYSE and AMEX). This, in
 particular, avoids the [survivorship bias], which will become important for us
@@ -118,8 +118,8 @@ comparison, I'm also throwing in the similarly normalized (`mean=0.0`,
 ![All stocks, normalized](assets/Distribution-all-stocks-with-samples.jpeg)
 
 The plot indeed looks very nice, and most interestingly, it follows fairly
-closely the T-distribution plot, even if the analytical graph somewhat
-underestimates the thickness of the tails.
+closely the T-distribution plot, even if it somewhat underestimates the
+thickness of the tails of the sample distribution.
 
 The number of samples in the buckets is fairly high even as far as 30 MADs away
 (about 700 samples at +30 and -30 MADs).  Notice the sample noise: it starts to
@@ -179,6 +179,9 @@ case, I cannot reject that `X` is indeed a random variable with a distribution
 resembling Student's T with `a=3.0` for liquid US stocks, i.e. with the average
 daily cash volume over $1M.
 
+There question of the p-value still remains, but we don't yet have enough
+machinery to estimate it accurately for the T-distribution.
+
 ## What about Normal?
 
 First, let's go back to the overall distribution of all the liquid stocks, and
@@ -201,6 +204,9 @@ trading days is about 20 years. This might just explain those "black swans" that
 apparently routinely hit Gaussian-based hedge funds (notably, [LTCM]) and a
 subsequent "excuse" that it was a "10-sigma event" which, obviously, "should
 never happen".
+
+Obviously, we don't need to worry about the p-value, as it is clearly
+ridiculously small.
 
 As a side note, I momentarily switched to the standard deviation (a.k.a.
 _sigma_) just to relate the result back to the "stardand" and often

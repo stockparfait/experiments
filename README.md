@@ -54,21 +54,22 @@ GOPATH` to find out where your `GOPATH` is).
 ## Quick start
 
 - Subscribe to the data source on [Nasdaq Data Link]; most of these experiments
-  use only the equity prices.
+  use only the equities prices.
 - Download the data by running `sharadar` - see [stockparfait/stockparfait] for
   details.
 - Copy `stockparfait/stockparfait/js` folder contents to a separate working
-  directory, for examples `~/plots/`; here I'll refer to it as `${PLOTS}`.
+  directory, for example `~/plots/`; here I'll refer to it as `${PLOTS}`.
 - Run an experiment as:
 
 ```sh
-experiments -conf <config>.json -js ${PLOTS}/data.js
+experiments -conf ${CONFIG}.json -js ${PLOTS}/data.js
 ```
 
-  where `<config>.json` is the config of your choice from one of the
-  experiments, or your own.
+  where `${CONFIG}.json` is the config of your choice from one of the
+  experiments, or your own. The schema of such configs is in
+  [config/config.go](config/config.go).
 
-- Open `${PLOTS}/plot.html` in your browser.
+- Open `${PLOTS}/plot.html` in your browser to see the resulting plots.
 
 ## Contributing to Stock Parfait Experiments
 
@@ -76,8 +77,8 @@ Pull requests are welcome. We suggest to contact us beforehand to coordinate
 your code contributions.
 
 Having said that, this repository serves primarily as the documentation of my
-own research into the behavior of the US markets, and also as an example of how
-to use and what can be done with the core libraries in
+own research into the behavior of the US stock market, and also as an example
+and the purpose and motivation behind the core libraries in
 [stockparfait/stockparfait].
 
 [stockparfait/stockparfait]: https://github.com/stockparfait/stockparfait

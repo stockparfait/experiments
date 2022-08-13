@@ -8,8 +8,8 @@ First, let's agree that the sole purpose of studying the stock market is to make
 or preserve money. Hence, any study must aim at predicting certain market
 behaviors and optimizing for certain parameters for maximum expected profit and minimum possible loss.
 
-For majority of retail traders and investors there are several ways to use the
-stock market, which can roughly be broken down into these categories:
+For the majority of retail traders and investors there are several ways to use
+the stock market, which can roughly be broken down into these categories:
 - Day trader: buy / sell during the day, close all positions overnight;
 - Swing trader: hold each position for a few days;
 - Position trader: hold each position for a few weeks / months;
@@ -69,27 +69,27 @@ it's more intuitive, and also for more practical reasons to be revealed later -
 another cliffhanger! Formally:
 
 ```
-MAD(X) = E[ abs( E(X) - X ) ]
+MAD(X) = E[ abs( E[X] - X ) ]
 ```
 
 where `E[X]` denotes the mean of `X`:
 
 ```
-E[X] = (X1 + X2 + ... + Xn) / n   - for a discrete X with n values,
+E[X] = (X1 + X2 + ... + Xn) / n   - for n samples  of X,
 E[X] = \integral [-inf..+inf] [ x * f(x) * dx ] - for a continuous X with the p.d.f. f(x).
 ```
 
 In practice, most statistical mathematics and machinery is developed for
-_additive_ processes and for (often symmetric) distributions that range from
-`[-inf..+inf]`.  Therefore, it is more practical to consider an equivalent
-process over _log-prices_:
+_additive_ processes and for distributions that range from `[-inf..+inf]`.
+Therefore, it is more practical to consider an equivalent process over
+_log-prices_:
 
 ```
 log(P(t+1)) = X + log(P(t))
 ```
 
 where `X` now ranges from `[-inf..+inf]` with a mean around `0` and MAD still
-around `0.01` for daily series. The reason MAD is preserved in this
+around `0.01` for daily series. The reason MAD doesn't change much in this
 transformation is because `log(1+x) ~= x` for small `x`, and:
 
 ```
@@ -103,7 +103,7 @@ regular (arithmetic) mean and MAD of `log(x)`:
 
 ```
 GE[X] = exp(E[ log(x) ])
-GMAD[X] = exp( MAD(log(x)) )
+GMAD[X] = exp( MAD[ log(x) ] )
 ```
 
 In the experiments we will often use the geometric versions for printing the
@@ -132,13 +132,13 @@ time period.  In particular:
   growth - again, a very intuitive and familiar measure;
 - If a price ever goes to zero (or `-inf` in log-space), it will stay zero
   thereafter, resulting in a zero geometric mean (since `-inf` will dominate the
-  sum). This correctly models a possibility of a total loss, after which there
+  sum). This correctly models the possibility of a total loss, after which there
   is obviously no recovery. On the contrary, an arithmetic mean in the original
   (non-log) space will gloss over such a catastrophic possibility and will tell
-  you that a Russian roulette with a 6-chamber revolver and doubling the price
-  on survival has a sure-fire (pun intended) 67% average profit. Play it 27
-  times, and you'll turn your $1K into $1B. I leave estimating the probability
-  of survival as an exercise to the reader.
+  you that a game of Russian roulette with one of the 6 chambers of the revolver
+  loaded, and doubling the price on survival has a sure-fire (pun intended) 67%
+  average profit: `5/6 * 2 =~ 1.67`. Play it 27 times, and you'll turn your $1K
+  into $1B. I leave the probability of survival as an exercise to the reader.
 
 There are, of course, still many questions about the validity of such modeling
 which we are going to ask and research further in this study, but as our first
@@ -151,9 +151,8 @@ distribution.
 Note, that the formula for `X` is independent of the frequency of price
 sampling. That is, `t+1` can mean the next second, the next day, or the next
 year, and the definition will still work (the typical mean and MAD will, of
-course, be different for different frequencies). In this study, I'm going to use
-the daily frequency, and specifically, the daily closing prices as `P(t)` data
-points.
+course, change). In this study, I'm going to use the daily frequency, and
+specifically, the daily closing prices as `P(t)` data points.
 
 One of the reasons is that daily prices is the highest possible frequency that
 may be relevant to an investor.  If we take any higher frequency, say, hourly
@@ -165,13 +164,13 @@ in my opinion unnecessarily complicates things - see the KISS principle in the
 
 Daily prices are also the most conveniently available form of data to the
 general public. For instance, [Nasdaq Data Link] has equity and ETF daily prices
-for US stock exchanges going back from 1998 till the current day.
+for US stock exchanges going back from 1998 to the current day.
 
 Note: I don't have any affiliation with Nasdaq Data Link or Sharadar, and I only
 mention it because these experiments are done using their data, and there is an
 app in [stockparfait/stockparfait] repository for downloading their price series
 tables.
 
-[Methodology]: methodology.md
+[Methodology]: ../methodology/
 [Nasdaq Data Link]: https://data.nasdaq.com/databases/SFB/data
 [stockparfait/stockparfait]: https://github.com/stockparfait/stockparfait

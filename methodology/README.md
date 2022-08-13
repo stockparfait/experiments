@@ -23,8 +23,8 @@ The experiments follow these basic principles derived from the
     model is only a hypothesis; but if it doesn't fit the data, it is definitely
     rejected;
   - _Any hypothesis must be falsifiable_ - there should always be an experiment
-    that may potentially show that the hypothesis doesn't hold; otherwise the
-    model has no value, since it fits any data, and therefore predicts nothing;
+    that may potentially reject the hypothesis; otherwise the model has no
+    value, since it fits any data, and therefore predicts nothing;
   - _Mind the p-values_ - most of the models (== hypotheses) will be statistical
     in nature, and therefore, their rejection / non-rejection should have an
     associated probability. It is of no use to say that we've rejected a
@@ -36,9 +36,10 @@ The experiments follow these basic principles derived from the
 
 Having said all that, the last (KISS) principle dictates that sometimes we may
 take justifiable shortcuts.  For instance, when estimating a p-value formally is
-too complex or practically infeasible, we may resort to simpler and more
-intuitive methods, such as visually noting the noise level in the graphs and
-concluding that this noise likely reflects the typical error margin.
+too complex, practically infeasible, or simply not worth it (e.g. when it's
+obviously very very small), we may resort to simpler and more intuitive methods,
+such as visually noting the noise level in the graphs and concluding that this
+noise likely reflects the typical error margin.
 
 In any case, the justification for such shortcuts needs to be spelled out
 explicitly, so that a thorough reader may challenge the justification and decide
