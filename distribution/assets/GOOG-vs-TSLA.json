@@ -1,0 +1,64 @@
+{
+  "experiments": [
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 0.3,
+          "minval": 0.005,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "end": "2022-07-31",
+          "start": "1998-01-01",
+          "tickers": [
+            "GOOG"
+          ]
+        },
+        "distribution graph": "dist",
+        "id": "GOOG",
+        "log pdf": true,
+        "normalize": false,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 0.3,
+          "minval": 0.005,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "end": "2022-07-31",
+          "start": "1998-01-01",
+          "tickers": [
+            "TSLA"
+          ]
+        },
+        "distribution graph": "dist",
+        "id": "TSLA",
+        "log pdf": true,
+        "normalize": false,
+        "use means": true
+      }
+    }
+  ],
+  "groups": [
+    {
+      "graphs": [
+        {
+          "id": "dist",
+          "title": "Distribution",
+          "y_log_scale": false
+        }
+      ],
+      "id": "dist group",
+      "timeseries": false,
+      "title": "Log-profit distributions"
+    }
+  ]
+}

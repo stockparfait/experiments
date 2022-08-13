@@ -1,0 +1,309 @@
+{
+  "experiments": [
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Basic Materials"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Basic Materials",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Communication Services"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Communication Services",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Consumer Cyclical"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Consumer Cyclical",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Consumer Defensive"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Consumer Defensive",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Energy"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Energy",
+        "log pdf": true,
+        "normalize": true,
+        "reference distribution": {
+          "alpha": 3.0,
+          "name": "t"
+        },
+        "reference graph": "dist",
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Financial Services"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Financial Services",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Healthcare"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Healthcare",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Industrials"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Industrials",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Real Estate"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Real Estate",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Technology"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Technology",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    },
+    {
+      "distribution": {
+        "buckets": {
+          "maxval": 200,
+          "minval": 0.2,
+          "n": 101,
+          "spacing": "symmetric exponential"
+        },
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2022-07-31",
+          "sectors": [
+            "Utilities"
+          ],
+          "start": "1998-01-01"
+        },
+        "distribution graph": "dist",
+        "id": "Utilities",
+        "log pdf": true,
+        "normalize": true,
+        "use means": true
+      }
+    }
+  ],
+  "groups": [
+    {
+      "graphs": [
+        {
+          "id": "dist",
+          "title": "Normalized Accumulated Distribution",
+          "y_log_scale": false
+        }
+      ],
+      "id": "dist group",
+      "timeseries": false,
+      "title": "Log-profit distributions"
+    }
+  ]
+}
