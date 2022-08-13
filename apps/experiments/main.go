@@ -16,10 +16,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -61,26 +59,6 @@ func parseFlags(args []string) (*Flags, error) {
 		return nil, errors.Reason("missing required -conf")
 	}
 	return &flags, err
-}
-
-func loadConfig(configPath string) (*config.Config, error) {
-	f, err := os.Open(configPath)
-	if err != nil {
-		return nil, errors.Annotate(err, "cannot open config file '%s'", configPath)
-	}
-	defer f.Close()
-
-	dec := json.NewDecoder(f)
-	var jv interface{}
-	if err := dec.Decode(&jv); err != nil && err != io.EOF {
-		return nil, errors.Annotate(err, "failed to decode JSON in %s", configPath)
-	}
-
-	var c config.Config
-	if err := c.InitMessage(jv); err != nil {
-		return nil, errors.Annotate(err, "cannot interpret config '%s'", configPath)
-	}
-	return &c, nil
 }
 
 func addGroups(ctx context.Context, groups []*config.Group) error {
@@ -173,7 +151,7 @@ func writePlots(ctx context.Context, flags *Flags) error {
 }
 
 func run(ctx context.Context, flags *Flags) error {
-	cfg, err := loadConfig(flags.Config)
+	cfg, err := config.Load(flags.Config)
 	if err != nil {
 		return errors.Annotate(err, "failed to load config")
 	}
