@@ -188,12 +188,12 @@ In the [previous section](../logprofits) we casually mentioned that stocks
 fluctuate daily roughly by 1% of their price. Is this really true?
 
 Let's plot the distribution of means and MADs of daily log-profits, one per each
-stock, for all the liquid stocks ([config](means-mads.json)):
+stock, for all the liquid stocks ([config](assets/means-mads.json)):
 
-![Means and MADs](means-mads.jpeg)
+![Means and MADs](assets/means-mads.jpeg)
 
-The average MAD is `0.02594` (that's 2.6%, not 1%), and the average daily mean
-is `-0.0006853`, or `-0.07%` - an average liquid stock is a loser! Note to self:
+The average MAD is `0.02619` (that's 2.6%, not 1%), and the average daily mean
+is `-0.0006928`, or `-0.07%` - an average liquid stock is a loser! Note to self:
 don't invest in all the liquid stocks in the market equally, as you'd lose about
 16% annually.
 
@@ -202,13 +202,17 @@ fluctuate roughly by 1%? As it turns out, this is the behavor of the _indexes_,
 such as S&P500 or Nasdaq Composite 100. Such indexes are composed of stocks with
 the highest market caps, usually weighted by the market cap itself. Since most
 of market in terms of market cap is dominated by relatively few very large
-stocks, we may reasonably expect that the most traded stocks indeed fluctuate
-less and grow a bit better than the average liquid stock.
+stocks, we may reasonably expect that the largest stocks indeed fluctuate less
+and grow a bit better than the average liquid stock.
 
-The dataset I have does not provide daily prices for such indexes, but later in
-the study I will attempt to construct my own index based on the data I have,
-compare it with the standard indexes, and compute the average growth and
-volatility for it.
+And indeed, GOOG (which somewhat resembles NASDAQ Composite 100) has
+`mean=0.06808%` and `mad=1.164%`, while FAANG stocks (META, AAPL, AMZN, NFLX,
+GOOG) jointly have the daily mean of `0.08894%` and MAD `1.814%`.
+
+The dataset I have does not provide daily prices for indexes, but later in the
+study I will attempt to construct my own indexes based on the data I have,
+compare it with the standard indexes, and compute the average growth, volatility
+and other interesting metrics for them.
 
 ## What about Normal?
 

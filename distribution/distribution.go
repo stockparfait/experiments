@@ -276,8 +276,8 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 
 type jobResult struct {
 	Histogram  *stats.Histogram
-	Mean       float64
-	MAD        float64
+	Means      []float64
+	MADs       []float64
 	NumTickers int
 	Err        error
 }
@@ -293,8 +293,8 @@ func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 	}
 	ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
 	sample := ts.LogProfits()
-	res.Mean = sample.Mean()
-	res.MAD = sample.MAD()
+	res.Means = append(res.Means, sample.Mean())
+	res.MADs = append(res.MADs, sample.MAD())
 	if res.Histogram != nil {
 		if d.config.LogProfits.Normalize && sample.MAD() != 0.0 {
 			sample, err = sample.Normalize()
@@ -359,8 +359,8 @@ func (d *Distribution) processTickers(tickers []string) error {
 		if d.histogram != nil {
 			d.histogram.AddHistogram(jr.Histogram)
 		}
-		means = append(means, jr.Mean)
-		mads = append(mads, jr.MAD)
+		means = append(means, jr.Means...)
+		mads = append(mads, jr.MADs...)
 		d.numTickers += jr.NumTickers
 	}
 	if d.config.Means != nil {
