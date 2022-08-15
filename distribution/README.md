@@ -238,8 +238,9 @@ apparently routinely hit Gaussian-based hedge funds (notably, [LTCM]) and a
 subsequent "excuse" that it was a "10-sigma event" which, obviously, "should
 never happen".
 
-Obviously, we don't need to worry about the p-value, as it is clearly
-ridiculously small.
+Clearly, the hypothesis that daily log-profits are normally distributed must be
+ejected out of the Solar system with the speed of a black hole plasma jet, as
+the p-value for the rejection is subatomically small.
 
 As a side note, I momentarily switched to the standard deviation (a.k.a.
 _sigma_) just to relate the result back to the "stardand" and often
