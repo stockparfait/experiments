@@ -66,7 +66,10 @@ func TestConfig(t *testing.T) {
     {"hold": {"data": {"DB": "test"}}},
     {"distribution": {
       "data": {"DB": "test"},
-      "distribution graph": "dist",
+      "log-profits": {
+        "graph": "dist",
+        "normalize": true
+      },
       "parallel workers": 1
     }}
   ]
@@ -147,14 +150,15 @@ func TestConfig(t *testing.T) {
 						TotalAxis:     "right",
 					}},
 					{Config: &Distribution{
-						Reader:           &defaultReader,
-						Buckets:          defaultBuckets,
-						DistGraph:        "dist",
-						ChartType:        "line",
-						SamplesChartType: "line",
-						Normalize:        true,
-						BatchSize:        10,
-						Workers:          1,
+						Reader: &defaultReader,
+						LogProfits: &DistributionPlot{
+							Graph:     "dist",
+							Buckets:   defaultBuckets,
+							ChartType: "line",
+							Normalize: true,
+						},
+						BatchSize: 10,
+						Workers:   1,
 					}},
 				},
 			})

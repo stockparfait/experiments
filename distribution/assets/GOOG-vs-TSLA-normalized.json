@@ -2,48 +2,60 @@
   "experiments": [
     {
       "distribution": {
-        "buckets": {
-          "maxval": 15,
-          "minval": 0.2,
-          "n": 101,
-          "spacing": "symmetric exponential"
-        },
         "data": {
           "DB": "sharadar",
           "end": "2022-07-31",
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
           "start": "1998-01-01",
           "tickers": [
             "GOOG"
           ]
         },
-        "distribution graph": "dist",
         "id": "GOOG",
-        "log pdf": true,
-        "normalize": true,
-        "use means": true
+        "log-profits": {
+          "buckets": {
+            "maxval": 15,
+            "minval": 0.2,
+            "n": 101,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "dist",
+          "log Y": true,
+          "normalize": true,
+          "use means": true
+        }
       }
     },
     {
       "distribution": {
-        "buckets": {
-          "maxval": 15,
-          "minval": 0.2,
-          "n": 101,
-          "spacing": "symmetric exponential"
-        },
         "data": {
           "DB": "sharadar",
           "end": "2022-07-31",
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
           "start": "1998-01-01",
           "tickers": [
             "TSLA"
           ]
         },
-        "distribution graph": "dist",
         "id": "TSLA",
-        "log pdf": true,
-        "normalize": true,
-        "use means": true
+        "log-profits": {
+          "buckets": {
+            "maxval": 15,
+            "minval": 0.2,
+            "n": 101,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "dist",
+          "log Y": true,
+          "normalize": true,
+          "use means": true
+        }
       }
     }
   ],
@@ -52,7 +64,7 @@
       "graphs": [
         {
           "id": "dist",
-          "title": "Normalized Distributions",
+          "title": "Noramlized Distribution",
           "y_log_scale": false
         }
       ],

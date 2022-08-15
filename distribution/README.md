@@ -179,8 +179,36 @@ case, I cannot reject that `X` is indeed a random variable with a distribution
 resembling Student's T with `a=3.0` for liquid US stocks, i.e. with the average
 daily cash volume over $1M.
 
-There question of the p-value still remains, but we don't yet have enough
+The question of the p-value still remains, but we don't yet have enough
 machinery to estimate it accurately for the T-distribution.
+
+## Losers, Winners and Wanderers
+
+In the [previous section](../logprofits) we casually mentioned that stocks
+fluctuate daily roughly by 1% of their price. Is this really true?
+
+Let's plot the distribution of means and MADs of daily log-profits, one per each
+stock, for all the liquid stocks ([config](means-mads.json)):
+
+![Means and MADs](means-mads.jpeg)
+
+The average MAD is `0.02594` (that's 2.6%, not 1%), and the average daily mean
+is `-0.0006853`, or `-0.07%` - an average liquid stock is a loser! Note to self:
+don't invest in all the liquid stocks in the market equally, as you'd lose about
+16% annually.
+
+So, where do we normally get an impression that the market grows on average and
+fluctuate roughly by 1%? As it turns out, this is the behavor of the _indexes_,
+such as S&P500 or Nasdaq Composite 100. Such indexes are composed of stocks with
+the highest market caps, usually weighted by the market cap itself. Since most
+of market in terms of market cap is dominated by relatively few very large
+stocks, we may reasonably expect that the most traded stocks indeed fluctuate
+less and grow a bit better than the average liquid stock.
+
+The dataset I have does not provide daily prices for such indexes, but later in
+the study I will attempt to construct my own index based on the data I have,
+compare it with the standard indexes, and compute the average growth and
+volatility for it.
 
 ## What about Normal?
 

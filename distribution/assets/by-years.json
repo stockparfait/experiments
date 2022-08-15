@@ -2,103 +2,122 @@
   "experiments": [
     {
       "distribution": {
-        "buckets": {
-          "maxval": 200,
-          "minval": 0.2,
-          "n": 201,
-          "spacing": "symmetric exponential"
-        },
         "data": {
           "DB": "sharadar",
           "cash volume": {
             "min": 1000000
           },
           "end": "2003-12-31",
-          "start": "1998-01-01",
-          "tickers": []
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
+          "start": "1998-01-01"
         },
-        "distribution graph": "dist",
         "id": "1998-2003",
-        "log pdf": true,
-        "normalize": true,
-        "use means": true
+        "log-profits": {
+          "buckets": {
+            "maxval": 200,
+            "minval": 0.2,
+            "n": 201,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "dist",
+          "log Y": true,
+          "normalize": true,
+          "use means": true
+        }
       }
     },
     {
       "distribution": {
-        "buckets": {
-          "maxval": 200,
-          "minval": 0.2,
-          "n": 201,
-          "spacing": "symmetric exponential"
-        },
         "data": {
           "DB": "sharadar",
           "cash volume": {
             "min": 1000000
           },
           "end": "2009-12-31",
-          "start": "2004-01-01",
-          "tickers": []
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
+          "start": "2004-01-01"
         },
-        "distribution graph": "dist",
         "id": "2004-2009",
-        "log pdf": true,
-        "normalize": true,
-        "use means": true
+        "log-profits": {
+          "buckets": {
+            "maxval": 200,
+            "minval": 0.2,
+            "n": 201,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "dist",
+          "log Y": true,
+          "normalize": true,
+          "use means": true
+        }
       }
     },
     {
       "distribution": {
-        "buckets": {
-          "maxval": 200,
-          "minval": 0.2,
-          "n": 201,
-          "spacing": "symmetric exponential"
-        },
         "data": {
           "DB": "sharadar",
           "cash volume": {
             "min": 1000000
           },
           "end": "2015-12-31",
-          "start": "2010-01-01",
-          "tickers": []
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
+          "start": "2010-01-01"
         },
-        "distribution graph": "dist",
         "id": "2010-2015",
-        "log pdf": true,
-        "normalize": true,
-        "use means": true
+        "log-profits": {
+          "buckets": {
+            "maxval": 200,
+            "minval": 0.2,
+            "n": 201,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "dist",
+          "log Y": true,
+          "normalize": true,
+          "use means": true
+        }
       }
     },
     {
       "distribution": {
-        "buckets": {
-          "maxval": 200,
-          "minval": 0.2,
-          "n": 201,
-          "spacing": "symmetric exponential"
-        },
         "data": {
           "DB": "sharadar",
           "cash volume": {
             "min": 1000000
           },
-          "end": "2022-07-31",
-          "start": "2016-01-01",
-          "tickers": []
+          "end": "2022-12-31",
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
+          "start": "2016-01-01"
         },
-        "distribution graph": "dist",
         "id": "2016-2022",
-        "log pdf": true,
-        "normalize": true,
-        "reference distribution": {
-          "alpha": 3.0,
-          "name": "t"
-        },
-        "reference graph": "dist",
-        "use means": true
+        "log-profits": {
+          "buckets": {
+            "maxval": 200,
+            "minval": 0.2,
+            "n": 201,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "dist",
+          "log Y": true,
+          "normalize": true,
+          "reference distribution": {
+            "alpha": 3.0,
+            "name": "t"
+          },
+          "use means": true
+        }
       }
     }
   ],
@@ -107,7 +126,7 @@
       "graphs": [
         {
           "id": "dist",
-          "title": "Normalized Accumulated Distribution",
+          "title": "Noramlized Accumulated Distribution",
           "y_log_scale": false
         }
       ],

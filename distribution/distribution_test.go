@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"testing"
 
@@ -75,14 +76,12 @@ func TestDistribution(t *testing.T) {
 
 		g, err := canvas.EnsureGraph(plot.KindXY, "g", "dist")
 		So(err, ShouldBeNil)
-		sg, err := canvas.EnsureGraph(plot.KindXY, "sg", "dist")
-		So(err, ShouldBeNil)
 
 		Convey("defaults", func() {
 			var cfg config.Distribution
 			So(cfg.InitMessage(testutil.JSON(fmt.Sprintf(`{
   "data": {"DB path": "%s", "DB": "%s"},
-  "distribution graph": "g"
+  "log-profits": {"graph": "g"}
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
@@ -90,7 +89,6 @@ func TestDistribution(t *testing.T) {
 				"samples": "4",
 				"tickers": "2",
 			})
-			So(len(sg.Plots), ShouldEqual, 0)
 			So(len(g.Plots), ShouldEqual, 1)
 		})
 
@@ -99,28 +97,34 @@ func TestDistribution(t *testing.T) {
 			So(cfg.InitMessage(testutil.JSON(fmt.Sprintf(`{
   "id": "test",
   "data": {"DB path": "%s", "DB": "%s"},
-  "buckets": {"n": 3, "minval": -0.4, "maxval": 0.4},
-  "use means": true,
-  "distribution graph": "g",
-  "chart type": "bars",
-  "log pdf": true,
-  "normalize": false,
-  "samples graph": "sg",
-  "plot mean": true,
-  "percentiles": [5, 95],
-  "reference graph": "g",
-  "reference distribution": {"name": "t"}
+  "log-profits": {
+    "graph": "g",
+    "buckets": {"n": 3, "minval": -0.4, "maxval": 0.4},
+    "normalize": false,
+    "use means": true,
+    "raw counts": true,
+    "log Y": true,
+    "chart type": "bars",
+    "plot mean": true,
+    "percentiles": [5, 95],
+    "reference distribution": {"name": "t"}
+  },
+  "means": {"graph": "g"},
+  "MADs": {"graph": "g"}
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
 			So(values, ShouldResemble, experiments.Values{
-				"test samples": "4",
-				"test tickers": "2",
+				"test samples":      "4",
+				"test tickers":      "2",
+				"test average MAD":  "0.1347",
+				"test average mean": "0.04766",
 			})
-			So(len(g.Plots), ShouldEqual, 5)
-			So(len(sg.Plots), ShouldEqual, 1)
+			So(len(g.Plots), ShouldEqual, 7)
+			So(g.Plots[0].Legend, ShouldEqual, "test log-profit counts")
 			// The first value is skipped due to 0 count.
-			So(sg.Plots[0].Y, ShouldResemble, []float64{2, 2})
+			logCount := math.Log10(2)
+			So(g.Plots[0].Y, ShouldResemble, []float64{logCount, logCount})
 		})
 	})
 }

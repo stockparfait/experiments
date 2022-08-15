@@ -2,27 +2,57 @@
   "experiments": [
     {
       "distribution": {
-        "buckets": {
-          "maxval": 0.2,
-          "minval": -0.2,
-          "n": 101
-        },
-        "chart type": "bars",
         "data": {
           "DB": "sharadar",
           "end": "2022-07-31",
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
           "start": "1998-01-01",
           "tickers": [
             "GOOG"
           ]
         },
-        "distribution graph": "dist",
         "id": "GOOG",
-        "normalize": false,
-        "samples chart type": "bars",
-        "samples graph": "counts",
-        "samples right axis": true,
-        "use means": true
+        "log-profits": {
+          "buckets": {
+            "maxval": 0.2,
+            "minval": -0.2,
+            "n": 101
+          },
+          "chart type": "bars",
+          "graph": "dist",
+          "use means": true
+        }
+      }
+    },
+    {
+      "distribution": {
+        "data": {
+          "DB": "sharadar",
+          "end": "2022-07-31",
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
+          "start": "1998-01-01",
+          "tickers": [
+            "GOOG"
+          ]
+        },
+        "id": "GOOG raw",
+        "log-profits": {
+          "buckets": {
+            "maxval": 0.2,
+            "minval": -0.2,
+            "n": 101
+          },
+          "chart type": "bars",
+          "graph": "counts",
+          "raw counts": true,
+          "use means": true
+        }
       }
     }
   ],

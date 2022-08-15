@@ -112,6 +112,38 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 	return nil
 }
 
+// DistributionPlot is a config for a single graph in the Distribution
+// experiment.
+type DistributionPlot struct {
+	Graph       string                  `json:"graph" required:"true"`
+	Buckets     stats.Buckets           `json:"buckets"`
+	ChartType   string                  `json:"chart type" choices:"line,bars" default:"line"`
+	Normalize   bool                    `json:"normalize"`  // to mean=0, MAD=1
+	UseMeans    bool                    `json:"use means"`  // use bucket means rather than middles
+	KeepZeros   bool                    `json:"keep zeros"` // by default, skip y==0 points
+	LogY        bool                    `json:"log Y"`      // plot log10(y)
+	RightAxis   bool                    `json:"right axis"`
+	RawCounts   bool                    `json:"raw counts"`
+	RefDist     *AnalyticalDistribution `json:"reference distribution"`
+	AdjustRef   bool                    `json:"adjust reference distribution"`
+	PlotMean    bool                    `json:"plot mean"`
+	Percentiles []float64               `json:"percentiles"` // in [0..100]
+}
+
+var _ message.Message = &DistributionPlot{}
+
+func (dp *DistributionPlot) InitMessage(js interface{}) error {
+	if err := message.Init(dp, js); err != nil {
+		return errors.Annotate(err, "failed to init DistributionPLot")
+	}
+	for _, p := range dp.Percentiles {
+		if p < 0.0 || 100.0 < p {
+			return errors.Reason("percentile=%g must be in [0..100]", p)
+		}
+	}
+	return nil
+}
+
 // Distribution is the experiment config for deriving the distribution of
 // log-profits. By default, it normalizes the log-profits to have 0.0 mean and
 // 1.0 MAD; set "normalize" to false for the original distribution.  When
@@ -119,25 +151,13 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 // setting "adjust reference distribution" flag sets the mean and MAD of the
 // reference to that of the sample.
 type Distribution struct {
-	ID               string                  `json:"id"` // experiment ID, for multiple instances
-	Reader           *db.Reader              `json:"data" required:"true"`
-	Buckets          stats.Buckets           `json:"buckets"`
-	UseMeans         bool                    `json:"use means"`  // use bucket means rather than middles
-	KeepZeros        bool                    `json:"keep zeros"` // by default, skip y==0 points
-	LogPDF           bool                    `json:"log pdf"`    // plot log10(p.d.f.)
-	DistGraph        string                  `json:"distribution graph"`
-	ChartType        string                  `json:"chart type" choices:"line,bars" default:"line"`
-	SamplesGraph     string                  `json:"samples graph"`
-	SamplesChartType string                  `json:"samples chart type" choices:"line,bars" default:"line"`
-	SamplesRightAxis bool                    `json:"samples right axis"`
-	Normalize        bool                    `json:"normalize" default:"true"`
-	RefDist          *AnalyticalDistribution `json:"reference distribution"`
-	RefGraph         string                  `json:"reference graph"`
-	AdjustRef        bool                    `json:"adjust reference distribution"`
-	PlotMean         bool                    `json:"plot mean"`
-	Percentiles      []float64               `json:"percentiles"`             // in [0..100]
-	BatchSize        int                     `json:"batch size" default:"10"` // must be >0
-	Workers          int                     `json:"parallel workers"`        // >0; default = 2*runtime.NumCPU()
+	ID         string            `json:"id"` // experiment ID, for multiple instances
+	Reader     *db.Reader        `json:"data" required:"true"`
+	LogProfits *DistributionPlot `json:"log-profits"`
+	Means      *DistributionPlot `json:"means"`
+	MADs       *DistributionPlot `json:"MADs"`
+	BatchSize  int               `json:"batch size" default:"10"` // must be >0
+	Workers    int               `json:"parallel workers"`        // >0; default = 2*runtime.NumCPU()
 }
 
 var _ ExperimentConfig = &Distribution{}
@@ -151,11 +171,6 @@ func (e *Distribution) InitMessage(js interface{}) error {
 	}
 	if e.Workers <= 0 {
 		e.Workers = 2 * runtime.NumCPU()
-	}
-	for _, p := range e.Percentiles {
-		if p < 0.0 || 100.0 < p {
-			return errors.Reason("percentile=%g must be in [0..100]", p)
-		}
 	}
 	return nil
 }
