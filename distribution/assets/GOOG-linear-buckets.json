@@ -4,6 +4,7 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
+          "sources": ["SEP"],
           "end": "2022-07-31",
           "exclude tickers": [
             "JWACU",
@@ -31,6 +32,7 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
+          "sources": ["SEP"],
           "end": "2022-07-31",
           "exclude tickers": [
             "JWACU",

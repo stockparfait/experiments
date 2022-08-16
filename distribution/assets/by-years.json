@@ -4,6 +4,7 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
+          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -33,6 +34,7 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
+          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -62,6 +64,7 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
+          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -91,6 +94,7 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
+          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
