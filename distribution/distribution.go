@@ -255,21 +255,23 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 		return errors.Annotate(err, "failed to plot '%s' MADs distribution", d.config.ID)
 	}
 	if err := experiments.AddValue(ctx, d.prefix("tickers"), fmt.Sprintf("%d", d.numTickers)); err != nil {
-		return errors.Annotate(err, "failed to add tickers value")
+		return errors.Annotate(err, "failed to add '%s' tickers value", d.config.ID)
 	}
 	if d.histogram != nil {
 		if err := experiments.AddValue(ctx, d.prefix("samples"), fmt.Sprintf("%d", d.histogram.Size())); err != nil {
-			return errors.Annotate(err, "failed to add samples value")
+			return errors.Annotate(err, "failed to add '%s' samples value", d.config.ID)
 		}
 	}
 	if d.meansHistogram != nil {
 		if err := experiments.AddValue(ctx, d.prefix("average mean"), fmt.Sprintf("%.4g", d.meansHistogram.Mean())); err != nil {
-			return errors.Annotate(err, "failed to add average mean value")
+			return errors.Annotate(err,
+				"failed to add '%s' average mean value", d.config.ID)
 		}
 	}
 	if d.madsHistogram != nil {
 		if err := experiments.AddValue(ctx, d.prefix("average MAD"), fmt.Sprintf("%.4g", d.madsHistogram.Mean())); err != nil {
-			return errors.Annotate(err, "failed to add average MAD value")
+			return errors.Annotate(err,
+				"failed to add '%s' average MAD value", d.config.ID)
 		}
 	}
 	return nil
