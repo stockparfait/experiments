@@ -179,8 +179,41 @@ case, I cannot reject that `X` is indeed a random variable with a distribution
 resembling Student's T with `a=3.0` for liquid US stocks, i.e. with the average
 daily cash volume over $1M.
 
-There question of the p-value still remains, but we don't yet have enough
+The question of the p-value still remains, but we don't yet have enough
 machinery to estimate it accurately for the T-distribution.
+
+## Losers, Winners and Wanderers
+
+In the [previous section](../logprofits) I casually mentioned that stocks
+fluctuate daily roughly by 1% of their price. Is this really true?
+
+Let's plot the distribution of means and MADs of daily log-profits, one per each
+stock, for all the liquid stocks ([config](assets/means-mads.json)):
+
+![Means and MADs](assets/means-mads.jpeg)
+
+The average MAD is `0.02619` (that's 2.6%, not 1%), and the average daily mean
+is `-0.0006928`, or `-0.07%` - an average liquid stock is a loser! Note to self:
+don't invest in all the liquid stocks in the market equally, as you'd lose about
+16% annually.
+
+So, where did I get the impression that the market fluctuates roughly by 1%? As
+it turns out, this is the behavor of the _indexes_, such as S&P500 or Nasdaq
+Composite 100. Such indexes are composed of stocks with the highest market caps,
+usually weighted by the market cap itself. Since most of the market in terms of
+market cap is dominated by relatively few very large stocks, we may reasonably
+expect that the largest stocks indeed fluctuate less and grow a bit better than
+the average liquid stock.
+
+And indeed, GOOG (which somewhat resembles NASDAQ Composite 100) has
+`mean=0.06808%` (`18.5%` annualized) and `mad=1.164%`, while FAANG stocks (META,
+AAPL, AMZN, NFLX, GOOG) jointly have the daily mean of `0.08894%` (`24.9%`
+annualized) and MAD `1.814%`. OK, this little mystery is solved.
+
+The dataset I have does not provide daily prices for indexes, but later in the
+study I will attempt to construct my own indexes based on the data I have,
+compare it with the standard indexes, and compute the average growth, volatility
+and other interesting metrics for them.
 
 ## What about Normal?
 
@@ -205,8 +238,9 @@ apparently routinely hit Gaussian-based hedge funds (notably, [LTCM]) and a
 subsequent "excuse" that it was a "10-sigma event" which, obviously, "should
 never happen".
 
-Obviously, we don't need to worry about the p-value, as it is clearly
-ridiculously small.
+Clearly, the hypothesis that daily log-profits are normally distributed must be
+ejected out of the Solar system with the speed of a black hole plasma jet, as
+the p-value for the rejection is subatomically small.
 
 As a side note, I momentarily switched to the standard deviation (a.k.a.
 _sigma_) just to relate the result back to the "stardand" and often

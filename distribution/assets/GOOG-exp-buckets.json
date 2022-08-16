@@ -2,27 +2,58 @@
   "experiments": [
     {
       "distribution": {
-        "buckets": {
-          "maxval": 0.2,
-          "minval": 0.005,
-          "n": 101,
-          "spacing": "symmetric exponential"
-        },
         "data": {
           "DB": "sharadar",
           "end": "2022-07-31",
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
           "start": "1998-01-01",
           "tickers": [
             "GOOG"
           ]
         },
-        "distribution graph": "dist",
         "id": "GOOG",
-        "log pdf": true,
-        "normalize": false,
-        "samples graph": "counts",
-        "samples right axis": true,
-        "use means": true
+        "log-profits": {
+          "buckets": {
+            "maxval": 0.2,
+            "minval": 0.005,
+            "n": 101,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "dist",
+          "log Y": true,
+          "use means": true
+        }
+      }
+    },
+    {
+      "distribution": {
+        "data": {
+          "DB": "sharadar",
+          "end": "2022-07-31",
+          "exclude tickers": [
+            "JWACU",
+            "BOALY"
+          ],
+          "start": "1998-01-01",
+          "tickers": [
+            "GOOG"
+          ]
+        },
+        "id": "GOOG raw",
+        "log-profits": {
+          "buckets": {
+            "maxval": 0.2,
+            "minval": 0.005,
+            "n": 101,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "counts",
+          "raw counts": true,
+          "use means": true
+        }
       }
     }
   ],
