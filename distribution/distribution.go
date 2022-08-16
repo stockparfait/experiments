@@ -141,6 +141,7 @@ func plotDistribution(ctx context.Context, h *stats.Histogram, c *config.Distrib
 	if c.ChartType == "bars" {
 		plt.SetChartType(plot.ChartBars)
 	}
+	plt.SetLeftAxis(c.LeftAxis)
 	if err := plot.Add(ctx, plt, c.Graph); err != nil {
 		return errors.Annotate(err, "failed to add '%s' plot", legend)
 	}
@@ -299,7 +300,8 @@ func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 		if d.config.LogProfits.Normalize && sample.MAD() != 0.0 {
 			sample, err = sample.Normalize()
 			if err != nil {
-				return errors.Annotate(err, "failed to normalize log-profits")
+				return errors.Annotate(err,
+					"'%s': failed to normalize %s's log-profits", d.config.ID, ticker)
 			}
 		}
 		res.Histogram.Add(sample.Data()...)
@@ -371,7 +373,8 @@ func (d *Distribution) processTickers(tickers []string) error {
 			var err error
 			sample, err = sample.Normalize()
 			if err != nil {
-				return errors.Annotate(err, "failed to normalize means")
+				return errors.Annotate(err,
+					"'%s': failed to normalize means", d.config.ID)
 			}
 		}
 		d.meansHistogram.Add(sample.Data()...)
@@ -384,7 +387,8 @@ func (d *Distribution) processTickers(tickers []string) error {
 			var err error
 			sample, err = sample.Normalize()
 			if err != nil {
-				return errors.Annotate(err, "failed to normalize MADs")
+				return errors.Annotate(err,
+					"'%s': failed to normalize MADs", d.config.ID)
 			}
 		}
 		d.madsHistogram.Add(sample.Data()...)

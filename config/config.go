@@ -122,8 +122,8 @@ type DistributionPlot struct {
 	UseMeans    bool                    `json:"use means"`  // use bucket means rather than middles
 	KeepZeros   bool                    `json:"keep zeros"` // by default, skip y==0 points
 	LogY        bool                    `json:"log Y"`      // plot log10(y)
-	RightAxis   bool                    `json:"right axis"`
-	RawCounts   bool                    `json:"raw counts"`
+	LeftAxis    bool                    `json:"left axis"`
+	RawCounts   bool                    `json:"raw counts"` // plot raw counts
 	RefDist     *AnalyticalDistribution `json:"reference distribution"`
 	AdjustRef   bool                    `json:"adjust reference distribution"`
 	PlotMean    bool                    `json:"plot mean"`
@@ -134,7 +134,7 @@ var _ message.Message = &DistributionPlot{}
 
 func (dp *DistributionPlot) InitMessage(js interface{}) error {
 	if err := message.Init(dp, js); err != nil {
-		return errors.Annotate(err, "failed to init DistributionPLot")
+		return errors.Annotate(err, "failed to init DistributionPlot")
 	}
 	for _, p := range dp.Percentiles {
 		if p < 0.0 || 100.0 < p {
