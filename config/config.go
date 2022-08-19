@@ -167,6 +167,9 @@ func (e *Distribution) InitMessage(js interface{}) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init Distribution")
 	}
+	if e.Compound < 1 {
+		return errors.Reason("compound = %d must be >= 1", e.Compound)
+	}
 	if e.BatchSize <= 0 {
 		return errors.Reason("batch size = %d must be positive", e.BatchSize)
 	}
