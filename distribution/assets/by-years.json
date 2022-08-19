@@ -130,7 +130,7 @@
       "graphs": [
         {
           "id": "dist",
-          "title": "Noramlized Accumulated Distribution",
+          "title": "Normalized Accumulated Distribution",
           "y_log_scale": false
         }
       ],
