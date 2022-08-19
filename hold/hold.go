@@ -83,8 +83,12 @@ func (h *Hold) AddPosition(ctx context.Context, p config.HoldPosition) error {
 	ts := stats.NewTimeseries().Init(dates, data)
 	h.positions = append(h.positions, ts)
 
-	plt := plot.NewSeriesPlot(ts).SetYLabel("price")
-	plt.SetLegend(fmt.Sprintf("%.6g*%s", factor, p.Ticker))
+	legend := fmt.Sprintf("%.6g*%s", factor, p.Ticker)
+	plt, err := plot.NewSeriesPlot(ts)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s'", legend)
+	}
+	plt.SetYLabel("price").SetLegend(legend)
 	if h.config.PositionsAxis == "left" {
 		plt.SetLeftAxis(true)
 	}
@@ -118,10 +122,16 @@ func (h *Hold) AddTotal(ctx context.Context) error {
 		data[i] = totalMap[k]
 	}
 	h.total = stats.NewTimeseries().Init(dates, data)
-	p := plot.NewSeriesPlot(h.total).SetYLabel("price").SetLegend("Portfolio")
+	p, err := plot.NewSeriesPlot(h.total)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot 'Porftolio'")
+	}
+	p.SetYLabel("price").SetLegend("Portfolio")
 	if h.config.TotalAxis == "left" {
 		p.SetLeftAxis(true)
 	}
-	err := plot.Add(ctx, p, h.config.TotalGraph)
-	return errors.Annotate(err, "failed to add a plot for portfolio total")
+	if err := plot.Add(ctx, p, h.config.TotalGraph); err != nil {
+		return errors.Annotate(err, "failed to add a plot for portfolio total")
+	}
+	return nil
 }

@@ -91,7 +91,10 @@ func (t *TestExperiment) Run(ctx context.Context, cfg config.ExperimentConfig) e
 	if err := AddValue(ctx, "test", passed); err != nil {
 		return errors.Annotate(err, "cannot add pass/fail value")
 	}
-	p := plot.NewXYPlot([]float64{1.0, 2.0}, []float64{21.5, 42.0})
+	p, err := plot.NewXYPlot([]float64{1.0, 2.0}, []float64{21.5, 42.0})
+	if err != nil {
+		return errors.Annotate(err, "failed to create XY plot")
+	}
 	if err := plot.Add(ctx, p, t.cfg.Graph); err != nil {
 		return errors.Annotate(err, "cannot add plot")
 	}
