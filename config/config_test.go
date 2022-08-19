@@ -157,6 +157,7 @@ func TestConfig(t *testing.T) {
 							ChartType: "line",
 							Normalize: true,
 						},
+						Compound:  1,
 						BatchSize: 10,
 						Workers:   1,
 					}},
