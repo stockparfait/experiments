@@ -259,6 +259,17 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	if err := d.processTickers(tickers); err != nil {
 		return errors.Annotate(err, "failed to process tickers")
 	}
+	if err := experiments.AddValue(ctx, d.prefix("tickers"), fmt.Sprintf("%d", d.numTickers)); err != nil {
+		return errors.Annotate(err, "failed to add '%s' tickers value", d.config.ID)
+	}
+	if d.histogram != nil {
+		if err := experiments.AddValue(ctx, d.prefix("samples"), fmt.Sprintf("%d", d.histogram.Size())); err != nil {
+			return errors.Annotate(err, "failed to add '%s' samples value", d.config.ID)
+		}
+	}
+	if d.histogram.Size() == 0 {
+		return nil
+	}
 	if err := plotDistribution(ctx, d.histogram, d.config.LogProfits, d.prefix("log-profit")); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' sample distribution", d.config.ID)
 	}
@@ -267,14 +278,6 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	}
 	if err := plotDistribution(ctx, d.madsHistogram, d.config.MADs, d.prefix("MADs")); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' MADs distribution", d.config.ID)
-	}
-	if err := experiments.AddValue(ctx, d.prefix("tickers"), fmt.Sprintf("%d", d.numTickers)); err != nil {
-		return errors.Annotate(err, "failed to add '%s' tickers value", d.config.ID)
-	}
-	if d.histogram != nil {
-		if err := experiments.AddValue(ctx, d.prefix("samples"), fmt.Sprintf("%d", d.histogram.Size())); err != nil {
-			return errors.Annotate(err, "failed to add '%s' samples value", d.config.ID)
-		}
 	}
 	if d.meansHistogram != nil {
 		if err := experiments.AddValue(ctx, d.prefix("average mean"), fmt.Sprintf("%.4g", d.meansHistogram.Mean())); err != nil {
