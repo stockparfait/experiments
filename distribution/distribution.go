@@ -133,7 +133,11 @@ func plotDistribution(ctx context.Context, h *stats.Histogram, c *config.Distrib
 	}
 	xs, ys = filterXY(xs, ys, c)
 	min, max := minMax(ys)
-	plt := plot.NewXYPlot(xs, ys).SetLegend(legend + " " + yLabel)
+	plt, err := plot.NewXYPlot(xs, ys)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s'", legend)
+	}
+	plt.SetLegend(legend + " " + yLabel)
 	if c.LogY {
 		yLabel = "log10(" + yLabel + ")"
 	}
@@ -143,7 +147,7 @@ func plotDistribution(ctx context.Context, h *stats.Histogram, c *config.Distrib
 	}
 	plt.SetLeftAxis(c.LeftAxis)
 	if err := plot.Add(ctx, plt, c.Graph); err != nil {
-		return errors.Annotate(err, "failed to add '%s' plot", legend)
+		return errors.Annotate(err, "failed to add plot '%s'", legend)
 	}
 	if c.PlotMean {
 		if err := plotMean(ctx, h, c.Graph, min, max, legend); err != nil {
@@ -161,7 +165,10 @@ func plotDistribution(ctx context.Context, h *stats.Histogram, c *config.Distrib
 
 func plotMean(ctx context.Context, h *stats.Histogram, graph string, min, max float64, legend string) error {
 	x := h.Mean()
-	plt := plot.NewXYPlot([]float64{x, x}, []float64{min, max})
+	plt, err := plot.NewXYPlot([]float64{x, x}, []float64{min, max})
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s mean'", legend)
+	}
 	plt.SetLegend(fmt.Sprintf("%s mean=%.4g", legend, x))
 	plt.SetYLabel("").SetChartType(plot.ChartDashed)
 	if err := plot.Add(ctx, plt, graph); err != nil {
@@ -173,11 +180,15 @@ func plotMean(ctx context.Context, h *stats.Histogram, graph string, min, max fl
 func plotPercentiles(ctx context.Context, h *stats.Histogram, c *config.DistributionPlot, min, max float64, legend string) error {
 	for _, p := range c.Percentiles {
 		x := h.Quantile(p / 100.0)
-		plt := plot.NewXYPlot([]float64{x, x}, []float64{min, max})
+		plt, err := plot.NewXYPlot([]float64{x, x}, []float64{min, max})
+		if err != nil {
+			return errors.Annotate(err, "failed to create plot '%s %gth %%-ile'",
+				legend, p)
+		}
 		plt.SetLegend(fmt.Sprintf("%s %gth %%-ile=%.3g", legend, p, x))
 		plt.SetYLabel("").SetChartType(plot.ChartDashed)
 		if err := plot.Add(ctx, plt, c.Graph); err != nil {
-			return errors.Annotate(err, "failed to add '%s %gth %%-ile' plot", legend, p)
+			return errors.Annotate(err, "failed to add plot '%s %gth %%-ile'", legend, p)
 		}
 	}
 	return nil
@@ -216,7 +227,10 @@ func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.Distribut
 		ys[i] = dist.Prob(x)
 	}
 	xs, ys = filterXY(xs, ys, c)
-	plt := plot.NewXYPlot(xs, ys)
+	plt, err := plot.NewXYPlot(xs, ys)
+	if err != nil {
+		return errors.Annotate(err, "failed to create '%s' analytical plot", legend)
+	}
 	plt.SetLegend(legend + " " + distName).SetChartType(plot.ChartDashed)
 	if c.LogY {
 		plt.SetYLabel("log10(p.d.f.)")

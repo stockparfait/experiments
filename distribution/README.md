@@ -198,22 +198,18 @@ don't invest in all the liquid stocks in the market equally, as you'd lose about
 16% annually.
 
 So, where did I get the impression that the market fluctuates roughly by 1%? As
-it turns out, this is the behavor of the _indexes_, such as S&P500 or Nasdaq
-Composite 100. Such indexes are composed of stocks with the highest market caps,
-usually weighted by the market cap itself. Since most of the market in terms of
-market cap is dominated by relatively few very large stocks, we may reasonably
-expect that the largest stocks indeed fluctuate less and grow a bit better than
-the average liquid stock.
+it turns out, this is the behavor of the _indexes_, such as S&P500 (`0.82%`) or
+Nasdaq Composite 100 (`1.1%`) from 1998 till mid-2022. Such indexes are composed
+of stocks with the highest market caps, usually weighted by the market cap
+itself. Since most of the market in terms of market cap is dominated by
+relatively few very large stocks, we may reasonably expect that the largest
+stocks indeed fluctuate less and grow a bit better than the average liquid
+stock.
 
 And indeed, GOOG (which somewhat resembles NASDAQ Composite 100) has
 `mean=0.06808%` (`18.5%` annualized) and `mad=1.164%`, while FAANG stocks (META,
 AAPL, AMZN, NFLX, GOOG) jointly have the daily mean of `0.08894%` (`24.9%`
 annualized) and MAD `1.814%`. OK, this little mystery is solved.
-
-The dataset I have does not provide daily prices for indexes, but later in the
-study I will attempt to construct my own indexes based on the data I have,
-compare it with the standard indexes, and compute the average growth, volatility
-and other interesting metrics for them.
 
 ## What about Normal?
 
