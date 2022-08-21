@@ -89,7 +89,7 @@ func maybeSkipZeros(xs, ys []float64, c *config.DistributionPlot) ([]float64, []
 	return xs1, ys1
 }
 
-// maybeLog10 computes log10 for the slice of values if LogPDF is true.
+// maybeLog10 computes log10 for the slice of values if LogY is true.
 func maybeLog10(ys []float64, c *config.DistributionPlot) []float64 {
 	if !c.LogY {
 		return ys
@@ -101,8 +101,7 @@ func maybeLog10(ys []float64, c *config.DistributionPlot) []float64 {
 	return res
 }
 
-// filterXY optionally skips zeros, computes log10 if configured, and stores the
-// Y range for vertical lines.
+// filterXY optionally skips zeros and computes log10 if configured.
 func filterXY(xs, ys []float64, c *config.DistributionPlot) ([]float64, []float64) {
 	xs, ys = maybeSkipZeros(xs, ys, c)
 	ys = maybeLog10(ys, c)
