@@ -20,6 +20,8 @@ import (
 
 	"github.com/stockparfait/experiments/config"
 	"github.com/stockparfait/stockparfait/plot"
+	"github.com/stockparfait/stockparfait/stats"
+	"github.com/stockparfait/testutil"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -36,6 +38,28 @@ func TestExperiments(t *testing.T) {
 
 		_, err := plot.EnsureGraph(ctx, plot.KindXY, "main", "top")
 		So(err, ShouldBeNil)
+
+		Convey("PlotDistribution works", func() {
+			So(err, ShouldBeNil)
+			var cfg config.DistributionPlot
+			js := testutil.JSON(`
+{
+    "graph": "main",
+    "buckets": {"n": 3, "minval": -5, "maxval": 5},
+    "normalize": false,
+    "use means": true,
+    "raw counts": true,
+    "log Y": true,
+    "chart type": "bars",
+    "plot mean": true,
+    "percentiles": [50],
+    "reference distribution": {"name": "t"}
+}`)
+			So(cfg.InitMessage(js), ShouldBeNil)
+			h := stats.NewHistogram(&cfg.Buckets)
+			h.Add(2.0, 3.0, 3.0, 4.0)
+			So(PlotDistribution(ctx, h, &cfg, "test"), ShouldBeNil)
+		})
 
 		Convey("for TestExperiment", func() {
 			conf := config.TestExperimentConfig{
