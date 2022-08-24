@@ -209,33 +209,85 @@ func plotPercentiles(ctx context.Context, h *stats.Histogram, c *config.Distribu
 	return nil
 }
 
+// distributionDistance computes a measure between the sample distribution given
+// by h and an analytical distribution d in xs points corresponding to h's
+// buckets, ignoring the points with less than ignoreCounts counts in h.
+func distributionDistance(xs []float64, h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
+	var res float64
+	if ignoreCounts < 0 {
+		ignoreCounts = 0
+	}
+	for i, x := range xs {
+		if h.Count(i) <= uint(ignoreCounts) {
+			continue
+		}
+		m := math.Abs(math.Log(h.PDF(i)) - math.Log(d.Prob(x)))
+		if m > res {
+			res = m
+		}
+	}
+	return res
+}
+
+// FindMin is a generic search for a function minimum within [min..max]
+// interval. Stop when the search interval is less than epsilon, or the number
+// of iterations exceeds maxIter.
+//
+// For correction functionality assumes min < max, epsilon > 0, maxIter >= 1.
+func FindMin(f func(float64) float64, min, max, epsilon float64, maxIter int) float64 {
+	res := (max - min) / 2.0
+	for i := 0; i < maxIter && (max-min) > epsilon; i++ {
+		m1 := min + (max-min)/2.1
+		m2 := max - (max-min)/2.1
+		if f(m1) < f(m2) {
+			max = m2
+		} else {
+			min = m1
+		}
+		res = (max + min) / 2.0
+	}
+	return res
+}
+
 func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.DistributionPlot, legend string) error {
 	if c.RefDist == nil {
 		return nil
 	}
 	mean := c.RefDist.Mean
 	mad := c.RefDist.MAD
+	alpha := c.RefDist.Alpha
 	if c.AdjustRef {
 		mean = h.Mean()
 		mad = h.MAD()
-	}
-	var dist stats.Distribution
-	distName := ""
-	switch c.RefDist.Name {
-	case "t":
-		dist = stats.NewStudentsTDistribution(c.RefDist.Alpha, mean, mad)
-		distName = fmt.Sprintf("T distribution a=%.2f", c.RefDist.Alpha)
-	case "normal":
-		dist = stats.NewNormalDistribution(mean, mad)
-		distName = "Normal distribution"
-	default:
-		return errors.Reason("unsuppoted distribution type: '%s'", c.RefDist.Name)
 	}
 	var xs []float64
 	if c.UseMeans {
 		xs = h.Xs()
 	} else {
 		xs = h.Buckets().Xs(0.5)
+	}
+	if c.DeriveAlpha != nil {
+		f := func(alpha float64) float64 {
+			d := stats.NewStudentsTDistribution(alpha, mean, mad)
+			return distributionDistance(xs, h, d, c.IgnoreCounts)
+		}
+		m := c.DeriveAlpha
+		alpha = FindMin(f, m.MinX, m.MaxX, m.Epsilon, m.MaxIterations)
+		if err := AddValue(ctx, legend+" alpha", fmt.Sprintf("%.4g", alpha)); err != nil {
+			return errors.Annotate(err, "failed to add value for '%s alpha'", legend)
+		}
+	}
+	var dist stats.Distribution
+	distName := ""
+	switch c.RefDist.Name {
+	case "t":
+		dist = stats.NewStudentsTDistribution(alpha, mean, mad)
+		distName = fmt.Sprintf("T distribution a=%.2f", alpha)
+	case "normal":
+		dist = stats.NewNormalDistribution(mean, mad)
+		distName = "Normal distribution"
+	default:
+		return errors.Reason("unsuppoted distribution type: '%s'", c.RefDist.Name)
 	}
 	ys := make([]float64, len(xs))
 	for i, x := range xs {

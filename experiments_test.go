@@ -30,6 +30,27 @@ import (
 func TestExperiments(t *testing.T) {
 	t.Parallel()
 
+	Convey("FindMin", t, func() {
+		var iterations int
+		f := func(x float64) float64 { iterations++; x = x - 1.0; return x * x }
+
+		Convey("stop with epsilon precision", func() {
+			maxIter := 20
+			res := FindMin(f, -1.0, 2.0, 0.01, maxIter)
+			// f is called twice per iteration.
+			So(iterations, ShouldBeLessThan, 2*maxIter)
+			So(testutil.Round(res, 2), ShouldEqual, 1.0)
+		})
+
+		Convey("stop with max iterations", func() {
+			maxIter := 8
+			res := FindMin(f, -5.0, 2.0, 0.01, maxIter)
+			So(iterations, ShouldEqual, 2*maxIter)
+			So(testutil.Round(res, 1), ShouldEqual, 1.0)
+		})
+
+	})
+
 	Convey("Experiments API works", t, func() {
 		ctx := context.Background()
 		canvas := plot.NewCanvas()
@@ -54,7 +75,12 @@ func TestExperiments(t *testing.T) {
     "chart type": "bars",
     "plot mean": true,
     "percentiles": [50],
-    "reference distribution": {"name": "t"}
+    "reference distribution": {"name": "t"},
+    "derive alpha": {
+      "min x": 2,
+      "max x": 4,
+      "max iterations": 10
+    }
 }`)
 			So(cfg.InitMessage(js), ShouldBeNil)
 			h := stats.NewHistogram(&cfg.Buckets)
