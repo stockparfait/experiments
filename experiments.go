@@ -235,18 +235,17 @@ func distributionDistance(xs []float64, h *stats.Histogram, d stats.Distribution
 //
 // For correction functionality assumes min < max, epsilon > 0, maxIter >= 1.
 func FindMin(f func(float64) float64, min, max, epsilon float64, maxIter int) float64 {
-	res := (max - min) / 2.0
 	for i := 0; i < maxIter && (max-min) > epsilon; i++ {
-		m1 := min + (max-min)/2.1
-		m2 := max - (max-min)/2.1
+		d := (max - min) / 2.1
+		m1 := min + d
+		m2 := max - d
 		if f(m1) < f(m2) {
 			max = m2
 		} else {
 			min = m1
 		}
-		res = (max + min) / 2.0
 	}
-	return res
+	return (max + min) / 2.0
 }
 
 func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.DistributionPlot, legend string) error {
