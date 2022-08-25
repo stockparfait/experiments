@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"os"
 	"testing"
 
@@ -99,10 +98,10 @@ func TestDistribution(t *testing.T) {
   "data": {"DB path": "%s", "DB": "%s"},
   "log-profits": {
     "graph": "g",
+    "counts graph": "g",
     "buckets": {"n": 3, "minval": -0.4, "maxval": 0.4},
     "normalize": false,
     "use means": true,
-    "raw counts": true,
     "log Y": true,
     "chart type": "bars",
     "plot mean": true,
@@ -120,11 +119,10 @@ func TestDistribution(t *testing.T) {
 				"test average MAD":  "0.1347",
 				"test average mean": "0.04766",
 			})
-			So(len(g.Plots), ShouldEqual, 7)
-			So(g.Plots[0].Legend, ShouldEqual, "test log-profit counts")
+			So(len(g.Plots), ShouldEqual, 8)
+			So(g.Plots[1].Legend, ShouldEqual, "test log-profit counts")
 			// The first value is skipped due to 0 count.
-			logCount := math.Log10(2)
-			So(g.Plots[0].Y, ShouldResemble, []float64{logCount, logCount})
+			So(g.Plots[1].Y, ShouldResemble, []float64{2, 2})
 		})
 	})
 }

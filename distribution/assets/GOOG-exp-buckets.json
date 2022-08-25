@@ -23,37 +23,9 @@
             "n": 101,
             "spacing": "symmetric exponential"
           },
+          "counts graph": "counts",
           "graph": "dist",
           "log Y": true,
-          "use means": true
-        }
-      }
-    },
-    {
-      "distribution": {
-        "data": {
-          "DB": "sharadar",
-          "sources": ["SEP"],
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "start": "1998-01-01",
-          "tickers": [
-            "GOOG"
-          ]
-        },
-        "id": "GOOG raw",
-        "log-profits": {
-          "buckets": {
-            "maxval": 0.2,
-            "minval": 0.005,
-            "n": 101,
-            "spacing": "symmetric exponential"
-          },
-          "graph": "counts",
-          "raw counts": true,
           "use means": true
         }
       }
