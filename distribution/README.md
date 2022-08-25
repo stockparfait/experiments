@@ -119,7 +119,7 @@ comparison, I'm also throwing in the similarly normalized (`mean=0.0`,
 
 The plot indeed looks very nice, and most interestingly, it follows fairly
 closely the T-distribution plot, even if it somewhat underestimates the
-thickness of the tails of the sample distribution.
+thickness of the tails of the sample distribution (in fact, `a=2.55` is a better fit).
 
 The number of samples in the buckets is fairly high even as far as 30 MADs away
 (about 700 samples at +30 and -30 MADs).  Notice the sample noise: it starts to

@@ -112,22 +112,52 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 	return nil
 }
 
+// FindMin configures parameters for finding the minimum of a function.  The
+// algorithm assumes that the function is monotone around the single minimum
+// within the interval.
+type FindMin struct {
+	MinX          float64 `json:"min x" required:"true"`
+	MaxX          float64 `json:"max x" required:"true"`
+	Epsilon       float64 `json:"epsilon" default:"0.01"` // min size of the search interval
+	MaxIterations int     `json:"max iterations" default:"1000"`
+}
+
+var _ message.Message = &FindMin{}
+
+func (f *FindMin) InitMessage(js interface{}) error {
+	if err := message.Init(f, js); err != nil {
+		return errors.Annotate(err, "failed to init FindMin")
+	}
+	if f.MinX > f.MaxX {
+		return errors.Reason("min x=%g must be <= max x=%g", f.MinX, f.MaxX)
+	}
+	if f.Epsilon <= 0.0 {
+		return errors.Reason("epsilon=%g must be > 0.0", f.Epsilon)
+	}
+	if f.MaxIterations < 1 {
+		return errors.Reason("max iterations = %d must be >= 1", f.MaxIterations)
+	}
+	return nil
+}
+
 // DistributionPlot is a config for a single graph in the Distribution
 // experiment.
 type DistributionPlot struct {
-	Graph       string                  `json:"graph" required:"true"`
-	Buckets     stats.Buckets           `json:"buckets"`
-	ChartType   string                  `json:"chart type" choices:"line,bars" default:"line"`
-	Normalize   bool                    `json:"normalize"`  // to mean=0, MAD=1
-	UseMeans    bool                    `json:"use means"`  // use bucket means rather than middles
-	KeepZeros   bool                    `json:"keep zeros"` // by default, skip y==0 points
-	LogY        bool                    `json:"log Y"`      // plot log10(y)
-	LeftAxis    bool                    `json:"left axis"`
-	RawCounts   bool                    `json:"raw counts"` // plot raw counts
-	RefDist     *AnalyticalDistribution `json:"reference distribution"`
-	AdjustRef   bool                    `json:"adjust reference distribution"`
-	PlotMean    bool                    `json:"plot mean"`
-	Percentiles []float64               `json:"percentiles"` // in [0..100]
+	Graph        string                  `json:"graph" required:"true"`
+	Buckets      stats.Buckets           `json:"buckets"`
+	ChartType    string                  `json:"chart type" choices:"line,bars" default:"line"`
+	Normalize    bool                    `json:"normalize"`  // to mean=0, MAD=1
+	UseMeans     bool                    `json:"use means"`  // use bucket means rather than middles
+	KeepZeros    bool                    `json:"keep zeros"` // by default, skip y==0 points
+	LogY         bool                    `json:"log Y"`      // plot log10(y)
+	LeftAxis     bool                    `json:"left axis"`
+	RawCounts    bool                    `json:"raw counts"` // plot raw counts
+	RefDist      *AnalyticalDistribution `json:"reference distribution"`
+	AdjustRef    bool                    `json:"adjust reference distribution"`
+	DeriveAlpha  *FindMin                `json:"derive alpha"`  // for ref. dist. from data
+	IgnoreCounts int                     `json:"ignore counts"` // when deriving alpha
+	PlotMean     bool                    `json:"plot mean"`
+	Percentiles  []float64               `json:"percentiles"` // in [0..100]
 }
 
 var _ message.Message = &DistributionPlot{}

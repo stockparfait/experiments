@@ -68,7 +68,12 @@ func TestConfig(t *testing.T) {
       "data": {"DB": "test"},
       "log-profits": {
         "graph": "dist",
-        "normalize": true
+        "normalize": true,
+        "reference distribution": {"name": "t"},
+        "derive alpha": {
+          "min x": 2,
+          "max x": 4
+        }
       },
       "parallel workers": 1
     }}
@@ -156,6 +161,18 @@ func TestConfig(t *testing.T) {
 							Buckets:   defaultBuckets,
 							ChartType: "line",
 							Normalize: true,
+							RefDist: &AnalyticalDistribution{
+								Name:  "t",
+								Mean:  0.0,
+								MAD:   1.0,
+								Alpha: 3.0,
+							},
+							DeriveAlpha: &FindMin{
+								MinX:          2.0,
+								MaxX:          4.0,
+								Epsilon:       0.01,
+								MaxIterations: 1000,
+							},
 						},
 						Compound:  1,
 						BatchSize: 10,
