@@ -127,26 +127,18 @@ func PlotDistribution(ctx context.Context, h *stats.Histogram, c *config.Distrib
 	if c == nil {
 		return nil
 	}
-	var xs []float64
+	var xs0 []float64
 	var ys []float64
 	yLabel := "p.d.f."
 
 	if c.UseMeans {
-		xs = h.Xs()
+		xs0 = h.Xs()
 	} else {
-		xs = h.Buckets().Xs(0.5)
+		xs0 = h.Buckets().Xs(0.5)
 	}
 
-	if c.RawCounts {
-		yLabel = "counts"
-		ys = make([]float64, len(h.Counts()))
-		for i, c := range h.Counts() {
-			ys[i] = float64(c)
-		}
-	} else {
-		ys = h.PDFs()
-	}
-	xs, ys = filterXY(xs, ys, c)
+	ys = h.PDFs()
+	xs, ys := filterXY(xs0, ys, c)
 	min, max := minMax(ys)
 	plt, err := plot.NewXYPlot(xs, ys)
 	if err != nil {
@@ -164,6 +156,9 @@ func PlotDistribution(ctx context.Context, h *stats.Histogram, c *config.Distrib
 	if err := plot.Add(ctx, plt, c.Graph); err != nil {
 		return errors.Annotate(err, "failed to add plot '%s'", legend)
 	}
+	if err := plotCounts(ctx, h, xs0, c, legend); err != nil {
+		return errors.Annotate(err, "failed to plot '%s counts'", legend)
+	}
 	if c.PlotMean {
 		if err := plotMean(ctx, h, c.Graph, min, max, legend); err != nil {
 			return errors.Annotate(err, "failed to plot '%s mean'", legend)
@@ -174,6 +169,30 @@ func PlotDistribution(ctx context.Context, h *stats.Histogram, c *config.Distrib
 	}
 	if err := plotAnalytical(ctx, h, c, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s ref dist'", legend)
+	}
+	return nil
+}
+
+func plotCounts(ctx context.Context, h *stats.Histogram, xs []float64, c *config.DistributionPlot, legend string) error {
+	if c.CountsGraph == "" {
+		return nil
+	}
+	cs := make([]float64, len(h.Counts()))
+	for i, y := range h.Counts() {
+		cs[i] = float64(y)
+	}
+	xs, cs = maybeSkipZeros(xs, cs, c)
+	plt, err := plot.NewXYPlot(xs, cs)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s counts'", legend)
+	}
+	plt.SetLegend(legend + " counts").SetYLabel("counts")
+	plt.SetLeftAxis(c.CountsLeftAxis)
+	if c.ChartType == "bars" {
+		plt.SetChartType(plot.ChartBars)
+	}
+	if err := plot.Add(ctx, plt, c.CountsGraph); err != nil {
+		return errors.Annotate(err, "failed to add plot '%s counts'", legend)
 	}
 	return nil
 }

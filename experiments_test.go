@@ -16,7 +16,6 @@ package experiments
 
 import (
 	"context"
-	"math"
 	"testing"
 
 	"github.com/stockparfait/experiments/config"
@@ -60,6 +59,8 @@ func TestExperiments(t *testing.T) {
 
 		g, err := plot.EnsureGraph(ctx, plot.KindXY, "main", "top")
 		So(err, ShouldBeNil)
+		cg, err := plot.EnsureGraph(ctx, plot.KindXY, "counts", "top")
+		So(err, ShouldBeNil)
 
 		Convey("PlotDistribution works", func() {
 			So(err, ShouldBeNil)
@@ -67,10 +68,10 @@ func TestExperiments(t *testing.T) {
 			js := testutil.JSON(`
 {
     "graph": "main",
+    "counts graph": "counts",
     "buckets": {"n": 9, "minval": -5, "maxval": 5},
     "normalize": false,
     "use means": true,
-    "raw counts": true,
     "log Y": true,
     "chart type": "bars",
     "plot mean": true,
@@ -87,9 +88,12 @@ func TestExperiments(t *testing.T) {
 			h.Add(-2.0, -0.5, 0.5, 2.0)
 			So(PlotDistribution(ctx, h, &cfg, "test"), ShouldBeNil)
 			So(len(g.Plots), ShouldEqual, 4)
-			So(g.Plots[0].Legend, ShouldEqual, "test counts")
-			So(g.Plots[0].X, ShouldResemble, []float64{-2, 0, 2})
-			So(g.Plots[0].Y, ShouldResemble, []float64{0, math.Log10(2), 0})
+			So(len(cg.Plots), ShouldEqual, 1)
+			So(g.Plots[0].Legend, ShouldEqual, "test p.d.f.")
+			So(cg.Plots[0].Legend, ShouldEqual, "test counts")
+			So(cg.Plots[0].YLabel, ShouldEqual, "counts")
+			So(cg.Plots[0].X, ShouldResemble, []float64{-2, 0, 2})
+			So(cg.Plots[0].Y, ShouldResemble, []float64{1, 2, 1})
 		})
 
 		Convey("for TestExperiment", func() {

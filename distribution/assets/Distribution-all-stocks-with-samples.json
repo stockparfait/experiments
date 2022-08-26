@@ -20,6 +20,7 @@
             "n": 201,
             "spacing": "symmetric exponential"
           },
+          "counts graph": "counts",
           "graph": "dist",
           "log Y": true,
           "normalize": true,
@@ -27,33 +28,6 @@
             "alpha": 3.0,
             "name": "t"
           },
-          "use means": true
-        }
-      }
-    },
-    {
-      "distribution": {
-        "data": {
-          "DB": "sharadar",
-          "sources": ["SEP"],
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "start": "1998-01-01"
-        },
-        "id": "all stocks 1998-2022 raw",
-        "log-profits": {
-          "buckets": {
-            "maxval": 700,
-            "minval": 0.2,
-            "n": 201,
-            "spacing": "symmetric exponential"
-          },
-          "graph": "counts",
-          "normalize": true,
-          "raw counts": true,
           "use means": true
         }
       }
