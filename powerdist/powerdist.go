@@ -24,10 +24,10 @@ import (
 	"github.com/stockparfait/stockparfait/stats"
 )
 
-// PowerDist is an Experiment implementation for studying properties of analytical power distributions.
+// PowerDist is an Experiment implementation for studying properties of
+// analytical power and normal distributions.
 type PowerDist struct {
 	config   *config.PowerDist
-	context  context.Context
 	distName string
 	dist     *stats.RandDistribution
 }
@@ -67,7 +67,6 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	if d.config, ok = cfg.(*config.PowerDist); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
-	d.context = ctx
 	d.dist, d.distName, err = randDistribution(&d.config.Dist)
 	if err != nil {
 		return errors.Annotate(err, "failed to create RandDistribution")

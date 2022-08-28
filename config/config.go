@@ -231,8 +231,8 @@ type PowerDist struct {
 	MeanGraph  string `json:"mean graph"`
 	MADGraph   string `json:"MAD graph"`
 	SigmaGraph string `json:"sigma graph"`
-	Samples    int    `json:"samples" default:"10000"`
-	Points     int    `json:"points" default:"200"`
+	Samples    int    `json:"samples" default:"10000"` // >= 3
+	Points     int    `json:"points" default:"200"`    // >= 3
 	// Distribution of derived statistics estimated from Samples, to estimate
 	// confidence intervals of the statistics.
 	MeanDist  *DistributionPlot `json:"mean distribution"`
@@ -246,6 +246,12 @@ var _ ExperimentConfig = &PowerDist{}
 func (e *PowerDist) InitMessage(js interface{}) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init PowerDist")
+	}
+	if e.Samples < 3 {
+		return errors.Reason("samples=%d must be >= 3", e.Samples)
+	}
+	if e.Points < 3 {
+		return errors.Reason("points=%d must be >= 3", e.Points)
 	}
 	return nil
 }
