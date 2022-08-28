@@ -27,6 +27,7 @@ import (
 	"github.com/stockparfait/experiments/config"
 	"github.com/stockparfait/experiments/distribution"
 	"github.com/stockparfait/experiments/hold"
+	"github.com/stockparfait/experiments/powerdist"
 	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/plot"
 )
@@ -95,6 +96,8 @@ func runExperiment(ctx context.Context, ec config.ExperimentConfig) error {
 		e = &hold.Hold{}
 	case "distribution":
 		e = &distribution.Distribution{}
+	case "power distribution":
+		e = &powerdist.PowerDist{}
 	default:
 		return errors.Reason("unsupported experiment '%s'", ec.Name())
 	}
