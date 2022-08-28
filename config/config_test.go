@@ -76,6 +76,9 @@ func TestConfig(t *testing.T) {
         }
       },
       "parallel workers": 1
+    }},
+    {"power distribution": {
+      "distribution": {"name": "normal"}
     }}
   ]
 }`
@@ -162,10 +165,13 @@ func TestConfig(t *testing.T) {
 							ChartType: "line",
 							Normalize: true,
 							RefDist: &AnalyticalDistribution{
-								Name:  "t",
-								Mean:  0.0,
-								MAD:   1.0,
-								Alpha: 3.0,
+								Name:     "t",
+								Mean:     0.0,
+								MAD:      1.0,
+								Alpha:    3.0,
+								Compound: 1,
+								Samples:  1000,
+								Buckets:  defaultBuckets,
 							},
 							DeriveAlpha: &FindMin{
 								MinX:          2.0,
@@ -177,6 +183,18 @@ func TestConfig(t *testing.T) {
 						Compound:  1,
 						BatchSize: 10,
 						Workers:   1,
+					}},
+					{Config: &PowerDist{
+						Dist: AnalyticalDistribution{
+							Name:     "normal",
+							MAD:      1.0,
+							Alpha:    3.0,
+							Compound: 1,
+							Samples:  1000,
+							Buckets:  defaultBuckets,
+						},
+						Samples: 10000,
+						Points:  200,
 					}},
 				},
 			})

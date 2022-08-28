@@ -267,16 +267,44 @@ func FindMin(f func(float64) float64, min, max, epsilon float64, maxIter int) fl
 	return (max + min) / 2.0
 }
 
+// AnalyticalDistribution instantiated from the corresponding config.
+func AnalyticalDistribution(c *config.AnalyticalDistribution) (dist stats.Distribution, distName string, err error) {
+	switch c.Name {
+	case "t":
+		dist = stats.NewStudentsTDistribution(c.Alpha, c.Mean, c.MAD)
+		distName = fmt.Sprintf("T(a=%.2f)", c.Alpha)
+	case "normal":
+		dist = stats.NewNormalDistribution(c.Mean, c.MAD)
+		distName = "Gauss"
+	default:
+		err = errors.Reason("unsuppoted distribution type: '%s'", c.Name)
+		return
+	}
+	if c.Compound > 1 {
+		xform := func(d stats.Distribution) float64 {
+			acc := 0.0
+			for i := 0; i < c.Compound; i++ {
+				acc += d.Rand()
+			}
+			if c.Normalize {
+				acc /= float64(c.Compound)
+			}
+			return acc
+		}
+		dist = stats.NewRandDistribution(dist, xform, c.Samples, &c.Buckets)
+		distName += fmt.Sprintf(" x %d", c.Compound)
+	}
+	return
+}
+
 func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.DistributionPlot, legend string) error {
 	if c.RefDist == nil {
 		return nil
 	}
-	mean := c.RefDist.Mean
-	mad := c.RefDist.MAD
-	alpha := c.RefDist.Alpha
+	dc := *c.RefDist // shallow copy, to modify locally
 	if c.AdjustRef {
-		mean = h.Mean()
-		mad = h.MAD()
+		dc.Mean = h.Mean()
+		dc.MAD = h.MAD()
 	}
 	var xs []float64
 	if c.UseMeans {
@@ -286,26 +314,18 @@ func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.Distribut
 	}
 	if c.DeriveAlpha != nil {
 		f := func(alpha float64) float64 {
-			d := stats.NewStudentsTDistribution(alpha, mean, mad)
+			d := stats.NewStudentsTDistribution(alpha, dc.Mean, dc.MAD)
 			return distributionDistance(xs, h, d, c.IgnoreCounts)
 		}
 		m := c.DeriveAlpha
-		alpha = FindMin(f, m.MinX, m.MaxX, m.Epsilon, m.MaxIterations)
-		if err := AddValue(ctx, legend+" alpha", fmt.Sprintf("%.4g", alpha)); err != nil {
+		dc.Alpha = FindMin(f, m.MinX, m.MaxX, m.Epsilon, m.MaxIterations)
+		if err := AddValue(ctx, legend+" alpha", fmt.Sprintf("%.4g", dc.Alpha)); err != nil {
 			return errors.Annotate(err, "failed to add value for '%s alpha'", legend)
 		}
 	}
-	var dist stats.Distribution
-	distName := ""
-	switch c.RefDist.Name {
-	case "t":
-		dist = stats.NewStudentsTDistribution(alpha, mean, mad)
-		distName = fmt.Sprintf("T distribution a=%.2f", alpha)
-	case "normal":
-		dist = stats.NewNormalDistribution(mean, mad)
-		distName = "Normal distribution"
-	default:
-		return errors.Reason("unsuppoted distribution type: '%s'", c.RefDist.Name)
+	dist, distName, err := AnalyticalDistribution(&dc)
+	if err != nil {
+		return errors.Annotate(err, "failed to instantiate reference distribution")
 	}
 	ys := make([]float64, len(xs))
 	for i, x := range xs {
@@ -316,7 +336,7 @@ func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.Distribut
 	if err != nil {
 		return errors.Annotate(err, "failed to create '%s' analytical plot", legend)
 	}
-	plt.SetLegend(legend + " " + distName).SetChartType(plot.ChartDashed)
+	plt.SetLegend(legend + " ref:" + distName).SetChartType(plot.ChartDashed)
 	if c.LogY {
 		plt.SetYLabel("log10(p.d.f.)")
 	} else {

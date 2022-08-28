@@ -91,10 +91,14 @@ func (h *Hold) Name() string { return "hold" }
 
 // AnalyticalDistribution configures the type and parameters of a distibution.
 type AnalyticalDistribution struct {
-	Name  string  `json:"name" required:"true" choices:"t,normal"`
-	Mean  float64 `json:"mean" default:"0.0"`
-	MAD   float64 `json:"MAD" default:"1.0"`
-	Alpha float64 `json:"alpha" default:"3.0"` // T dist. parameter
+	Name      string        `json:"name" required:"true" choices:"t,normal"`
+	Mean      float64       `json:"mean" default:"0.0"`
+	MAD       float64       `json:"MAD" default:"1.0"`
+	Alpha     float64       `json:"alpha" default:"3.0"`    // T dist. parameter
+	Compound  int           `json:"compound" default:"1"`   // sum of N samples
+	Normalize bool          `json:"normalize"`              // divide by Compound
+	Samples   int           `json:"samples" default:"1000"` // #samples for estimating statistics
+	Buckets   stats.Buckets `json:"buckets"`
 }
 
 var _ message.Message = &AnalyticalDistribution{}
@@ -108,6 +112,12 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 	}
 	if d.MAD <= 0.0 {
 		return errors.Reason("MAD=%f must be positive", d.MAD)
+	}
+	if d.Compound < 1 {
+		return errors.Reason("Compound=%d must be >= 1", d.Compound)
+	}
+	if d.Samples < 1 {
+		return errors.Reason("Samples=%d must be >= 1", d.Samples)
 	}
 	return nil
 }
@@ -212,6 +222,42 @@ func (e *Distribution) InitMessage(js interface{}) error {
 
 func (e *Distribution) Name() string { return "distribution" }
 
+type PowerDist struct {
+	ID         string                 `json:"id"` // experiment ID, for multiple instances
+	Dist       AnalyticalDistribution `json:"distribution"`
+	SamplePlot *DistributionPlot      `json:"sample plot"` // sampled Dist
+	// Graphs of statistics as functions of number of samples, up to Samples.
+	// Select the number of Points to plot, spread out logarithmically.
+	MeanGraph  string `json:"mean graph"`
+	MADGraph   string `json:"MAD graph"`
+	SigmaGraph string `json:"sigma graph"`
+	Samples    int    `json:"samples" default:"10000"` // >= 3
+	Points     int    `json:"points" default:"200"`    // >= 3
+	// Distribution of derived statistics estimated from Samples, to estimate
+	// confidence intervals of the statistics.
+	MeanDist  *DistributionPlot `json:"mean distribution"`
+	MADDist   *DistributionPlot `json:"MAD distribution"`
+	SigmaDist *DistributionPlot `json:"sigma distribution"`
+}
+
+var _ message.Message = &PowerDist{}
+var _ ExperimentConfig = &PowerDist{}
+
+func (e *PowerDist) InitMessage(js interface{}) error {
+	if err := message.Init(e, js); err != nil {
+		return errors.Annotate(err, "failed to init PowerDist")
+	}
+	if e.Samples < 3 {
+		return errors.Reason("samples=%d must be >= 3", e.Samples)
+	}
+	if e.Points < 3 {
+		return errors.Reason("points=%d must be >= 3", e.Points)
+	}
+	return nil
+}
+
+func (e *PowerDist) Name() string { return "power distribution" }
+
 // ExpMap represents a Message which reads a single-element map {name:
 // Experiment} and knows how to populate specific implementations of the
 // Experiment interface.
@@ -234,6 +280,8 @@ func (e *ExpMap) InitMessage(js interface{}) error {
 			e.Config = &Hold{}
 		case "distribution":
 			e.Config = &Distribution{}
+		case "power distribution":
+			e.Config = &PowerDist{}
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}
