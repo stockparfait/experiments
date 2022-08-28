@@ -34,7 +34,7 @@ import (
 func TestDistribution(t *testing.T) {
 	t.Parallel()
 
-	tmpdir, tmpdirErr := ioutil.TempDir("", "test_hold")
+	tmpdir, tmpdirErr := ioutil.TempDir("", "test_distribution")
 	defer os.RemoveAll(tmpdir)
 
 	Convey("Test setup succeeded", t, func() {

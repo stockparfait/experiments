@@ -30,9 +30,6 @@ type PowerDist struct {
 	context  context.Context
 	distName string
 	dist     *stats.RandDistribution
-	meanDist *stats.RandDistribution
-	// madDist   *stats.RandDistribution
-	// sigmaDist *stats.RandDistribution
 }
 
 var _ experiments.Experiment = &PowerDist{}
@@ -83,29 +80,45 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 			return errors.Annotate(err, "failed to plot %s", d.distName)
 		}
 	}
-	if err := d.plotMeans(ctx); err != nil {
+	meanFn := func(d *stats.Histogram) float64 { return d.Mean() }
+	if err := d.plotStatistic(ctx, d.config.MeanDist, meanFn, "means"); err != nil {
 		return errors.Annotate(err, "failed to plot '%s'", d.prefix("means"))
+	}
+	madFn := func(d *stats.Histogram) float64 { return d.MAD() }
+	if err := d.plotStatistic(ctx, d.config.MADDist, madFn, "MADs"); err != nil {
+		return errors.Annotate(err, "failed to plot '%s'", d.prefix("MADs"))
+	}
+	sigmaFn := func(d *stats.Histogram) float64 { return d.Sigma() }
+	if err := d.plotStatistic(ctx, d.config.SigmaDist, sigmaFn, "Sigmas"); err != nil {
+		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Sigmas"))
 	}
 	return nil
 }
 
-func (d *PowerDist) plotMeans(ctx context.Context) (err error) {
-	if d.config.MeanDist == nil {
+func (d *PowerDist) plotStatistic(
+	ctx context.Context,
+	c *config.DistributionPlot,
+	f func(*stats.Histogram) float64, // compute the statistic
+	name string,
+) (err error) {
+	if c == nil {
 		return nil
 	}
-	c := d.config.MeanDist
 	xform := func(d stats.Distribution) float64 {
-		return d.Copy().Mean() // to use a fresh seed and recompute mean
+		rd := d.Copy().(*stats.RandDistribution) // use a fresh copy to recompute the histogram
+		return f(rd.Histogram())
 	}
-	dist, _, err := randDistribution(&d.config.Dist)
+	// Do NOT directly compute dist.Histogram() or statistics that require it, so
+	// that copies would have to compute it every time.
+	dist, distName, err := randDistribution(&d.config.Dist)
 	if err != nil {
 		return errors.Annotate(err, "failed to create source distribution")
 	}
-	d.meanDist = stats.NewRandDistribution(dist, xform, d.config.Samples, &c.Buckets)
-	err = experiments.PlotDistribution(
-		ctx, d.meanDist.Histogram(), c, d.prefix("means"))
-	if err != nil {
-		return errors.Annotate(err, "failed to plot %s", d.prefix("means"))
+	statDist := stats.NewRandDistribution(dist, xform, d.config.Samples, &c.Buckets)
+	h := statDist.Histogram()
+	fullName := d.prefix(distName + " " + name)
+	if err = experiments.PlotDistribution(ctx, h, c, fullName); err != nil {
+		return errors.Annotate(err, "failed to plot %s", fullName)
 	}
 	return nil
 }
