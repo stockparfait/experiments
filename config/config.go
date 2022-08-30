@@ -225,10 +225,11 @@ func (e *Distribution) Name() string { return "distribution" }
 type PowerDist struct {
 	ID         string                 `json:"id"` // experiment ID, for multiple instances
 	Dist       AnalyticalDistribution `json:"distribution"`
-	SamplePlot *DistributionPlot      `json:"sample plot"` // sampled Dist Graphs
-	// of statistics as functions of number of samples, up to Samples.  Select the
-	// number of Points to plot which are spread out logarithmically, and
-	// optionally plot min/max values of samples between points.
+	SamplePlot *DistributionPlot      `json:"sample plot"` // sampled Dist
+
+	// Graphs of statistics as functions of number of samples, up to Samples.
+	// Select the number of Points to plot which are spread out logarithmically,
+	// and optionally plot min/max values of samples between points.
 	MeanGraph  string `json:"mean graph"`
 	MADGraph   string `json:"MAD graph"`
 	SigmaGraph string `json:"sigma graph"`

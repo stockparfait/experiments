@@ -63,6 +63,56 @@ func randDistribution(c *config.AnalyticalDistribution) (dist *stats.RandDistrib
 	return
 }
 
+type cumulativeStatistic struct {
+	samples   int
+	points    int
+	i         int
+	sum       float64
+	min       float64
+	max       float64
+	xs        []float64
+	ys        []float64
+	mins      []float64
+	maxs      []float64
+	nextPoint int
+}
+
+func newCumulativeStatistic(samples, points int) *cumulativeStatistic {
+	return &cumulativeStatistic{
+		samples: samples,
+		points:  points,
+	}
+}
+
+func (c *cumulativeStatistic) point(i int) int {
+	max := math.Log(float64(c.samples))
+	x := max * float64(i+1) / float64(c.points)
+	return int(math.Floor(math.Exp(x)))
+}
+
+func (c *cumulativeStatistic) Add(y float64) {
+	if c.i == 0 {
+		c.min = y
+		c.max = y
+	}
+	if y < c.min {
+		c.min = y
+	}
+	if y > c.max {
+		c.max = y
+	}
+	c.i++
+	c.sum += y
+	avg := c.sum / float64(c.i)
+	if c.i >= c.nextPoint {
+		c.xs = append(c.xs, float64(c.i))
+		c.ys = append(c.ys, avg)
+		c.mins = append(c.mins, c.min)
+		c.maxs = append(c.maxs, c.max)
+		c.nextPoint = c.point(len(c.xs))
+	}
+}
+
 func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	var ok bool
 	var err error
@@ -94,51 +144,29 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Sigmas"))
 	}
 
-	// TODO: make it so all such cumulative statistics accumulate from the same
-	// sample sequence. Rather than computing them separately, compute them at the
-	// same time, accumulate only the points, so we don't have to save all the
-	// samples, thus allowing potentially for billions of samples.
-	//
-	// To reuse point accumulation code, create a private struct type which will
-	// accumulate the points + min & max, and then add plots as needed.
-	nextMean := func() func() float64 {
-		i := 0
-		var sum float64
-		return func() float64 {
-			sum += d.dist.Rand()
-			i++
-			return sum / float64(i)
-		}
-	}()
-	if err := d.plotStatsSamples(ctx, d.config.MeanGraph, "mean", nextMean, d.config.Samples, d.config.Points); err != nil {
-		return errors.Annotate(err, "failed to plot means")
+	cumulMean := newCumulativeStatistic(d.config.Samples, d.config.Points)
+	cumulMAD := newCumulativeStatistic(d.config.Samples, d.config.Points)
+	cumulSigma := newCumulativeStatistic(d.config.Samples, d.config.Points)
+
+	for i := 0; i < d.config.Samples; i++ {
+		y := d.dist.Rand()
+		cumulMean.Add(y)
+		diff := d.config.Dist.Mean - y
+		cumulMAD.Add(math.Abs(diff))
+		cumulSigma.Add(diff * diff)
+	}
+	for i, v := range cumulSigma.ys {
+		cumulSigma.ys[i] = math.Sqrt(v)
 	}
 
-	nextMAD := func() func() float64 {
-		i := 0
-		var sum float64
-		return func() float64 {
-			sum += math.Abs(d.config.Dist.Mean - d.dist.Rand())
-			i++
-			return sum / float64(i)
-		}
-	}()
-	if err := d.plotStatsSamples(ctx, d.config.MADGraph, "MAD", nextMAD, d.config.Samples, d.config.Points); err != nil {
-		return errors.Annotate(err, "failed to plot MADs")
+	if err := d.plotStatsSamples(ctx, d.config.MeanGraph, "mean", cumulMean); err != nil {
+		return errors.Annotate(err, "failed to plot cumulative mean")
 	}
-
-	nextSigma := func() func() float64 {
-		i := 0
-		var sum float64
-		return func() float64 {
-			x := d.config.Dist.Mean - d.dist.Rand()
-			sum += x * x
-			i++
-			return math.Sqrt(sum / float64(i))
-		}
-	}()
-	if err := d.plotStatsSamples(ctx, d.config.SigmaGraph, "sigma", nextSigma, d.config.Samples, d.config.Points); err != nil {
-		return errors.Annotate(err, "failed to plot sigmas")
+	if err := d.plotStatsSamples(ctx, d.config.MADGraph, "MAD", cumulMAD); err != nil {
+		return errors.Annotate(err, "failed to plot cumulative MAD")
+	}
+	if err := d.plotStatsSamples(ctx, d.config.SigmaGraph, "sigma", cumulSigma); err != nil {
+		return errors.Annotate(err, "failed to plot cumulative sigma")
 	}
 	return nil
 }
@@ -171,43 +199,12 @@ func (d *PowerDist) plotStatistic(
 	return nil
 }
 
-func (d *PowerDist) plotStatsSamples(ctx context.Context, graph, name string, next func() float64, samples, points int) error {
+func (d *PowerDist) plotStatsSamples(ctx context.Context, graph, name string, c *cumulativeStatistic) error {
 	if graph == "" {
 		return nil
 	}
-	var min, max float64
-	var xs, ys, mins, maxs []float64
-	point := func(i int) int {
-		max := math.Log(float64(samples))
-		x := max * float64(i+1) / float64(points)
-		return int(math.Floor(math.Exp(x)))
-	}
-	nextPoint := point(0)
-
-	for i := 0; i < samples; i++ {
-		y := next()
-		if i == 0 {
-			min = y
-			max = y
-		}
-		if y < min {
-			min = y
-		}
-		if y > max {
-			max = y
-		}
-		if i >= nextPoint {
-			xs = append(xs, float64(i))
-			ys = append(ys, y)
-			mins = append(mins, min)
-			maxs = append(maxs, max)
-			min = y
-			max = y
-			nextPoint = point(len(xs))
-		}
-	}
 	legend := d.prefix(name)
-	plt, err := plot.NewXYPlot(xs, ys)
+	plt, err := plot.NewXYPlot(c.xs, c.ys)
 	if err != nil {
 		return errors.Annotate(err, "failed to create plot '%s'", legend)
 	}
@@ -218,7 +215,7 @@ func (d *PowerDist) plotStatsSamples(ctx context.Context, graph, name string, ne
 	if !d.config.PlotMinMax {
 		return nil
 	}
-	plt, err = plot.NewXYPlot(xs, mins)
+	plt, err = plot.NewXYPlot(c.xs, c.mins)
 	if err != nil {
 		return errors.Annotate(err, "failed to create plot '%s min'", legend)
 	}
@@ -227,7 +224,7 @@ func (d *PowerDist) plotStatsSamples(ctx context.Context, graph, name string, ne
 		return errors.Annotate(err, "failed to add plot '%s min'", legend)
 	}
 
-	plt, err = plot.NewXYPlot(xs, maxs)
+	plt, err = plot.NewXYPlot(c.xs, c.maxs)
 	if err != nil {
 		return errors.Annotate(err, "failed to create plot '%s max'", legend)
 	}
