@@ -17,10 +17,12 @@ package powerdist
 
 import (
 	"context"
+	"math"
 
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
+	"github.com/stockparfait/stockparfait/plot"
 	"github.com/stockparfait/stockparfait/stats"
 )
 
@@ -91,6 +93,53 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	if err := d.plotStatistic(ctx, d.config.SigmaDist, sigmaFn, "Sigmas"); err != nil {
 		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Sigmas"))
 	}
+
+	// TODO: make it so all such cumulative statistics accumulate from the same
+	// sample sequence. Rather than computing them separately, compute them at the
+	// same time, accumulate only the points, so we don't have to save all the
+	// samples, thus allowing potentially for billions of samples.
+	//
+	// To reuse point accumulation code, create a private struct type which will
+	// accumulate the points + min & max, and then add plots as needed.
+	nextMean := func() func() float64 {
+		i := 0
+		var sum float64
+		return func() float64 {
+			sum += d.dist.Rand()
+			i++
+			return sum / float64(i)
+		}
+	}()
+	if err := d.plotStatsSamples(ctx, d.config.MeanGraph, "mean", nextMean, d.config.Samples, d.config.Points); err != nil {
+		return errors.Annotate(err, "failed to plot means")
+	}
+
+	nextMAD := func() func() float64 {
+		i := 0
+		var sum float64
+		return func() float64 {
+			sum += math.Abs(d.config.Dist.Mean - d.dist.Rand())
+			i++
+			return sum / float64(i)
+		}
+	}()
+	if err := d.plotStatsSamples(ctx, d.config.MADGraph, "MAD", nextMAD, d.config.Samples, d.config.Points); err != nil {
+		return errors.Annotate(err, "failed to plot MADs")
+	}
+
+	nextSigma := func() func() float64 {
+		i := 0
+		var sum float64
+		return func() float64 {
+			x := d.config.Dist.Mean - d.dist.Rand()
+			sum += x * x
+			i++
+			return math.Sqrt(sum / float64(i))
+		}
+	}()
+	if err := d.plotStatsSamples(ctx, d.config.SigmaGraph, "sigma", nextSigma, d.config.Samples, d.config.Points); err != nil {
+		return errors.Annotate(err, "failed to plot sigmas")
+	}
 	return nil
 }
 
@@ -118,6 +167,73 @@ func (d *PowerDist) plotStatistic(
 	fullName := d.prefix(distName + " " + name)
 	if err = experiments.PlotDistribution(ctx, h, c, fullName); err != nil {
 		return errors.Annotate(err, "failed to plot %s", fullName)
+	}
+	return nil
+}
+
+func (d *PowerDist) plotStatsSamples(ctx context.Context, graph, name string, next func() float64, samples, points int) error {
+	if graph == "" {
+		return nil
+	}
+	var min, max float64
+	var xs, ys, mins, maxs []float64
+	point := func(i int) int {
+		max := math.Log(float64(samples))
+		x := max * float64(i+1) / float64(points)
+		return int(math.Floor(math.Exp(x)))
+	}
+	nextPoint := point(0)
+
+	for i := 0; i < samples; i++ {
+		y := next()
+		if i == 0 {
+			min = y
+			max = y
+		}
+		if y < min {
+			min = y
+		}
+		if y > max {
+			max = y
+		}
+		if i >= nextPoint {
+			xs = append(xs, float64(i))
+			ys = append(ys, y)
+			mins = append(mins, min)
+			maxs = append(maxs, max)
+			min = y
+			max = y
+			nextPoint = point(len(xs))
+		}
+	}
+	legend := d.prefix(name)
+	plt, err := plot.NewXYPlot(xs, ys)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s'", legend)
+	}
+	plt.SetLegend(legend).SetYLabel(name)
+	if err := plot.Add(ctx, plt, graph); err != nil {
+		return errors.Annotate(err, "failed to add plot '%s'", legend)
+	}
+	if !d.config.PlotMinMax {
+		return nil
+	}
+	plt, err = plot.NewXYPlot(xs, mins)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s min'", legend)
+	}
+	plt.SetLegend(legend + " min").SetYLabel(name).SetChartType(plot.ChartDashed)
+	if err := plot.Add(ctx, plt, graph); err != nil {
+		return errors.Annotate(err, "failed to add plot '%s min'", legend)
+	}
+
+	plt, err = plot.NewXYPlot(xs, maxs)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s max'", legend)
+	}
+	plt.SetLegend(legend + " max").SetYLabel(name).SetChartType(plot.ChartDashed)
+	if err := plot.Add(ctx, plt, graph); err != nil {
+		return errors.Annotate(err, "failed to add plot '%s max'", legend)
 	}
 	return nil
 }

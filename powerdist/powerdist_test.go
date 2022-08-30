@@ -72,15 +72,25 @@ func TestDistribution(t *testing.T) {
   "sample plot": {
     "graph": "dist"
   },
+  "mean graph": "samples",
+  "MAD graph": "samples",
+  "sigma graph": "samples",
+  "plot min max": true,
   "mean distribution": {
     "graph": "means"
   },
   "MAD distribution": {
     "graph": "mads"
+  },
+  "sigma distribution": {
+    "graph": "sigmas"
   }
 }
 `
 			distGraph, err := canvas.EnsureGraph(plot.KindXY, "dist", "group")
+			So(err, ShouldBeNil)
+
+			samplesGraph, err := canvas.EnsureGraph(plot.KindXY, "samples", "group")
 			So(err, ShouldBeNil)
 
 			meansGraph, err := canvas.EnsureGraph(plot.KindXY, "means", "group")
@@ -89,12 +99,17 @@ func TestDistribution(t *testing.T) {
 			madsGraph, err := canvas.EnsureGraph(plot.KindXY, "mads", "group")
 			So(err, ShouldBeNil)
 
+			sigmasGraph, err := canvas.EnsureGraph(plot.KindXY, "sigmas", "group")
+			So(err, ShouldBeNil)
+
 			So(cfg.InitMessage(testutil.JSON(JSConfig)), ShouldBeNil)
 			var pd PowerDist
 			So(pd.Run(ctx, &cfg), ShouldBeNil)
 			So(len(distGraph.Plots), ShouldEqual, 1)
+			So(len(samplesGraph.Plots), ShouldEqual, 9) // 3 for each statistic
 			So(len(meansGraph.Plots), ShouldEqual, 1)
 			So(len(madsGraph.Plots), ShouldEqual, 1)
+			So(len(sigmasGraph.Plots), ShouldEqual, 1)
 		})
 	})
 }
