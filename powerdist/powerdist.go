@@ -17,6 +17,7 @@ package powerdist
 
 import (
 	"context"
+	"fmt"
 	"math"
 
 	"github.com/stockparfait/errors"
@@ -64,23 +65,25 @@ func randDistribution(c *config.AnalyticalDistribution) (dist *stats.RandDistrib
 }
 
 type cumulativeStatistic struct {
-	samples   int
-	points    int
-	i         int
-	sum       float64
-	min       float64
-	max       float64
-	xs        []float64
-	ys        []float64
-	mins      []float64
-	maxs      []float64
-	nextPoint int
+	samples       int
+	points        int
+	percentiles   []float64 // in [0..100]
+	h             *stats.Histogram
+	i             int
+	sum           float64
+	xs            []float64
+	ys            []float64
+	percentilesYs [][]float64
+	nextPoint     int
 }
 
-func newCumulativeStatistic(samples, points int) *cumulativeStatistic {
+func newCumulativeStatistic(samples, points int, percentiles []float64, buckets *stats.Buckets) *cumulativeStatistic {
 	return &cumulativeStatistic{
-		samples: samples,
-		points:  points,
+		samples:       samples,
+		points:        points,
+		percentiles:   percentiles,
+		percentilesYs: make([][]float64, len(percentiles)),
+		h:             stats.NewHistogram(buckets),
 	}
 }
 
@@ -91,25 +94,17 @@ func (c *cumulativeStatistic) point(i int) int {
 }
 
 func (c *cumulativeStatistic) Add(y float64) {
-	if c.i == 0 {
-		c.min = y
-		c.max = y
-	}
-	if y < c.min {
-		c.min = y
-	}
-	if y > c.max {
-		c.max = y
-	}
 	c.i++
 	c.sum += y
 	avg := c.sum / float64(c.i)
+	c.h.Add(avg)
 	if c.i >= c.nextPoint {
 		c.xs = append(c.xs, float64(c.i))
 		c.ys = append(c.ys, avg)
-		c.mins = append(c.mins, c.min)
-		c.maxs = append(c.maxs, c.max)
 		c.nextPoint = c.point(len(c.xs))
+		for i, p := range c.percentiles {
+			c.percentilesYs[i] = append(c.percentilesYs[i], c.h.Quantile(p/100.0))
+		}
 	}
 }
 
@@ -144,9 +139,35 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Sigmas"))
 	}
 
-	cumulMean := newCumulativeStatistic(d.config.Samples, d.config.Points)
-	cumulMAD := newCumulativeStatistic(d.config.Samples, d.config.Points)
-	cumulSigma := newCumulativeStatistic(d.config.Samples, d.config.Points)
+	meanBuckets, err := stats.NewBuckets(101, -10, 10, stats.LinearSpacing)
+	if err != nil {
+		return errors.Annotate(err, "failed to create mean buckets")
+	}
+	if d.config.MeanDist != nil {
+		meanBuckets = &d.config.MeanDist.Buckets
+	}
+	cumulMean := newCumulativeStatistic(
+		d.config.Samples, d.config.Points, d.config.Percentiles, meanBuckets)
+
+	madBuckets, err := stats.NewBuckets(101, 0, 10, stats.LinearSpacing)
+	if err != nil {
+		return errors.Annotate(err, "failed to create MAD buckets")
+	}
+	if d.config.MADDist != nil {
+		madBuckets = &d.config.MADDist.Buckets
+	}
+	cumulMAD := newCumulativeStatistic(
+		d.config.Samples, d.config.Points, d.config.Percentiles, madBuckets)
+
+	sigmaBuckets, err := stats.NewBuckets(101, 0, 10, stats.LinearSpacing)
+	if err != nil {
+		return errors.Annotate(err, "failed to create sigma buckets")
+	}
+	if d.config.SigmaDist != nil {
+		sigmaBuckets = &d.config.SigmaDist.Buckets
+	}
+	cumulSigma := newCumulativeStatistic(
+		d.config.Samples, d.config.Points, d.config.Percentiles, sigmaBuckets)
 
 	for i := 0; i < d.config.Samples; i++ {
 		y := d.dist.Rand()
@@ -157,15 +178,21 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	}
 	for i, v := range cumulSigma.ys {
 		cumulSigma.ys[i] = math.Sqrt(v)
+		for p := range cumulSigma.percentilesYs {
+			if cumulSigma.percentilesYs[p][i] < 0.0 {
+				cumulSigma.percentilesYs[p][i] = 0.0
+			}
+			cumulSigma.percentilesYs[p][i] = math.Sqrt(cumulSigma.percentilesYs[p][i])
+		}
 	}
 
-	if err := d.plotStatsSamples(ctx, d.config.MeanGraph, "mean", cumulMean); err != nil {
+	if err := d.plotStatsSamples(ctx, d.config.CumulMeanGraph, "mean", cumulMean); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative mean")
 	}
-	if err := d.plotStatsSamples(ctx, d.config.MADGraph, "MAD", cumulMAD); err != nil {
+	if err := d.plotStatsSamples(ctx, d.config.CumulMADGraph, "MAD", cumulMAD); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative MAD")
 	}
-	if err := d.plotStatsSamples(ctx, d.config.SigmaGraph, "sigma", cumulSigma); err != nil {
+	if err := d.plotStatsSamples(ctx, d.config.CumulSigmaGraph, "sigma", cumulSigma); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative sigma")
 	}
 	return nil
@@ -212,25 +239,16 @@ func (d *PowerDist) plotStatsSamples(ctx context.Context, graph, name string, c 
 	if err := plot.Add(ctx, plt, graph); err != nil {
 		return errors.Annotate(err, "failed to add plot '%s'", legend)
 	}
-	if !d.config.PlotMinMax {
-		return nil
-	}
-	plt, err = plot.NewXYPlot(c.xs, c.mins)
-	if err != nil {
-		return errors.Annotate(err, "failed to create plot '%s min'", legend)
-	}
-	plt.SetLegend(legend + " min").SetYLabel(name).SetChartType(plot.ChartDashed)
-	if err := plot.Add(ctx, plt, graph); err != nil {
-		return errors.Annotate(err, "failed to add plot '%s min'", legend)
-	}
-
-	plt, err = plot.NewXYPlot(c.xs, c.maxs)
-	if err != nil {
-		return errors.Annotate(err, "failed to create plot '%s max'", legend)
-	}
-	plt.SetLegend(legend + " max").SetYLabel(name).SetChartType(plot.ChartDashed)
-	if err := plot.Add(ctx, plt, graph); err != nil {
-		return errors.Annotate(err, "failed to add plot '%s max'", legend)
+	for i, p := range d.config.Percentiles {
+		pLegend := fmt.Sprintf("%s %.3g-th %%-ile", legend, p)
+		plt, err = plot.NewXYPlot(c.xs, c.percentilesYs[i])
+		if err != nil {
+			return errors.Annotate(err, "failed to create plot '%s'", pLegend)
+		}
+		plt.SetLegend(pLegend).SetYLabel(name).SetChartType(plot.ChartDashed)
+		if err := plot.Add(ctx, plt, graph); err != nil {
+			return errors.Annotate(err, "failed to add plot '%s'", pLegend)
+		}
 	}
 	return nil
 }

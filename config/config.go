@@ -227,15 +227,17 @@ type PowerDist struct {
 	Dist       AnalyticalDistribution `json:"distribution"`
 	SamplePlot *DistributionPlot      `json:"sample plot"` // sampled Dist
 
-	// Graphs of statistics as functions of number of samples, up to Samples.
-	// Select the number of Points to plot which are spread out logarithmically,
-	// and optionally plot min/max values of samples between points.
-	MeanGraph  string `json:"mean graph"`
-	MADGraph   string `json:"MAD graph"`
-	SigmaGraph string `json:"sigma graph"`
-	Samples    int    `json:"samples" default:"10000"` // >= 3
-	Points     int    `json:"points" default:"200"`    // >= 3
-	PlotMinMax bool   `json:"plot min max"`
+	// Graphs of cumulative statistics, up to Samples.  Select the number of
+	// Points to plot which are spread out logarithmically, and optionally plot
+	// percentile values of accumulated values by that point. The buckets are
+	// taken from the corresponding *Dist config if present, or set to reasonable
+	// defaults.
+	CumulMeanGraph  string    `json:"cumulative mean graph"`
+	CumulMADGraph   string    `json:"cumulative MAD graph"`
+	CumulSigmaGraph string    `json:"cumulative sigma graph"`
+	Samples         int       `json:"samples" default:"10000"` // >= 3
+	Points          int       `json:"points" default:"200"`    // >= 3
+	Percentiles     []float64 `json:"percentiles"`             // in [0..100]
 	// Distribution of derived statistics estimated from Samples, to estimate
 	// confidence intervals of the statistics.
 	MeanDist  *DistributionPlot `json:"mean distribution"`
@@ -255,6 +257,11 @@ func (e *PowerDist) InitMessage(js interface{}) error {
 	}
 	if e.Points < 3 {
 		return errors.Reason("points=%d must be >= 3", e.Points)
+	}
+	for _, p := range e.Percentiles {
+		if p < 0.0 || 100.0 < p {
+			return errors.Reason("percentile=%g must be in [0..100]", p)
+		}
 	}
 	return nil
 }
