@@ -222,6 +222,41 @@ func (e *Distribution) InitMessage(js interface{}) error {
 
 func (e *Distribution) Name() string { return "distribution" }
 
+// CumulativeStatistic is a statistic that accumulates over the number of
+// samples, like a mean or a MAD.  This configures a plot showing how such
+// accumulation behaves as the number of samples grow.  The ratio of Points to
+// Samples defines how many points are plotted when the number of samples
+// increases by the multiple of Samples. That is, Points are spread out
+// logarithmically. By default, the first 10K samples will generate 200 points,
+// 100M samples (10K^2) will generate 400 points, and so on.
+type CumulativeStatistic struct {
+	Graph       string        `json:"graph" required:"true"`
+	Buckets     stats.Buckets `json:"buckets"`                 // for estimating percentiles
+	Samples     int           `json:"samples" default:"10000"` // >= 3
+	Points      int           `json:"points" default:"200"`    // >= 3
+	Percentiles []float64     `json:"percentiles"`             // in [0..100]
+}
+
+var _ message.Message = &CumulativeStatistic{}
+
+func (c *CumulativeStatistic) InitMessage(js interface{}) error {
+	if err := message.Init(c, js); err != nil {
+		return errors.Annotate(err, "failed to init CumulativeDistribution")
+	}
+	if c.Samples < 3 {
+		return errors.Reason("samples=%d must be >= 3", c.Samples)
+	}
+	if c.Points < 3 {
+		return errors.Reason("points=%d must be >= 3", c.Points)
+	}
+	for _, p := range c.Percentiles {
+		if p < 0.0 || 100.0 < p {
+			return errors.Reason("percentile=%g must be in [0..100]", p)
+		}
+	}
+	return nil
+}
+
 type PowerDist struct {
 	ID         string                 `json:"id"` // experiment ID, for multiple instances
 	Dist       AnalyticalDistribution `json:"distribution"`
@@ -229,15 +264,14 @@ type PowerDist struct {
 
 	// Graphs of cumulative statistics, up to Samples.  Select the number of
 	// Points to plot which are spread out logarithmically, and optionally plot
-	// percentile values of accumulated values by that point. The buckets are
-	// taken from the corresponding *Dist config if present, or set to reasonable
-	// defaults.
-	CumulMeanGraph  string    `json:"cumulative mean graph"`
-	CumulMADGraph   string    `json:"cumulative MAD graph"`
-	CumulSigmaGraph string    `json:"cumulative sigma graph"`
-	Samples         int       `json:"samples" default:"10000"` // >= 3
-	Points          int       `json:"points" default:"200"`    // >= 3
-	Percentiles     []float64 `json:"percentiles"`             // in [0..100]
+	// percentiles of accumulated values by that point. The buckets are taken from
+	// the corresponding *Dist config if present, or set to reasonable defaults.
+	CumulMean  *CumulativeStatistic `json:"cumulative mean"`
+	CumulMAD   *CumulativeStatistic `json:"cumulative MAD"`
+	CumulSigma *CumulativeStatistic `json:"cumulative sigma"`
+	// We use the same sample sequence to generate all the cumulative statistics
+	// in parallel. Hence, the top-level number of samples.
+	Samples int `json:"samples" default:"10000"` // >= 3
 	// Distribution of derived statistics estimated from Samples, to estimate
 	// confidence intervals of the statistics.
 	MeanDist  *DistributionPlot `json:"mean distribution"`
@@ -254,14 +288,6 @@ func (e *PowerDist) InitMessage(js interface{}) error {
 	}
 	if e.Samples < 3 {
 		return errors.Reason("samples=%d must be >= 3", e.Samples)
-	}
-	if e.Points < 3 {
-		return errors.Reason("points=%d must be >= 3", e.Points)
-	}
-	for _, p := range e.Percentiles {
-		if p < 0.0 || 100.0 < p {
-			return errors.Reason("percentile=%g must be in [0..100]", p)
-		}
 	}
 	return nil
 }

@@ -78,7 +78,8 @@ func TestConfig(t *testing.T) {
       "parallel workers": 1
     }},
     {"power distribution": {
-      "distribution": {"name": "normal"}
+      "distribution": {"name": "normal"},
+      "cumulative mean": {"graph": "cumul mean"}
     }}
   ]
 }`
@@ -193,8 +194,13 @@ func TestConfig(t *testing.T) {
 							Samples:  1000,
 							Buckets:  defaultBuckets,
 						},
+						CumulMean: &CumulativeStatistic{
+							Graph:   "cumul mean",
+							Buckets: defaultBuckets,
+							Samples: 10000,
+							Points:  200,
+						},
 						Samples: 10000,
-						Points:  200,
 					}},
 				},
 			})

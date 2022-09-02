@@ -72,10 +72,9 @@ func TestDistribution(t *testing.T) {
   "sample plot": {
     "graph": "dist"
   },
-  "cumulative mean graph": "samples",
-  "cumulative MAD graph": "samples",
-  "cumulative sigma graph": "samples",
-  "percentiles": [5, 95],
+  "cumulative mean": {"graph": "samples", "percentiles": [5, 95]},
+  "cumulative MAD": {"graph": "samples", "percentiles": [5, 95]},
+  "cumulative sigma": {"graph": "samples", "percentiles": [5, 95]},
   "mean distribution": {
     "graph": "means"
   },
