@@ -150,8 +150,8 @@ func (f *FindMin) InitMessage(js interface{}) error {
 	return nil
 }
 
-// DistributionPlot is a config for a single graph in the Distribution
-// experiment.
+// DistributionPlot is a config for plotting a given distribution, its
+// statistics, and its approximation by an analytical distribution.
 type DistributionPlot struct {
 	Graph          string                  `json:"graph" required:"true"`
 	CountsGraph    string                  `json:"counts graph"` // plot buckets' counts
@@ -222,22 +222,58 @@ func (e *Distribution) InitMessage(js interface{}) error {
 
 func (e *Distribution) Name() string { return "distribution" }
 
+// CumulativeStatistic is a statistic that accumulates over the number of
+// samples, like a mean or a MAD.  This configures a plot showing how such
+// accumulation behaves as the number of samples grow.  The plotted number of
+// Points are logarithmically spread out for each multiple of Samlpes. By
+// default, the first 10K samples are plotted with 200 points, 100M samples
+// (10K^2) - with 400 points, and so on.
+type CumulativeStatistic struct {
+	Graph       string        `json:"graph" required:"true"`
+	Buckets     stats.Buckets `json:"buckets"`                 // for estimating percentiles
+	Samples     int           `json:"samples" default:"10000"` // >= 3
+	Points      int           `json:"points" default:"200"`    // >= 3
+	Percentiles []float64     `json:"percentiles"`             // in [0..100]
+}
+
+var _ message.Message = &CumulativeStatistic{}
+
+func (c *CumulativeStatistic) InitMessage(js interface{}) error {
+	if err := message.Init(c, js); err != nil {
+		return errors.Annotate(err, "failed to init CumulativeDistribution")
+	}
+	if c.Samples < 3 {
+		return errors.Reason("samples=%d must be >= 3", c.Samples)
+	}
+	if c.Points < 3 {
+		return errors.Reason("points=%d must be >= 3", c.Points)
+	}
+	for _, p := range c.Percentiles {
+		if p < 0.0 || 100.0 < p {
+			return errors.Reason("percentile=%g must be in [0..100]", p)
+		}
+	}
+	return nil
+}
+
 type PowerDist struct {
 	ID         string                 `json:"id"` // experiment ID, for multiple instances
 	Dist       AnalyticalDistribution `json:"distribution"`
 	SamplePlot *DistributionPlot      `json:"sample plot"` // sampled Dist
-	// Graphs of statistics as functions of number of samples, up to Samples.
-	// Select the number of Points to plot, spread out logarithmically.
-	MeanGraph  string `json:"mean graph"`
-	MADGraph   string `json:"MAD graph"`
-	SigmaGraph string `json:"sigma graph"`
-	Samples    int    `json:"samples" default:"10000"` // >= 3
-	Points     int    `json:"points" default:"200"`    // >= 3
-	// Distribution of derived statistics estimated from Samples, to estimate
-	// confidence intervals of the statistics.
-	MeanDist  *DistributionPlot `json:"mean distribution"`
-	MADDist   *DistributionPlot `json:"MAD distribution"`
-	SigmaDist *DistributionPlot `json:"sigma distribution"`
+
+	// Graphs of cumulative statistics, up to Samples, all generated from the same
+	// sequence of values.
+	CumulMean    *CumulativeStatistic `json:"cumulative mean"`
+	CumulMAD     *CumulativeStatistic `json:"cumulative MAD"`
+	CumulSigma   *CumulativeStatistic `json:"cumulative sigma"`
+	CumulSamples int                  `json:"cumulative samples" default:"10000"` // >= 3
+
+	// Distributions of derived statistics estimated by computing each statistic
+	// StatsSamples number of times.
+	MeanDist    *DistributionPlot `json:"mean distribution"`
+	MADDist     *DistributionPlot `json:"MAD distribution"`
+	SigmaDist   *DistributionPlot `json:"sigma distribution"`
+	StatSamples int               `json:"statistic samples" default:"10000"` // >= 3
 }
 
 var _ message.Message = &PowerDist{}
@@ -247,11 +283,11 @@ func (e *PowerDist) InitMessage(js interface{}) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init PowerDist")
 	}
-	if e.Samples < 3 {
-		return errors.Reason("samples=%d must be >= 3", e.Samples)
+	if e.CumulSamples < 3 {
+		return errors.Reason("cumulative samples=%d must be >= 3", e.CumulSamples)
 	}
-	if e.Points < 3 {
-		return errors.Reason("points=%d must be >= 3", e.Points)
+	if e.StatSamples < 3 {
+		return errors.Reason("statistic samples=%d must be >= 3", e.StatSamples)
 	}
 	return nil
 }
