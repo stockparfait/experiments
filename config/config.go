@@ -150,8 +150,8 @@ func (f *FindMin) InitMessage(js interface{}) error {
 	return nil
 }
 
-// DistributionPlot is a config for a single graph in the Distribution
-// experiment.
+// DistributionPlot is a config for plotting a given distribution, its
+// statistics, and its approximation by an analytical distribution.
 type DistributionPlot struct {
 	Graph          string                  `json:"graph" required:"true"`
 	CountsGraph    string                  `json:"counts graph"` // plot buckets' counts
@@ -224,11 +224,10 @@ func (e *Distribution) Name() string { return "distribution" }
 
 // CumulativeStatistic is a statistic that accumulates over the number of
 // samples, like a mean or a MAD.  This configures a plot showing how such
-// accumulation behaves as the number of samples grow.  The ratio of Points to
-// Samples defines how many points are plotted when the number of samples
-// increases by the multiple of Samples. That is, Points are spread out
-// logarithmically. By default, the first 10K samples will generate 200 points,
-// 100M samples (10K^2) will generate 400 points, and so on.
+// accumulation behaves as the number of samples grow.  The plotted number of
+// Points are logarithmically spread out for each multiple of Samlpes. By
+// default, the first 10K samples are plotted with 200 points, 100M samples
+// (10K^2) - with 400 points, and so on.
 type CumulativeStatistic struct {
 	Graph       string        `json:"graph" required:"true"`
 	Buckets     stats.Buckets `json:"buckets"`                 // for estimating percentiles
@@ -262,21 +261,19 @@ type PowerDist struct {
 	Dist       AnalyticalDistribution `json:"distribution"`
 	SamplePlot *DistributionPlot      `json:"sample plot"` // sampled Dist
 
-	// Graphs of cumulative statistics, up to Samples.  Select the number of
-	// Points to plot which are spread out logarithmically, and optionally plot
-	// percentiles of accumulated values by that point. The buckets are taken from
-	// the corresponding *Dist config if present, or set to reasonable defaults.
-	CumulMean  *CumulativeStatistic `json:"cumulative mean"`
-	CumulMAD   *CumulativeStatistic `json:"cumulative MAD"`
-	CumulSigma *CumulativeStatistic `json:"cumulative sigma"`
-	// We use the same sample sequence to generate all the cumulative statistics
-	// in parallel. Hence, the top-level number of samples.
-	Samples int `json:"samples" default:"10000"` // >= 3
-	// Distribution of derived statistics estimated from Samples, to estimate
-	// confidence intervals of the statistics.
-	MeanDist  *DistributionPlot `json:"mean distribution"`
-	MADDist   *DistributionPlot `json:"MAD distribution"`
-	SigmaDist *DistributionPlot `json:"sigma distribution"`
+	// Graphs of cumulative statistics, up to Samples, all generated from the same
+	// sequence of values.
+	CumulMean    *CumulativeStatistic `json:"cumulative mean"`
+	CumulMAD     *CumulativeStatistic `json:"cumulative MAD"`
+	CumulSigma   *CumulativeStatistic `json:"cumulative sigma"`
+	CumulSamples int                  `json:"cumulative samples" default:"10000"` // >= 3
+
+	// Distributions of derived statistics estimated by computing each statistic
+	// StatsSamples number of times.
+	MeanDist    *DistributionPlot `json:"mean distribution"`
+	MADDist     *DistributionPlot `json:"MAD distribution"`
+	SigmaDist   *DistributionPlot `json:"sigma distribution"`
+	StatSamples int               `json:"statistic samples" default:"10000"` // >= 3
 }
 
 var _ message.Message = &PowerDist{}
@@ -286,8 +283,11 @@ func (e *PowerDist) InitMessage(js interface{}) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init PowerDist")
 	}
-	if e.Samples < 3 {
-		return errors.Reason("samples=%d must be >= 3", e.Samples)
+	if e.CumulSamples < 3 {
+		return errors.Reason("cumulative samples=%d must be >= 3", e.CumulSamples)
+	}
+	if e.StatSamples < 3 {
+		return errors.Reason("statistic samples=%d must be >= 3", e.StatSamples)
 	}
 	return nil
 }

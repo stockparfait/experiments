@@ -68,13 +68,13 @@ func TestDistribution(t *testing.T) {
     "buckets": {"n": 5},
     "samples": 10
   },
-  "samples": 10,
   "sample plot": {
     "graph": "dist"
   },
   "cumulative mean": {"graph": "samples", "percentiles": [5, 95]},
   "cumulative MAD": {"graph": "samples", "percentiles": [5, 95]},
   "cumulative sigma": {"graph": "samples", "percentiles": [5, 95]},
+  "cumulative samples": 10,
   "mean distribution": {
     "graph": "means"
   },
@@ -83,7 +83,8 @@ func TestDistribution(t *testing.T) {
   },
   "sigma distribution": {
     "graph": "sigmas"
-  }
+  },
+  "statistic samples": 10
 }
 `
 			distGraph, err := canvas.EnsureGraph(plot.KindXY, "dist", "group")

@@ -200,7 +200,8 @@ func TestConfig(t *testing.T) {
 							Samples: 10000,
 							Points:  200,
 						},
-						Samples: 10000,
+						CumulSamples: 10000,
+						StatSamples:  10000,
 					}},
 				},
 			})
