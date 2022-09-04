@@ -268,7 +268,7 @@ func FindMin(f func(float64) float64, min, max, epsilon float64, maxIter int) fl
 }
 
 // AnalyticalDistribution instantiated from the corresponding config.
-func AnalyticalDistribution(c *config.AnalyticalDistribution) (dist stats.Distribution, distName string, err error) {
+func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistribution) (dist stats.Distribution, distName string, err error) {
 	switch c.Name {
 	case "t":
 		dist = stats.NewStudentsTDistribution(c.Alpha, c.Mean, c.MAD)
@@ -291,7 +291,7 @@ func AnalyticalDistribution(c *config.AnalyticalDistribution) (dist stats.Distri
 			}
 			return acc
 		}
-		dist = stats.NewRandDistribution(dist, xform, c.Samples, &c.Buckets)
+		dist = stats.NewRandDistribution(ctx, dist, xform, c.Samples, &c.Buckets)
 		distName += fmt.Sprintf(" x %d", c.Compound)
 	}
 	return
@@ -323,7 +323,7 @@ func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.Distribut
 			return errors.Annotate(err, "failed to add value for '%s alpha'", legend)
 		}
 	}
-	dist, distName, err := AnalyticalDistribution(&dc)
+	dist, distName, err := AnalyticalDistribution(ctx, &dc)
 	if err != nil {
 		return errors.Annotate(err, "failed to instantiate reference distribution")
 	}
