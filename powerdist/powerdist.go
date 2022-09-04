@@ -47,9 +47,9 @@ func (d *PowerDist) prefix(s string) string {
 
 // randDistribution wraps analytical distribution into RandDistribution, as
 // necessary.
-func randDistribution(c *config.AnalyticalDistribution) (dist *stats.RandDistribution, name string, err error) {
+func randDistribution(ctx context.Context, c *config.AnalyticalDistribution) (dist *stats.RandDistribution, name string, err error) {
 	var d stats.Distribution
-	d, name, err = experiments.AnalyticalDistribution(c)
+	d, name, err = experiments.AnalyticalDistribution(ctx, c)
 	if err != nil {
 		err = errors.Annotate(err, "failed to create analytical distribution")
 		return
@@ -59,7 +59,7 @@ func randDistribution(c *config.AnalyticalDistribution) (dist *stats.RandDistrib
 		xform := func(d stats.Distribution) float64 {
 			return d.Rand()
 		}
-		dist = stats.NewRandDistribution(d, xform, c.Samples, &c.Buckets)
+		dist = stats.NewRandDistribution(ctx, d, xform, c.Samples, &c.Buckets)
 	}
 	return
 }
@@ -158,7 +158,7 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	if d.config, ok = cfg.(*config.PowerDist); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
-	d.dist, d.distName, err = randDistribution(&d.config.Dist)
+	d.dist, d.distName, err = randDistribution(ctx, &d.config.Dist)
 	if err != nil {
 		return errors.Annotate(err, "failed to create RandDistribution")
 	}
@@ -241,11 +241,11 @@ func (d *PowerDist) plotStatistic(
 	}
 	// Do NOT directly compute dist.Histogram() or statistics that require it, so
 	// that copies would have to compute it every time.
-	dist, distName, err := randDistribution(&d.config.Dist)
+	dist, distName, err := randDistribution(ctx, &d.config.Dist)
 	if err != nil {
 		return errors.Annotate(err, "failed to create source distribution")
 	}
-	statDist := stats.NewRandDistribution(dist, xform, d.config.StatSamples, &c.Buckets)
+	statDist := stats.NewRandDistribution(ctx, dist, xform, d.config.StatSamples, &c.Buckets)
 	h := statDist.Histogram()
 	fullName := d.prefix(distName + " " + name)
 	if err = experiments.PlotDistribution(ctx, h, c, fullName); err != nil {
