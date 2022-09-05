@@ -229,11 +229,12 @@ func (e *Distribution) Name() string { return "distribution" }
 // default, the first 10K samples are plotted with 200 points, 100M samples
 // (10K^2) - with 400 points, and so on.
 type CumulativeStatistic struct {
-	Graph       string        `json:"graph" required:"true"`
-	Buckets     stats.Buckets `json:"buckets"`                 // for estimating percentiles
-	Samples     int           `json:"samples" default:"10000"` // >= 3
-	Points      int           `json:"points" default:"200"`    // >= 3
-	Percentiles []float64     `json:"percentiles"`             // in [0..100]
+	Graph        string        `json:"graph" required:"true"`
+	Buckets      stats.Buckets `json:"buckets"`                 // for estimating percentiles
+	Samples      int           `json:"samples" default:"10000"` // >= 3
+	Points       int           `json:"points" default:"200"`    // >= 3
+	Percentiles  []float64     `json:"percentiles"`             // in [0..100]
+	PlotExpected bool          `json:"plot expected"`
 }
 
 var _ message.Message = &CumulativeStatistic{}
