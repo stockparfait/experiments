@@ -96,6 +96,9 @@ func TestDistribution(t *testing.T) {
   "sigma distribution": {
     "graph": "sigmas"
   },
+  "alpha distribution": {
+    "graph": "alphas"
+  },
   "statistic samples": 10
 }
 `
@@ -114,6 +117,9 @@ func TestDistribution(t *testing.T) {
 			sigmasGraph, err := canvas.EnsureGraph(plot.KindXY, "sigmas", "group")
 			So(err, ShouldBeNil)
 
+			alphasGraph, err := canvas.EnsureGraph(plot.KindXY, "alphas", "group")
+			So(err, ShouldBeNil)
+
 			So(cfg.InitMessage(testutil.JSON(JSConfig)), ShouldBeNil)
 			var pd PowerDist
 			So(pd.Run(ctx, &cfg), ShouldBeNil)
@@ -122,6 +128,7 @@ func TestDistribution(t *testing.T) {
 			So(len(meansGraph.Plots), ShouldEqual, 1)
 			So(len(madsGraph.Plots), ShouldEqual, 1)
 			So(len(sigmasGraph.Plots), ShouldEqual, 1)
+			So(len(alphasGraph.Plots), ShouldEqual, 1)
 		})
 	})
 }
