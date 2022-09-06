@@ -204,10 +204,11 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		mad := d.source.MAD()
 		h := d.rand.Histogram()
 		xs := h.Xs()
+		k := d.config.AlphaIgnoreCounts
 		return func(h *stats.Histogram) float64 {
 			f := func(a float64) float64 {
 				s := stats.NewStudentsTDistribution(a, mean, mad)
-				return experiments.DistributionDistance(xs, h, s, d.config.AlphaIgnoreCounts)
+				return experiments.DistributionDistance(xs, h, s, k)
 			}
 			m := d.config.AlphaParams
 			return experiments.FindMin(f, m.MinX, m.MaxX, m.Epsilon, m.MaxIterations)

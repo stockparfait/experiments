@@ -274,7 +274,7 @@ type PowerDist struct {
 	MeanDist  *DistributionPlot `json:"mean distribution"`
 	MADDist   *DistributionPlot `json:"MAD distribution"`
 	SigmaDist *DistributionPlot `json:"sigma distribution"`
-	AlphaDist *DistributionPlot `json:"alpha distribution"` // derived from samples
+	AlphaDist *DistributionPlot `json:"alpha distribution"`
 	// Defaults to alpha \in [1.01..100], e=0.01, max. iter=1000.
 	AlphaParams       *FindMin `json:"alpha params"`
 	AlphaIgnoreCounts int      `json:"alpha ignore counts"`
