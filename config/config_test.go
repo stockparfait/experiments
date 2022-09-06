@@ -200,6 +200,12 @@ func TestConfig(t *testing.T) {
 							Samples: 10000,
 							Points:  200,
 						},
+						AlphaParams: &FindMin{
+							MinX:          1.01,
+							MaxX:          100.0,
+							Epsilon:       0.01,
+							MaxIterations: 1000,
+						},
 						CumulSamples: 10000,
 						StatSamples:  10000,
 					}},

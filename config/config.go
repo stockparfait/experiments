@@ -271,10 +271,14 @@ type PowerDist struct {
 
 	// Distributions of derived statistics estimated by computing each statistic
 	// StatsSamples number of times.
-	MeanDist    *DistributionPlot `json:"mean distribution"`
-	MADDist     *DistributionPlot `json:"MAD distribution"`
-	SigmaDist   *DistributionPlot `json:"sigma distribution"`
-	StatSamples int               `json:"statistic samples" default:"10000"` // >= 3
+	MeanDist  *DistributionPlot `json:"mean distribution"`
+	MADDist   *DistributionPlot `json:"MAD distribution"`
+	SigmaDist *DistributionPlot `json:"sigma distribution"`
+	AlphaDist *DistributionPlot `json:"alpha distribution"`
+	// Defaults to alpha \in [1.01..100], e=0.01, max. iter=1000.
+	AlphaParams       *FindMin `json:"alpha params"`
+	AlphaIgnoreCounts int      `json:"alpha ignore counts"`
+	StatSamples       int      `json:"statistic samples" default:"10000"` // >= 3
 }
 
 var _ message.Message = &PowerDist{}
@@ -289,6 +293,14 @@ func (e *PowerDist) InitMessage(js interface{}) error {
 	}
 	if e.StatSamples < 3 {
 		return errors.Reason("statistic samples=%d must be >= 3", e.StatSamples)
+	}
+	if e.AlphaParams == nil {
+		e.AlphaParams = &FindMin{
+			MinX:          1.01,
+			MaxX:          100.0,
+			Epsilon:       0.01,
+			MaxIterations: 1000,
+		}
 	}
 	return nil
 }

@@ -198,6 +198,25 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	if err := d.plotStatistic(ctx, d.config.SigmaDist, sigmaFn, "Sigmas"); err != nil {
 		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Sigmas"))
 	}
+	alphaFn := func() func(*stats.Histogram) float64 {
+		// Add an extra function closure to cache and hide these vars.
+		mean := d.source.Mean()
+		mad := d.source.MAD()
+		h := d.rand.Histogram()
+		xs := h.Xs()
+		k := d.config.AlphaIgnoreCounts
+		return func(h *stats.Histogram) float64 {
+			f := func(a float64) float64 {
+				s := stats.NewStudentsTDistribution(a, mean, mad)
+				return experiments.DistributionDistance(xs, h, s, k)
+			}
+			m := d.config.AlphaParams
+			return experiments.FindMin(f, m.MinX, m.MaxX, m.Epsilon, m.MaxIterations)
+		}
+	}
+	if err := d.plotStatistic(ctx, d.config.AlphaDist, alphaFn(), "Alphas"); err != nil {
+		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Alphas"))
+	}
 
 	var cumulMean, cumulMAD, cumulSigma *cumulativeStatistic
 	if d.config.CumulMean != nil {

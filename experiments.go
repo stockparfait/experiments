@@ -228,10 +228,10 @@ func plotPercentiles(ctx context.Context, h *stats.Histogram, c *config.Distribu
 	return nil
 }
 
-// distributionDistance computes a measure between the sample distribution given
+// DistributionDistance computes a measure between the sample distribution given
 // by h and an analytical distribution d in xs points corresponding to h's
 // buckets, ignoring the points with less than ignoreCounts counts in h.
-func distributionDistance(xs []float64, h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
+func DistributionDistance(xs []float64, h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
 	var res float64
 	if ignoreCounts < 0 {
 		ignoreCounts = 0
@@ -315,7 +315,7 @@ func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.Distribut
 	if c.DeriveAlpha != nil {
 		f := func(alpha float64) float64 {
 			d := stats.NewStudentsTDistribution(alpha, dc.Mean, dc.MAD)
-			return distributionDistance(xs, h, d, c.IgnoreCounts)
+			return DistributionDistance(xs, h, d, c.IgnoreCounts)
 		}
 		m := c.DeriveAlpha
 		dc.Alpha = FindMin(f, m.MinX, m.MaxX, m.Epsilon, m.MaxIterations)
