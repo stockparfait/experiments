@@ -35,13 +35,12 @@
       "graphs": [
         {
           "id": "dist",
-          "title": "Distribution",
-          "y_log_scale": false
+          "title": "Distribution"
         },
         {
           "id": "counts",
           "title": "Number of Samples",
-          "y_log_scale": true
+          "log scale Y": true
         }
       ],
       "id": "dist group",

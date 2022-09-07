@@ -46,18 +46,18 @@ func TestConfig(t *testing.T) {
     {
        "id": "real",
        "title": "Real Group",
-       "x_log_scale": true,
+       "log scale X": true,
        "graphs": [
-         {"id": "r1", "title": "Real One", "x_label": "points"},
-         {"id": "r2", "x_label": "points", "y_log_scale": true}
+         {"id": "r1", "title": "Real One", "X label": "points"},
+         {"id": "r2", "X label": "points", "log scale Y": true}
        ]
     },
     {
        "id": "time",
        "timeseries": true,
        "graphs": [
-         {"id": "t1", "title": "Time One", "x_label": "dates"},
-         {"id": "t2", "x_label": "dates", "y_log_scale": true}
+         {"id": "t1", "title": "Time One", "X label": "dates"},
+         {"id": "t2", "X label": "dates", "log scale Y": true}
        ]
     }
   ],
@@ -221,7 +221,7 @@ func TestConfig(t *testing.T) {
 {
   "groups": [{
     "timeseries": true,
-    "id": "time", "x_log_scale": true,
+    "id": "time", "log scale X": true,
     "graphs": [{"id": "g"}]
   }]
 }`))

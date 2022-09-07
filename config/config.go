@@ -345,8 +345,8 @@ func (e *ExpMap) InitMessage(js interface{}) error {
 type Graph struct {
 	ID        string `json:"id"`
 	Title     string `json:"title"`
-	XLabel    string `json:"x_label"`
-	YLogScale bool   `json:"y_log_scale"`
+	XLabel    string `json:"X label"`
+	YLogScale bool   `json:"log scale Y"`
 }
 
 var _ message.Message = &Graph{}
@@ -367,7 +367,7 @@ type Group struct {
 	Timeseries bool     `json:"timeseries"`
 	ID         string   `json:"id"`
 	Title      string   `json:"title"` // default: same as ID
-	XLogScale  bool     `json:"x_log_scale"`
+	XLogScale  bool     `json:"log scale X"`
 	Graphs     []*Graph `json:"graphs"`
 }
 

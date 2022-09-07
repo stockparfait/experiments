@@ -61,8 +61,7 @@
       "graphs": [
         {
           "id": "dist",
-          "title": "Normalized Accumulated Distribution",
-          "y_log_scale": false
+          "title": "Normalized Accumulated Distribution"
         }
       ],
       "id": "dist group",
@@ -73,8 +72,7 @@
       "graphs": [
         {
           "id": "means",
-          "title": "Distribution of Means",
-          "y_log_scale": false
+          "title": "Distribution of Means"
         }
       ],
       "id": "means",
@@ -85,8 +83,7 @@
       "graphs": [
         {
           "id": "mads",
-          "title": "Distribution of MADs",
-          "y_log_scale": false
+          "title": "Distribution of MADs"
         }
       ],
       "id": "mads",

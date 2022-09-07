@@ -66,8 +66,7 @@
       "graphs": [
         {
           "id": "dist",
-          "title": "Normalized Distribution",
-          "y_log_scale": false
+          "title": "Normalized Distribution"
         }
       ],
       "id": "dist group",
