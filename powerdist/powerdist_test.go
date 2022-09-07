@@ -86,6 +86,12 @@ func TestDistribution(t *testing.T) {
     "percentiles": [5, 95],
     "plot expected": true
   },
+  "cumulative alpha": {
+    "graph": "samples",
+    "skip": 2,
+    "percentiles": [5, 95],
+    "plot expected": true
+  },
   "cumulative samples": 10,
   "mean distribution": {
     "graph": "means"
@@ -124,7 +130,7 @@ func TestDistribution(t *testing.T) {
 			var pd PowerDist
 			So(pd.Run(ctx, &cfg), ShouldBeNil)
 			So(len(distGraph.Plots), ShouldEqual, 1)
-			So(len(samplesGraph.Plots), ShouldEqual, 12) // 4 for each statistic
+			So(len(samplesGraph.Plots), ShouldEqual, 16) // 4 for each statistic
 			So(len(meansGraph.Plots), ShouldEqual, 1)
 			So(len(madsGraph.Plots), ShouldEqual, 1)
 			So(len(sigmasGraph.Plots), ShouldEqual, 1)

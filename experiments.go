@@ -231,16 +231,17 @@ func plotPercentiles(ctx context.Context, h *stats.Histogram, c *config.Distribu
 // DistributionDistance computes a measure between the sample distribution given
 // by h and an analytical distribution d in xs points corresponding to h's
 // buckets, ignoring the points with less than ignoreCounts counts in h.
-func DistributionDistance(xs []float64, h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
+func DistributionDistance(h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
 	var res float64
 	if ignoreCounts < 0 {
 		ignoreCounts = 0
 	}
-	for i, x := range xs {
+	n := h.Buckets().N
+	for i := 0; i < n; i++ {
 		if h.Count(i) <= uint(ignoreCounts) {
 			continue
 		}
-		m := math.Abs(math.Log(h.PDF(i)) - math.Log(d.Prob(x)))
+		m := math.Abs(math.Log(h.PDF(i)) - math.Log(d.Prob(h.X(i))))
 		if m > res {
 			res = m
 		}
@@ -301,10 +302,9 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 // distribution with the given mean and MAD that most closely corresponds to the
 // sample distribution given as a histogram h.
 func DeriveAlpha(h *stats.Histogram, mean, MAD float64, c *config.FindMin, ignoreCounts int) float64 {
-	xs := h.Xs()
 	f := func(alpha float64) float64 {
 		d := stats.NewStudentsTDistribution(alpha, mean, MAD)
-		return DistributionDistance(xs, h, d, ignoreCounts)
+		return DistributionDistance(h, d, ignoreCounts)
 	}
 	return FindMin(f, c.MinX, c.MaxX, c.Epsilon, c.MaxIterations)
 }

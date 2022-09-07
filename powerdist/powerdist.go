@@ -112,7 +112,7 @@ func (c *cumulativeStatistic) AddDirect(y float64) {
 	}
 }
 
-func (c *cumulativeStatistic) Add(y float64) {
+func (c *cumulativeStatistic) AddToAverage(y float64) {
 	if c == nil {
 		return
 	}
@@ -255,10 +255,10 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	cumulHist := stats.NewHistogram(&d.config.Dist.Buckets)
 	for i := 0; i < d.config.CumulSamples; i++ {
 		y := d.rand.Rand()
-		cumulMean.Add(y)
+		cumulMean.AddToAverage(y)
 		diff := d.config.Dist.Mean - y
-		cumulMAD.Add(math.Abs(diff))
-		cumulSigma.Add(diff * diff)
+		cumulMAD.AddToAverage(math.Abs(diff))
+		cumulSigma.AddToAverage(diff * diff)
 		cumulHist.Add(y)
 		// Deriving alpha is expensive, skip if not needed.
 		if cumulAlpha != nil {
