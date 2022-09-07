@@ -68,6 +68,7 @@ type cumulativeStatistic struct {
 	config        *config.CumulativeStatistic
 	h             *stats.Histogram
 	i             int
+	numPoints     int
 	sum           float64
 	Xs            []float64
 	Ys            []float64
@@ -90,21 +91,43 @@ func (c *cumulativeStatistic) point(i int) int {
 	return int(math.Floor(math.Exp(x)))
 }
 
-func (c *cumulativeStatistic) Add(y float64) {
+func (c *cumulativeStatistic) AddDirect(y float64) {
 	if c == nil {
 		return
 	}
+	if c.i < c.config.Skip {
+		c.Skip()
+		return
+	}
 	c.i++
-	c.sum += y
-	avg := c.sum / float64(c.i)
-	c.h.Add(avg)
+	c.h.Add(y)
 	if c.i >= c.nextPoint {
 		c.Xs = append(c.Xs, float64(c.i))
-		c.Ys = append(c.Ys, avg)
-		c.nextPoint = c.point(len(c.Xs))
+		c.Ys = append(c.Ys, y)
+		c.numPoints++
+		c.nextPoint = c.point(c.numPoints)
 		for i, p := range c.config.Percentiles {
 			c.PercentilesYs[i] = append(c.PercentilesYs[i], c.h.Quantile(p/100.0))
 		}
+	}
+}
+
+func (c *cumulativeStatistic) AddToAverage(y float64) {
+	if c == nil {
+		return
+	}
+	c.sum += y
+	avg := c.sum / float64(c.i+1)
+	c.AddDirect(avg)
+}
+
+// Skip the next sample from the statistic, but advance the sample and point
+// counters.
+func (c *cumulativeStatistic) Skip() {
+	c.i++
+	if c.i >= c.nextPoint {
+		c.numPoints++
+		c.nextPoint = c.point(c.numPoints)
 	}
 }
 
@@ -202,23 +225,16 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		// Add an extra function closure to cache and hide these vars.
 		mean := d.source.Mean()
 		mad := d.source.MAD()
-		h := d.rand.Histogram()
-		xs := h.Xs()
 		k := d.config.AlphaIgnoreCounts
 		return func(h *stats.Histogram) float64 {
-			f := func(a float64) float64 {
-				s := stats.NewStudentsTDistribution(a, mean, mad)
-				return experiments.DistributionDistance(xs, h, s, k)
-			}
-			m := d.config.AlphaParams
-			return experiments.FindMin(f, m.MinX, m.MaxX, m.Epsilon, m.MaxIterations)
+			return experiments.DeriveAlpha(h, mean, mad, d.config.AlphaParams, k)
 		}
 	}
 	if err := d.plotStatistic(ctx, d.config.AlphaDist, alphaFn(), "Alphas"); err != nil {
 		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Alphas"))
 	}
 
-	var cumulMean, cumulMAD, cumulSigma *cumulativeStatistic
+	var cumulMean, cumulMAD, cumulSigma, cumulAlpha *cumulativeStatistic
 	if d.config.CumulMean != nil {
 		cumulMean = newCumulativeStatistic(d.config.CumulMean)
 		cumulMean.SetExpected(d.source.Mean())
@@ -231,13 +247,29 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		cumulSigma = newCumulativeStatistic(d.config.CumulSigma)
 		cumulSigma.SetExpected(math.Sqrt(d.source.Variance()))
 	}
+	if d.config.CumulAlpha != nil {
+		cumulAlpha = newCumulativeStatistic(d.config.CumulAlpha)
+		cumulAlpha.SetExpected(d.config.Dist.Alpha)
+	}
 
+	cumulHist := stats.NewHistogram(&d.config.Dist.Buckets)
 	for i := 0; i < d.config.CumulSamples; i++ {
 		y := d.rand.Rand()
-		cumulMean.Add(y)
+		cumulMean.AddToAverage(y)
 		diff := d.config.Dist.Mean - y
-		cumulMAD.Add(math.Abs(diff))
-		cumulSigma.Add(diff * diff)
+		cumulMAD.AddToAverage(math.Abs(diff))
+		cumulSigma.AddToAverage(diff * diff)
+		cumulHist.Add(y)
+		// Deriving alpha is expensive, skip if not needed.
+		if cumulAlpha != nil {
+			cumulAlpha.AddDirect(experiments.DeriveAlpha(
+				cumulHist,
+				d.config.Dist.Mean,
+				d.config.Dist.MAD,
+				d.config.AlphaParams,
+				d.config.AlphaIgnoreCounts,
+			))
+		}
 	}
 	cumulSigma.Map(func(y float64) float64 {
 		if y < 0.0 {
@@ -254,6 +286,9 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	}
 	if err := cumulSigma.Plot(ctx, "sigma", d.prefix("sigma")); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative sigma")
+	}
+	if err := cumulAlpha.Plot(ctx, "alpha", d.prefix("alpha")); err != nil {
+		return errors.Annotate(err, "failed to plot cumulative alpha")
 	}
 	return nil
 }

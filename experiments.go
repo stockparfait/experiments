@@ -231,16 +231,17 @@ func plotPercentiles(ctx context.Context, h *stats.Histogram, c *config.Distribu
 // DistributionDistance computes a measure between the sample distribution given
 // by h and an analytical distribution d in xs points corresponding to h's
 // buckets, ignoring the points with less than ignoreCounts counts in h.
-func DistributionDistance(xs []float64, h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
+func DistributionDistance(h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
 	var res float64
 	if ignoreCounts < 0 {
 		ignoreCounts = 0
 	}
-	for i, x := range xs {
+	n := h.Buckets().N
+	for i := 0; i < n; i++ {
 		if h.Count(i) <= uint(ignoreCounts) {
 			continue
 		}
-		m := math.Abs(math.Log(h.PDF(i)) - math.Log(d.Prob(x)))
+		m := math.Abs(math.Log(h.PDF(i)) - math.Log(d.Prob(h.X(i))))
 		if m > res {
 			res = m
 		}
@@ -297,6 +298,17 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 	return
 }
 
+// DeriveAlpha estimates the degrees of freedom parameter for a Student's T
+// distribution with the given mean and MAD that most closely corresponds to the
+// sample distribution given as a histogram h.
+func DeriveAlpha(h *stats.Histogram, mean, MAD float64, c *config.FindMin, ignoreCounts int) float64 {
+	f := func(alpha float64) float64 {
+		d := stats.NewStudentsTDistribution(alpha, mean, MAD)
+		return DistributionDistance(h, d, ignoreCounts)
+	}
+	return FindMin(f, c.MinX, c.MaxX, c.Epsilon, c.MaxIterations)
+}
+
 func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.DistributionPlot, legend string) error {
 	if c.RefDist == nil {
 		return nil
@@ -313,12 +325,7 @@ func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.Distribut
 		xs = h.Buckets().Xs(0.5)
 	}
 	if c.DeriveAlpha != nil {
-		f := func(alpha float64) float64 {
-			d := stats.NewStudentsTDistribution(alpha, dc.Mean, dc.MAD)
-			return DistributionDistance(xs, h, d, c.IgnoreCounts)
-		}
-		m := c.DeriveAlpha
-		dc.Alpha = FindMin(f, m.MinX, m.MaxX, m.Epsilon, m.MaxIterations)
+		dc.Alpha = DeriveAlpha(h, dc.Mean, dc.MAD, c.DeriveAlpha, c.IgnoreCounts)
 		if err := AddValue(ctx, legend+" alpha", fmt.Sprintf("%.4g", dc.Alpha)); err != nil {
 			return errors.Annotate(err, "failed to add value for '%s alpha'", legend)
 		}

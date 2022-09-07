@@ -229,11 +229,13 @@ func (e *Distribution) Name() string { return "distribution" }
 // default, the first 10K samples are plotted with 200 points, 100M samples
 // (10K^2) - with 400 points, and so on.
 type CumulativeStatistic struct {
-	Graph        string        `json:"graph" required:"true"`
-	Buckets      stats.Buckets `json:"buckets"`                 // for estimating percentiles
-	Samples      int           `json:"samples" default:"10000"` // >= 3
-	Points       int           `json:"points" default:"200"`    // >= 3
-	Percentiles  []float64     `json:"percentiles"`             // in [0..100]
+	Graph   string `json:"graph" required:"true"`
+	Samples int    `json:"samples" default:"10000"` // >= 3
+	Points  int    `json:"points" default:"200"`    // >= 3
+	// Skip this many first points.
+	Skip         int           `json:"skip"`
+	Percentiles  []float64     `json:"percentiles"` // in [0..100]
+	Buckets      stats.Buckets `json:"buckets"`     // for estimating percentiles
 	PlotExpected bool          `json:"plot expected"`
 }
 
@@ -267,6 +269,7 @@ type PowerDist struct {
 	CumulMean    *CumulativeStatistic `json:"cumulative mean"`
 	CumulMAD     *CumulativeStatistic `json:"cumulative MAD"`
 	CumulSigma   *CumulativeStatistic `json:"cumulative sigma"`
+	CumulAlpha   *CumulativeStatistic `json:"cumulative alpha"`
 	CumulSamples int                  `json:"cumulative samples" default:"10000"` // >= 3
 
 	// Distributions of derived statistics estimated by computing each statistic
