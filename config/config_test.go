@@ -174,11 +174,12 @@ func TestConfig(t *testing.T) {
 								Samples:  1000,
 								Buckets:  defaultBuckets,
 							},
-							DeriveAlpha: &FindMin{
+							DeriveAlpha: &DeriveAlpha{
 								MinX:          2.0,
 								MaxX:          4.0,
 								Epsilon:       0.01,
 								MaxIterations: 1000,
+								IgnoreCounts:  10,
 							},
 						},
 						Compound:  1,
@@ -200,11 +201,12 @@ func TestConfig(t *testing.T) {
 							Samples: 10000,
 							Points:  200,
 						},
-						AlphaParams: &FindMin{
+						AlphaParams: &DeriveAlpha{
 							MinX:          1.01,
 							MaxX:          100.0,
 							Epsilon:       0.01,
 							MaxIterations: 1000,
+							IgnoreCounts:  10,
 						},
 						CumulSamples: 10000,
 						StatSamples:  10000,

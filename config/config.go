@@ -122,21 +122,21 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 	return nil
 }
 
-// FindMin configures parameters for finding the minimum of a function.  The
-// algorithm assumes that the function is monotone around the single minimum
-// within the interval.
-type FindMin struct {
+// DeriveAlpha configures parameters for finding the alpha parameter for a
+// Student's T distribution that fits best the data.
+type DeriveAlpha struct {
 	MinX          float64 `json:"min x" required:"true"`
 	MaxX          float64 `json:"max x" required:"true"`
 	Epsilon       float64 `json:"epsilon" default:"0.01"` // min size of the search interval
 	MaxIterations int     `json:"max iterations" default:"1000"`
+	IgnoreCounts  int     `json:"ignore counts" default:"10"`
 }
 
-var _ message.Message = &FindMin{}
+var _ message.Message = &DeriveAlpha{}
 
-func (f *FindMin) InitMessage(js interface{}) error {
+func (f *DeriveAlpha) InitMessage(js interface{}) error {
 	if err := message.Init(f, js); err != nil {
-		return errors.Annotate(err, "failed to init FindMin")
+		return errors.Annotate(err, "failed to init DeriveAlpha")
 	}
 	if f.MinX > f.MaxX {
 		return errors.Reason("min x=%g must be <= max x=%g", f.MinX, f.MaxX)
@@ -146,6 +146,9 @@ func (f *FindMin) InitMessage(js interface{}) error {
 	}
 	if f.MaxIterations < 1 {
 		return errors.Reason("max iterations = %d must be >= 1", f.MaxIterations)
+	}
+	if f.IgnoreCounts < 0 {
+		return errors.Reason("ignore counts = %d must be >= 0", f.IgnoreCounts)
 	}
 	return nil
 }
@@ -165,8 +168,7 @@ type DistributionPlot struct {
 	CountsLeftAxis bool                    `json:"counts left axis"`
 	RefDist        *AnalyticalDistribution `json:"reference distribution"`
 	AdjustRef      bool                    `json:"adjust reference distribution"`
-	DeriveAlpha    *FindMin                `json:"derive alpha"`  // for ref. dist. from data
-	IgnoreCounts   int                     `json:"ignore counts"` // when deriving alpha
+	DeriveAlpha    *DeriveAlpha            `json:"derive alpha"` // for ref. dist. from data
 	PlotMean       bool                    `json:"plot mean"`
 	Percentiles    []float64               `json:"percentiles"` // in [0..100]
 }
@@ -279,9 +281,8 @@ type PowerDist struct {
 	SigmaDist *DistributionPlot `json:"sigma distribution"`
 	AlphaDist *DistributionPlot `json:"alpha distribution"`
 	// Defaults to alpha \in [1.01..100], e=0.01, max. iter=1000.
-	AlphaParams       *FindMin `json:"alpha params"`
-	AlphaIgnoreCounts int      `json:"alpha ignore counts"`
-	StatSamples       int      `json:"statistic samples" default:"10000"` // >= 3
+	AlphaParams *DeriveAlpha `json:"alpha params"`
+	StatSamples int          `json:"statistic samples" default:"10000"` // >= 3
 }
 
 var _ message.Message = &PowerDist{}
@@ -298,11 +299,12 @@ func (e *PowerDist) InitMessage(js interface{}) error {
 		return errors.Reason("statistic samples=%d must be >= 3", e.StatSamples)
 	}
 	if e.AlphaParams == nil {
-		e.AlphaParams = &FindMin{
+		e.AlphaParams = &DeriveAlpha{
 			MinX:          1.01,
 			MaxX:          100.0,
 			Epsilon:       0.01,
 			MaxIterations: 1000,
+			IgnoreCounts:  10,
 		}
 	}
 	return nil
