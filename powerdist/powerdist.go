@@ -104,7 +104,11 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Alphas"))
 	}
 
-	var cumulMean, cumulMAD, cumulSigma, cumulAlpha *experiments.CumulativeStatistic
+	var cumulMean, cumulMAD *experiments.CumulativeStatistic
+	var cumulSigma, cumulAlpha *experiments.CumulativeStatistic
+	var cumulSkew, cumulKurt *experiments.CumulativeStatistic
+	expectVariance := d.source.Variance()
+	expectSigma := math.Sqrt(expectVariance)
 	if d.config.CumulMean != nil {
 		cumulMean = experiments.NewCumulativeStatistic(d.config.CumulMean)
 		cumulMean.SetExpected(d.source.Mean())
@@ -115,20 +119,29 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	}
 	if d.config.CumulSigma != nil {
 		cumulSigma = experiments.NewCumulativeStatistic(d.config.CumulSigma)
-		cumulSigma.SetExpected(math.Sqrt(d.source.Variance()))
+		cumulSigma.SetExpected(expectSigma)
 	}
 	if d.config.CumulAlpha != nil {
 		cumulAlpha = experiments.NewCumulativeStatistic(d.config.CumulAlpha)
 		cumulAlpha.SetExpected(d.config.Dist.Alpha)
+	}
+	if d.config.CumulSkew != nil {
+		cumulSkew = experiments.NewCumulativeStatistic(d.config.CumulSkew)
+	}
+	if d.config.CumulKurt != nil {
+		cumulKurt = experiments.NewCumulativeStatistic(d.config.CumulKurt)
 	}
 
 	cumulHist := stats.NewHistogram(&d.config.Dist.Buckets)
 	for i := 0; i < d.config.CumulSamples; i++ {
 		y := d.rand.Rand()
 		cumulMean.AddToAverage(y)
-		diff := d.config.Dist.Mean - y
+		diff := y - d.config.Dist.Mean
 		cumulMAD.AddToAverage(math.Abs(diff))
-		cumulSigma.AddToAverage(diff * diff)
+		dd := diff * diff
+		cumulSigma.AddToAverage(dd)
+		cumulSkew.AddToAverage(dd * diff)
+		cumulKurt.AddToAverage(dd * dd)
 		cumulHist.Add(y)
 		// Deriving alpha is expensive, skip if not needed.
 		if cumulAlpha != nil {
@@ -147,6 +160,14 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		return math.Sqrt(y)
 	})
 
+	cumulSkew.Map(func(y float64) float64 {
+		return y / (expectVariance * expectSigma)
+	})
+
+	cumulKurt.Map(func(y float64) float64 {
+		return y / (expectVariance * expectVariance)
+	})
+
 	if err := cumulMean.Plot(ctx, "mean", d.prefix("mean")); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative mean")
 	}
@@ -158,6 +179,12 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	}
 	if err := cumulAlpha.Plot(ctx, "alpha", d.prefix("alpha")); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative alpha")
+	}
+	if err := cumulSkew.Plot(ctx, "skewness", d.prefix("skewness")); err != nil {
+		return errors.Annotate(err, "failed to plot cumulative skewness")
+	}
+	if err := cumulKurt.Plot(ctx, "kurtosis", d.prefix("kurtosis")); err != nil {
+		return errors.Annotate(err, "failed to plot cumulative kurtosis")
 	}
 	return nil
 }
