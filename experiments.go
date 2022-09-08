@@ -355,6 +355,133 @@ func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.Distribut
 	return nil
 }
 
+type CumulativeStatistic struct {
+	config      *config.CumulativeStatistic
+	h           *stats.Histogram
+	i           int
+	numPoints   int
+	sum         float64
+	Xs          []float64
+	Ys          []float64
+	Percentiles [][]float64
+	Expected    float64 // expected value of the statistic
+	nextPoint   int
+}
+
+func NewCumulativeStatistic(cfg *config.CumulativeStatistic) *CumulativeStatistic {
+	return &CumulativeStatistic{
+		config:      cfg,
+		Percentiles: make([][]float64, len(cfg.Percentiles)),
+		h:           stats.NewHistogram(&cfg.Buckets),
+	}
+}
+
+func (c *CumulativeStatistic) point(i int) int {
+	logSamples := math.Log(float64(c.config.Samples))
+	x := logSamples * float64(i+1) / float64(c.config.Points)
+	return int(math.Floor(math.Exp(x)))
+}
+
+func (c *CumulativeStatistic) AddDirect(y float64) {
+	if c == nil {
+		return
+	}
+	if c.i < c.config.Skip {
+		c.Skip()
+		return
+	}
+	c.i++
+	c.h.Add(y)
+	if c.i >= c.nextPoint {
+		c.Xs = append(c.Xs, float64(c.i))
+		c.Ys = append(c.Ys, y)
+		c.numPoints++
+		c.nextPoint = c.point(c.numPoints)
+		for i, p := range c.config.Percentiles {
+			c.Percentiles[i] = append(c.Percentiles[i], c.h.Quantile(p/100.0))
+		}
+	}
+}
+
+func (c *CumulativeStatistic) AddToAverage(y float64) {
+	if c == nil {
+		return
+	}
+	c.sum += y
+	avg := c.sum / float64(c.i+1)
+	c.AddDirect(avg)
+}
+
+// Skip the next sample from the statistic, but advance the sample and point
+// counters.
+func (c *CumulativeStatistic) Skip() {
+	c.i++
+	if c.i >= c.nextPoint {
+		c.numPoints++
+		c.nextPoint = c.point(c.numPoints)
+	}
+}
+
+func (c *CumulativeStatistic) SetExpected(y float64) {
+	if c == nil {
+		return
+	}
+	c.Expected = y
+}
+
+// Map applies f to all the resulting point values (averages and percentiles).
+func (c *CumulativeStatistic) Map(f func(float64) float64) {
+	if c == nil {
+		return
+	}
+	for i, v := range c.Ys {
+		c.Ys[i] = f(v)
+		for p := range c.Percentiles {
+			c.Percentiles[p][i] = f(c.Percentiles[p][i])
+		}
+	}
+}
+
+func (c *CumulativeStatistic) Plot(ctx context.Context, yLabel, legend string) error {
+	if c == nil {
+		return nil
+	}
+	plt, err := plot.NewXYPlot(c.Xs, c.Ys)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s'", legend)
+	}
+	plt.SetLegend(legend).SetYLabel(yLabel)
+	if err := plot.Add(ctx, plt, c.config.Graph); err != nil {
+		return errors.Annotate(err, "failed to add plot '%s'", legend)
+	}
+	for i, p := range c.config.Percentiles {
+		pLegend := fmt.Sprintf("%s %.3g-th %%-ile", legend, p)
+		plt, err = plot.NewXYPlot(c.Xs, c.Percentiles[i])
+		if err != nil {
+			return errors.Annotate(err, "failed to create plot '%s'", pLegend)
+		}
+		plt.SetLegend(pLegend).SetYLabel(yLabel).SetChartType(plot.ChartDashed)
+		if err := plot.Add(ctx, plt, c.config.Graph); err != nil {
+			return errors.Annotate(err, "failed to add plot '%s'", pLegend)
+		}
+	}
+	if c.config.PlotExpected {
+		xs := []float64{c.Xs[0], c.Xs[len(c.Xs)-1]}
+		ys := []float64{c.Expected, c.Expected}
+		plt, err := plot.NewXYPlot(xs, ys)
+		if err != nil {
+			return errors.Annotate(err, "failed to add plot '%s expected'", legend)
+		}
+		eLegend := fmt.Sprintf("%s expected=%.4g", legend, c.Expected)
+		plt.SetLegend(eLegend).SetYLabel(yLabel)
+		plt.SetChartType(plot.ChartDashed)
+		if err := plot.Add(ctx, plt, c.config.Graph); err != nil {
+			return errors.Annotate(err, "failed to add plot '%s expected'", legend)
+		}
+	}
+	return nil
+}
+
 // TestExperiment is a fake experiment used in tests. Define actual experiments
 // in their own subpackages.
 type TestExperiment struct {

@@ -96,6 +96,26 @@ func TestExperiments(t *testing.T) {
 			So(cg.Plots[0].Y, ShouldResemble, []float64{1, 2, 1})
 		})
 
+		Convey("CumulativeStatistic works", func() {
+			js := testutil.JSON(`
+{
+  "graph": "main",
+  "skip": 2,
+  "percentiles": [5, 95],
+  "plot expected": true
+}`)
+			var cfg config.CumulativeStatistic
+			So(cfg.InitMessage(js), ShouldBeNil)
+			cs := NewCumulativeStatistic(&cfg)
+			cs.SetExpected(5.0)
+			for i := 0; i < 10; i++ {
+				cs.AddToAverage(float64(i))
+			}
+			cs.Map(func(x float64) float64 { return x + 1.0 })
+			So(cs.Plot(ctx, "numbers", "average of one to ten"), ShouldBeNil)
+			So(len(g.Plots), ShouldEqual, 4) // avg + 2 percentiles + expected
+		})
+
 		Convey("for TestExperiment", func() {
 			conf := config.TestExperimentConfig{
 				Grade:  3.5,
