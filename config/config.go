@@ -280,7 +280,7 @@ type PowerDist struct {
 	MADDist   *DistributionPlot `json:"MAD distribution"`
 	SigmaDist *DistributionPlot `json:"sigma distribution"`
 	AlphaDist *DistributionPlot `json:"alpha distribution"`
-	// Defaults to alpha \in [1.01..100], e=0.01, max. iter=1000.
+	// Default: alpha \in [1.01..100], e=0.01, max. iter=1000, ignore counts=10.
 	AlphaParams *DeriveAlpha `json:"alpha params"`
 	StatSamples int          `json:"statistic samples" default:"10000"` // >= 3
 }
