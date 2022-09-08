@@ -301,10 +301,10 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 // DeriveAlpha estimates the degrees of freedom parameter for a Student's T
 // distribution with the given mean and MAD that most closely corresponds to the
 // sample distribution given as a histogram h.
-func DeriveAlpha(h *stats.Histogram, mean, MAD float64, c *config.FindMin, ignoreCounts int) float64 {
+func DeriveAlpha(h *stats.Histogram, mean, MAD float64, c *config.DeriveAlpha) float64 {
 	f := func(alpha float64) float64 {
 		d := stats.NewStudentsTDistribution(alpha, mean, MAD)
-		return DistributionDistance(h, d, ignoreCounts)
+		return DistributionDistance(h, d, c.IgnoreCounts)
 	}
 	return FindMin(f, c.MinX, c.MaxX, c.Epsilon, c.MaxIterations)
 }
@@ -325,7 +325,7 @@ func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.Distribut
 		xs = h.Buckets().Xs(0.5)
 	}
 	if c.DeriveAlpha != nil {
-		dc.Alpha = DeriveAlpha(h, dc.Mean, dc.MAD, c.DeriveAlpha, c.IgnoreCounts)
+		dc.Alpha = DeriveAlpha(h, dc.Mean, dc.MAD, c.DeriveAlpha)
 		if err := AddValue(ctx, legend+" alpha", fmt.Sprintf("%.4g", dc.Alpha)); err != nil {
 			return errors.Annotate(err, "failed to add value for '%s alpha'", legend)
 		}

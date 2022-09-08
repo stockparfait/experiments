@@ -96,9 +96,8 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		// Add an extra function closure to cache and hide these vars.
 		mean := d.source.Mean()
 		mad := d.source.MAD()
-		k := d.config.AlphaIgnoreCounts
 		return func(h *stats.Histogram) float64 {
-			return experiments.DeriveAlpha(h, mean, mad, d.config.AlphaParams, k)
+			return experiments.DeriveAlpha(h, mean, mad, d.config.AlphaParams)
 		}
 	}
 	if err := d.plotStatistic(ctx, d.config.AlphaDist, alphaFn(), "Alphas"); err != nil {
@@ -138,7 +137,6 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 				d.config.Dist.Mean,
 				d.config.Dist.MAD,
 				d.config.AlphaParams,
-				d.config.AlphaIgnoreCounts,
 			))
 		}
 	}
