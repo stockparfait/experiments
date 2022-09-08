@@ -272,6 +272,8 @@ type PowerDist struct {
 	CumulMAD     *CumulativeStatistic `json:"cumulative MAD"`
 	CumulSigma   *CumulativeStatistic `json:"cumulative sigma"`
 	CumulAlpha   *CumulativeStatistic `json:"cumulative alpha"`
+	CumulSkew    *CumulativeStatistic `json:"cumulative skewness"`
+	CumulKurt    *CumulativeStatistic `json:"cumulative kurtosis"`
 	CumulSamples int                  `json:"cumulative samples" default:"10000"` // >= 3
 
 	// Distributions of derived statistics estimated by computing each statistic
