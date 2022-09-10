@@ -32,6 +32,7 @@ section for details on how to use such configs with the tool.
 - [Methodology](methodology/)
 - [Market, Random Walks and Log-Profits](logprofits/)
 - [Distribution of Log-Profits](distribution/)
+- [Hypothesis Testing, Confidence Intervals and Monte Carlo](powerdist/)
 
 ## Installation
 
