@@ -1,46 +1,7 @@
 # Hypothesis Testing, Confidence Intervals and Monte Carlo
 
-Now that we [have established](../distribution/) that log-profits can be
-reasonably accurately modeled by a random variable `X` with a Student's
-[t-distribution] with (approximately) `a=3` degrees of freedom, it is time to
-look closer at this distribution and understand some of its fundamental
-properties.
-
-## The Tale of Fat Tails
-
-As a reminder, the p.d.f. of the t-distribution with `a` degrees of freedom is:
-
-```
-f_a(x) = C * (1 + x^2/a)^(-(a+1)/2)
-```
-
-where `C=Gamma((a+1)/2) / [ sqrt[a*Pi] * Gamma(a/2) ]` is a normalizing
-coefficient. The important part is that when the absolute value of `x`
-approaches infinity, the p.d.f. becomes proportional to a [power law] with the
-exponent `a+1`:
-
-```
-f_a(x) [ abs(x) --> Inf] ~  1/ [ abs(x)^(a+1) ]
-```
-
-and hence, the c.d.f. (cumulative distribution function) approaches 0 or 1 as a
-power law with the exponent `a`. Therefore, a Student's t-distribution is a
-[heavy-tailed distribution], since for any `a` it has infinite moments, and for
-`a<=3` it is also a [fat-tailed distribution], since its skewness and kurtosis
-are infinite.
-
-For our practical purposes, we are mostly interested in testing hypotheses and
-estimating the confidence intervals under these hypotheses for various
-statistics, such as mean, MAD (mean absolute deviation) and the standard
-deviation `sigma`, as well as the tail's exponent `a`.
-
-We will also attempt approximating the sum of `N` t-distributed samples with
-either another t-distribution with a different `a`, or a normal distribution.
-For the latter, it would be interesting to find such `N` when such approximation
-could be justified.
-
-Along the way, this section establishes a methodology for working with sampled
-data and estimating the precision of the results.
+In this section, we establish a methodology for working with sampled data and
+estimating the precision of the results.
 
 ## Hypothesis Testing and Confidence Intervals
 
@@ -115,9 +76,48 @@ Along the way, we can estimate the quality of the estimator `s(X)` by comparing
 its mean to `theta` and evaluating the width of `I` as an indicator of its
 precision.
 
-[t-distribution](https://en.wikipedia.org/wiki/Student%27s_t-distribution)
-[power law](https://en.wikipedia.org/wiki/Power_law)
-[heavy-tailed distribution](https://en.wikipedia.org/wiki/Heavy-tailed_distribution)
-[fat-tailed distribution](https://en.wikipedia.org/wiki/Fat-tailed_distribution)
-[confidence interval](https://en.wikipedia.org/wiki/Confidence_interval)
-[hypothesis testing](https://en.wikipedia.org/wiki/Statistical_hypothesis_testing)
+## The Tale of Fat Tails
+
+Earlier, we [have established](../distribution/) that log-profits can be
+reasonably accurately modeled by a random variable `X` with a Student's
+[t-distribution] with (approximately) `a=3` degrees of freedom, it is time to
+look closer at this distribution and understand some of its fundamental
+properties.
+
+ As a reminder, the p.d.f. of the t-distribution with `a` degrees of freedom is:
+
+```
+f_a(x) = C * (1 + x^2/a)^(-(a+1)/2)
+```
+
+where `C=Gamma((a+1)/2) / [ sqrt[a*Pi] * Gamma(a/2) ]` is a normalizing
+coefficient. The important part is that when the absolute value of `x`
+approaches infinity, the p.d.f. becomes proportional to a [power law] with the
+exponent `a+1`:
+
+```
+f_a(x) [ abs(x) --> Inf] ~  1/ [ abs(x)^(a+1) ]
+```
+
+and hence, the c.d.f. (cumulative distribution function) approaches 0 or 1 as a
+power law with the exponent `a`. Therefore, a Student's t-distribution is a
+[heavy-tailed distribution], since for any `a` it has infinite moments, and for
+`a<=3` it is also a [fat-tailed distribution], since its skewness and kurtosis
+are infinite.
+
+For our practical purposes, we are mostly interested in testing hypotheses and
+estimating the confidence intervals under these hypotheses for various
+statistics, such as mean, MAD (mean absolute deviation) and the standard
+deviation `sigma`, as well as the tail's exponent `a`.
+
+We will also attempt approximating the sum of `N` t-distributed samples with
+either another t-distribution with a different `a`, or a normal distribution.
+For the latter, it would be interesting to find such `N` when such approximation
+could be justified.
+
+[t-distribution]: https://en.wikipedia.org/wiki/Student%27s_t-distribution
+[power law]: https://en.wikipedia.org/wiki/Power_law
+[heavy-tailed distribution]: https://en.wikipedia.org/wiki/Heavy-tailed_distribution
+[fat-tailed distribution]: https://en.wikipedia.org/wiki/Fat-tailed_distribution
+[confidence interval]: https://en.wikipedia.org/wiki/Confidence_interval
+[hypothesis testing]: https://en.wikipedia.org/wiki/Statistical_hypothesis_testing
