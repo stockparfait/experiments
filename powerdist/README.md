@@ -106,16 +106,6 @@ power law with the exponent `a`. Therefore, a Student's t-distribution is a
 `a<=3` it is also a [fat-tailed distribution], since its skewness and kurtosis
 are infinite.
 
-For our practical purposes, we are mostly interested in testing hypotheses and
-estimating the confidence intervals under these hypotheses for various
-statistics, such as mean, MAD (mean absolute deviation) and the standard
-deviation `sigma`, as well as the tail's exponent `a`.
-
-We will also attempt approximating the sum of `N` t-distributed samples with
-either another t-distribution with a different `a`, or a normal distribution.
-For the latter, it would be interesting to find such `N` when such approximation
-could be justified.
-
 [t-distribution]: https://en.wikipedia.org/wiki/Student%27s_t-distribution
 [power law]: https://en.wikipedia.org/wiki/Power_law
 [heavy-tailed distribution]: https://en.wikipedia.org/wiki/Heavy-tailed_distribution
