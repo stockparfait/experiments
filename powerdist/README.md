@@ -20,15 +20,16 @@ Specifically, we'll be interested in the case when our null hypothesis states
 that the samples are generated using a particular distribution `f(X|theta)` for
 a specific `theta`.  An example of such a null hypothesis suggested in the
 previous section is that log-profits (normalized to `mean=0` and `MAD=1`) are
-distributed as t-distribution with `a=3`,  the alternative being `a != 3`.
+distributed as a t-distribution with `a=3`, the alternative hypothesis being
+`a!=3`.
 
 In this case, we can construct the following experiment. Under the null
 hypothesis, we know the true value of `theta` for the distribution `f(X|theta)`.
 Let's sample this distribution to obtain a sample `x=(x_1, ..., x_n)`, and use
 an _estimator_ `s(x)` to estimate the value of `theta` from `x`.  This
 estimator, in turn, can be viewed as a random variable `s(X)` with its own
-distribution `g(X|theta)`, which we assume to be a non-degenerate p.d.f. of
-finite value for any `x`.
+distribution `g(X|theta)`, which we assume to be a non-degenerate p.d.f., finite
+for any `x`.
 
 Next, for a given probability `P`, we construct an interval `I=[theta-u..theta+v]`
 such that:
