@@ -1,7 +1,9 @@
 # Hypothesis Testing, Confidence Intervals and Monte Carlo
 
-In this section, we establish a methodology for working with sampled data and
-estimating the precision of the results.
+In this experiment, we establish a methodology for working with sampled data and
+estimating the precision of the results. Note, that unlike most other
+experiments, we will be working exclusively with analytical distributions, and
+therefore, will not need any external data.
 
 ## Hypothesis Testing and Confidence Intervals
 
@@ -76,6 +78,81 @@ follows:
 Along the way, we can estimate the quality of the estimator `s(X)` by comparing
 its mean to `theta` and evaluating the width of `I` as an indicator of its
 precision.
+
+### Mean, MAD, Sigma and friends
+
+As an illustration, our first set of experiments will estimate (computationally)
+the basic statistics of our two distributions of interests, t-distribution and
+Gaussian.
+
+We start with the mean, MAD and stardand deviation `sigma` for several sample
+sizes denoted in the plot by `N`. That is, we draw `N` samples from the source
+distribution `x=(x_1, ..., x_N)`, compute the statistics using their definitions
+(and not bother with the "sample" vs. "population" distinction for `sigma`):
+
+```
+mean = sum(x_1, ..., x_N) / N
+MAD = sum_N(abs(mean - x_i)) / N
+sigma = sqrt( sum_N( (mean - x_i)^2) / N )
+```
+
+A value of each statistic becomes a single sample of its own histogram. We then
+repeat this process 10K times, so that 1% is still respectable 100 samples, thus
+even the 99% confidence level will give us a reasonably accurate confidence
+interval.  All in all, we'll be sampling the distribution `10,000 * N` times for
+each statistic.
+
+For uniformity, our source distribution will always have `mean=0` and `MAD=1`,
+and t-distribution will usually have `a=3` unless stated otherwise.
+
+### Normal Distribution
+
+We begin our study with the normal distribution, and we use the following values
+of `N`: `250` (approximately the number of trading days in a year), `5000` (20
+years - the maximum duration of any single stock in our dataset), and finally
+`24,000,000` (the number of daily samples in our dataset for the stocks with the
+average daily volume of `>$1M`).
+
+`N=250` ([config](assets/normal-N-250-mean-mad-sigma.json)):
+
+![Source distribution](assets/normal-N-250-source.jpeg)
+
+![Mean](assets/normal-N-250-mean.jpeg)
+
+![MAD](assets/normal-N-250-mad.jpeg)
+
+![Sigma](assets/normal-N-250-sigma.jpeg)
+
+`N=5000` ([config](assets/normal-N-5K-mean-mad-sigma.json)):
+
+![Source distribution](assets/normal-N-5K-source.jpeg)
+
+![Mean](assets/normal-N-5K-mean.jpeg)
+
+![MAD](assets/normal-N-5K-mad.jpeg)
+
+![Sigma](assets/normal-N-5K-sigma.jpeg)
+
+`N=20,000,000` ([config](assets/normal-N-20M-mean-mad-sigma.json) - warning:
+very long runtime!):
+
+![Source distribution](assets/normal-N-20M-source.jpeg)
+
+![Mean](assets/normal-N-20M-mean.jpeg)
+
+![MAD](assets/normal-N-20M-mad.jpeg)
+
+![Sigma](assets/normal-N-20M-sigma.jpeg)
+
+A few things to note:
+
+- Sampling the source distribution even 20M times barely has any samples above 7
+  MADs; at 5K times it hardly crosses 4 MADs.
+- All three statistics converge fairly rapidly with the number samples; the 99%
+  confidence interval goes from `+-0.2` for mean at `N=250` to `+-0.045` at
+  `N=5K`, and is negligibly small at `N=20M`.
+- Sigma and MAD have approximately the same precision: `+-12%` at `N=250` and
+  `+-3%` at `N=5K` for the same 99% confidence level.
 
 ## The Tale of Fat Tails
 
