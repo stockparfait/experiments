@@ -48,10 +48,10 @@ Now consider an interval `CI(S)=[S-v, S+u]`. My claim now is that this is
 precisely the confidence interval for `theta` with the confidence level `P`
 under the null hypothesis.
 
-Indeed, by construction, a specific sample `s(x)` can be outside of the interval
-`I` on either side with equal probability of `(1-P)/2`. When `s(x)` is on the
-right side of the interval, `s(x) > theta+v`, and hence, `s(x)-v > theta`, so
-`theta` is out of `CI(s(x))`. Similarly, when `s(x)` is on the left of
+Indeed, by construction, `S` can be outside of the interval `I` on either side
+with equal probability of `(1-P)/2`. When a specific sample `s(x)` is on the
+right side of the interval `I`, `s(x) > theta+v`, and hence, `s(x)-v > theta`,
+so `theta` is out of `CI(s(x))`. Similarly, when `s(x)` is on the left of
 `CI(s(x))` we have that `s(x) < theta-u`, hence `s(x)+u < theta`, and again
 `theta` is out of the interval. Conversely, when `s(x)` is within `I`, `theta`
 is within `CI(s(x))`. Therefore, `theta` belongs to `CI(S)` with the probability
@@ -107,11 +107,13 @@ and t-distribution will usually have `a=3` unless stated otherwise.
 
 ### Normal Distribution
 
-We begin our study with the normal distribution, and we use the following values
-of `N`: `250` (approximately the number of trading days in a year), `5000` (20
-years - a rounded maximum duration of a single stock in our dataset), and
-finally `20,000,000` (the rounded number of daily samples in our dataset for the
-stocks with the average daily volume of `>$1M`).
+We begin our study with the normal distribution and use the following values of
+`N`:
+
+-`250` - approximately the number of trading days in a year,
+-`5000` - 20 years, the rounded maximum duration of a single stock in our dataset,
+- `20,000,000` - the rounded number of daily samples in our dataset for the
+  stocks with the average daily volume of `>$1M`.
 
 `N=250` ([config](assets/normal-N-250-mean-mad-sigma.json)):
 
@@ -151,8 +153,9 @@ A few things to note:
 - All three statistics converge fairly rapidly with the number samples; the 99%
   confidence interval goes from `+-0.2` for mean at `N=250` to `+-0.045` at
   `N=5K`, and is negligibly small at `N=20M`. In fact, the mean's CI roughly
-  equals the theoretically expected `[-3..3]/sqrt(N)`, where `[-3..3]` is the mean's
-  CI for `N=1`, as shown on the source distribution plot.
+  equals the theoretically expected `[-3.25..3.25]/sqrt(N)`, where
+  `[-3.25..3.25]` is the mean's CI for `N=1`, as shown on the source
+  distribution plot.
 - Sigma and MAD have approximately the same precision: `+-12%` at `N=250` and
   `+-3%` at `N=5K` for the same 99% confidence level.
 
