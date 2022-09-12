@@ -95,7 +95,7 @@
       "graphs": [
         {
           "id": "dist",
-          "title": "Distirbution under study, N=20000000"
+          "title": "Normal Distribution, N=20000000"
         },
         {
           "id": "counts",
