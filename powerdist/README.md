@@ -110,8 +110,8 @@ and t-distribution will usually have `a=3` unless stated otherwise.
 We begin our study with the normal distribution and use the following values of
 `N`:
 
--`250` - approximately the number of trading days in a year,
--`5000` - 20 years, the rounded maximum duration of a single stock in our dataset,
+- `250` - approximately the number of trading days in a year,
+- `5000` - 20 years, the rounded maximum duration of a single stock in our dataset,
 - `20,000,000` - the rounded number of daily samples in our dataset for the
   stocks with the average daily volume of `>$1M`.
 
