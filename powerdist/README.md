@@ -180,7 +180,7 @@ A few things to note:
 ![Sigma](assets/t-N-5K-sigma.jpeg)
 
 `N=20,000,000` ([config](assets/t-N-20M-mean-mad-sigma.json) - warning:
-very long runtime, 2h15m on my Macbook Air M1):
+very long runtime, 4h on my Macbook Air M1):
 
 ![Source distribution](assets/t-N-20M-source.jpeg)
 
@@ -206,6 +206,37 @@ for the t-distribution with `a=3`:
 In other words, the standard deviation converges a lot slower and is a lot
 noisier than MAD, and hence, I've decided to use MAD rather than `sigma`.
 Additionally, MAD is a more intuitive measure of volatility.
+
+## Implications for Log-Profits
+
+Recall that the market on average (as judged e.g. by the NASDAQ Composite index)
+has a daily mean of about 3-5% of its MAD. Let's optimistically take the 5%.
+This implies that the mean's CI must be no more than +-0.05 (5% of MAD) just to
+give an indication whether the price series is rising or falling on average, and
+a lot narrower to estimate its actual value.
+
+For a 1-year period, the 99% mean's CI is +-20% of MAD for the normal, and 25%
+for the t-distribution, which is quite a bit wider than necessary. In fact, the
+required +-5% width can only be obtained for a CI with a confidence level of 45%
+for the normal, and 40% for the t-distribution, which is a dubious confidence
+level to say it nicely.
+
+The 20-year period, the 99% mean's CI is now a bit below +-5%, but the
+t-distribution is closer to +-6%, and the required 5% is obtained by the h98%
+confidence level. Once again, this is just to be sure with 98% confidence that
+the stock or index actually grows over time, but not to tell how fast.
+
+For reference, a 10-year period achieves the 5% accuracy with 90% confidence for
+t-distribution, and the same 90% confidence yields 3.7% accuracy over 20 years,
+which might in fact be passable for a practical investor. Note, that assuming 5%
+mean/MAD for a typical 1% volatility is 0.05% daily growth, which translates
+to 3.5% annualized growth, so +-3.7% accuracy is a 90% confidence that the stock
+grows between 1.4% and 8.9% annually. I'd say, that's still a pretty lousy
+accuracy, even if somewhat reassuaring.
+
+Since the normal distribution has comparable ranges for the mean and MAD, the
+precision and the confidence are not much higher, even if we take a wild chance
+and decide to use it as a model.
 
 ## The Tale of Fat Tails
 
