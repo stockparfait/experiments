@@ -1,0 +1,144 @@
+{
+  "experiments": [
+    {
+      "power distribution": {
+        "MAD distribution": {
+          "buckets": {
+            "maxval": 1.18,
+            "minval": 0.8,
+            "n": 201,
+            "spacing": "linear"
+          },
+          "chart type": "line",
+          "graph": "mads",
+          "keep zeros": false,
+          "log Y": true,
+          "percentiles": [
+            0.5,
+            99.5
+          ],
+          "plot mean": true
+        },
+        "distribution": {
+          "MAD": 1.0,
+          "alpha": 3,
+          "buckets": {
+            "maxval": 15,
+            "minval": 0.1,
+            "n": 101,
+            "spacing": "symmetric exponential"
+          },
+          "compound": 1,
+          "mean": 0.0,
+          "name": "t",
+          "normalize": true,
+          "samples": 5000
+        },
+        "id": "N=5000 @ 1",
+        "mean distribution": {
+          "buckets": {
+            "maxval": 0.1,
+            "minval": -0.1,
+            "n": 201
+          },
+          "chart type": "line",
+          "graph": "means",
+          "keep zeros": false,
+          "log Y": true,
+          "percentiles": [
+            0.5,
+            99.5
+          ],
+          "plot mean": true
+        },
+        "sample plot": {
+          "buckets": {
+            "maxval": 15,
+            "minval": 0.1,
+            "n": 101,
+            "spacing": "symmetric exponential"
+          },
+          "counts graph": "counts",
+          "graph": "dist",
+          "log Y": true,
+          "percentiles": [
+            0.5,
+            99.5
+          ],
+          "reference distribution": {
+            "MAD": 1.0,
+            "mean": 0.0,
+            "name": "t"
+          }
+        },
+        "sigma distribution": {
+          "buckets": {
+            "maxval": 10,
+            "minval": 1,
+            "spacing": "linear"
+          },
+          "chart type": "line",
+          "graph": "sigmas",
+          "log Y": true,
+          "percentiles": [
+            0.5,
+            99.5
+          ],
+          "plot mean": true
+        },
+        "statistic samples": 10000
+      }
+    }
+  ],
+  "groups": [
+    {
+      "graphs": [
+        {
+          "id": "dist",
+          "title": "T Distribution, N=5000"
+        },
+        {
+          "id": "counts",
+          "log scale Y": true,
+          "title": "Samples"
+        }
+      ],
+      "id": "dist group",
+      "timeseries": false,
+      "title": "Source Distribution"
+    },
+    {
+      "graphs": [
+        {
+          "id": "means",
+          "title": "Mean x 10000 samples"
+        }
+      ],
+      "id": "means group",
+      "timeseries": false,
+      "title": "Mean"
+    },
+    {
+      "graphs": [
+        {
+          "id": "mads",
+          "title": "MAD x 10000 samples"
+        }
+      ],
+      "id": "mads group",
+      "timeseries": false,
+      "title": "MAD"
+    },
+    {
+      "graphs": [
+        {
+          "id": "sigmas",
+          "title": "Sigma x 10000 samples"
+        }
+      ],
+      "id": "sigmas group",
+      "timeseries": false,
+      "title": "Sigma"
+    }
+  ]
+}

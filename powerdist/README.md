@@ -103,17 +103,15 @@ in all, we'll be sampling the distribution `10,000 * N` times for each
 statistic.
 
 For uniformity, our source distribution will always have `mean=0` and `MAD=1`,
-and t-distribution will usually have `a=3` unless stated otherwise.
-
-### Normal Distribution
-
-We begin our study with the normal distribution and use the following values of
-`N`:
+and t-distribution will usually have `a=3` unless stated otherwise.  We use the
+following values of `N`:
 
 - `250` - approximately the number of trading days in a year,
 - `5000` - 20 years, the rounded maximum duration of a single stock in our dataset,
 - `20,000,000` - the rounded number of daily samples in our dataset for the
   stocks with the average daily volume of `>$1M`.
+
+### Normal Distribution
 
 `N=250` ([config](assets/normal-N-250-mean-mad-sigma.json)):
 
@@ -158,6 +156,56 @@ A few things to note:
   distribution plot.
 - Sigma and MAD have approximately the same precision: `+-12%` at `N=250` and
   `+-3%` at `N=5K` for the same 99% confidence level.
+
+### Student's T-Distribution
+
+`N=250` ([config](assets/t-N-250-mean-mad-sigma.json)):
+
+![Source distribution](assets/t-N-250-source.jpeg)
+
+![Mean](assets/t-N-250-mean.jpeg)
+
+![MAD](assets/t-N-250-mad.jpeg)
+
+![Sigma](assets/t-N-250-sigma.jpeg)
+
+`N=5000` ([config](assets/t-N-5K-mean-mad-sigma.json)):
+
+![Source distribution](assets/t-N-5K-source.jpeg)
+
+![Mean](assets/t-N-5K-mean.jpeg)
+
+![MAD](assets/t-N-5K-mad.jpeg)
+
+![Sigma](assets/t-N-5K-sigma.jpeg)
+
+`N=20,000,000` ([config](assets/t-N-20M-mean-mad-sigma.json) - warning:
+very long runtime, 2h15m on my Macbook Air M1):
+
+![Source distribution](assets/t-N-20M-source.jpeg)
+
+![Mean](assets/t-N-20M-mean.jpeg)
+
+![MAD](assets/t-N-20M-mad.jpeg)
+
+![Sigma](assets/t-N-20M-sigma.jpeg)
+
+In comparison to the normal distribution, the same points look very different
+for the t-distribution with `a=3`:
+
+- Even within 250 samples we are seeing a couple of samples near 6 MADs away
+  from the mean; at 5K samples about 50 (1%) lie more than 5 MADs away, some of
+  which reach over 12 MADs (which are already practically unreachable for the
+  normal distribution), and at 20M there are samples more than 200 MADs
+  away.
+- Mean and MAD still converge fairly well, even if their 99% CIs are about twice
+  as wide as for normal, but the same `sigma`'s CI is 3x wider even for 20M
+  samples, all the while having occasional jumps a whole order of magnitude away
+  from its expected value for `N=250` and about 3x its value for `N=5K`.
+
+In other words, the standard deviation converges a lot slower and is a lot
+noisier than MAD, and hence, I've decided to use MAD rather than `sigma`.
+Additionally, MAD is a more intuitive measure of volatility.
 
 ## The Tale of Fat Tails
 
