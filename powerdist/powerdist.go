@@ -18,10 +18,12 @@ package powerdist
 import (
 	"context"
 	"math"
+	"runtime"
 
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
+	"github.com/stockparfait/parallel"
 	"github.com/stockparfait/stockparfait/stats"
 )
 
@@ -80,28 +82,45 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 			return errors.Annotate(err, "failed to plot %s", d.distName)
 		}
 	}
-	meanFn := func(d *stats.Histogram) float64 { return d.Mean() }
-	if err := d.plotStatistic(ctx, d.config.MeanDist, meanFn, "means"); err != nil {
-		return errors.Annotate(err, "failed to plot '%s'", d.prefix("means"))
+	sts := []*statistic{}
+	if d.config.MeanDist != nil {
+		sts = append(sts, &statistic{
+			c:    d.config.MeanDist,
+			f:    func(d *stats.Histogram) float64 { return d.Mean() },
+			name: "means",
+		})
 	}
-	madFn := func(d *stats.Histogram) float64 { return d.MAD() }
-	if err := d.plotStatistic(ctx, d.config.MADDist, madFn, "MADs"); err != nil {
-		return errors.Annotate(err, "failed to plot '%s'", d.prefix("MADs"))
+	if d.config.MADDist != nil {
+		sts = append(sts, &statistic{
+			c:    d.config.MADDist,
+			f:    func(d *stats.Histogram) float64 { return d.MAD() },
+			name: "MADs",
+		})
 	}
-	sigmaFn := func(d *stats.Histogram) float64 { return d.Sigma() }
-	if err := d.plotStatistic(ctx, d.config.SigmaDist, sigmaFn, "Sigmas"); err != nil {
-		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Sigmas"))
+	if d.config.SigmaDist != nil {
+		sts = append(sts, &statistic{
+			c:    d.config.SigmaDist,
+			f:    func(d *stats.Histogram) float64 { return d.Sigma() },
+			name: "Sigmas",
+		})
 	}
-	alphaFn := func() func(*stats.Histogram) float64 {
-		// Add an extra function closure to cache and hide these vars.
-		mean := d.source.Mean()
-		mad := d.source.MAD()
-		return func(h *stats.Histogram) float64 {
-			return experiments.DeriveAlpha(h, mean, mad, d.config.AlphaParams)
+	if d.config.AlphaDist != nil {
+		alphaFn := func() func(*stats.Histogram) float64 {
+			// Add an extra function closure to cache and hide these vars.
+			mean := d.source.Mean()
+			mad := d.source.MAD()
+			return func(h *stats.Histogram) float64 {
+				return experiments.DeriveAlpha(h, mean, mad, d.config.AlphaParams)
+			}
 		}
+		sts = append(sts, &statistic{
+			c:    d.config.AlphaDist,
+			f:    alphaFn(),
+			name: "Alphas",
+		})
 	}
-	if err := d.plotStatistic(ctx, d.config.AlphaDist, alphaFn(), "Alphas"); err != nil {
-		return errors.Annotate(err, "failed to plot '%s'", d.prefix("Alphas"))
+	if err := d.plotStatistics(ctx, sts); err != nil {
+		return errors.Annotate(err, "failed to plot statistics distributions")
 	}
 
 	var cumulMean, cumulMAD *experiments.CumulativeStatistic
@@ -189,18 +208,15 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	return nil
 }
 
-func (d *PowerDist) plotStatistic(
-	ctx context.Context,
-	c *config.DistributionPlot,
-	f func(*stats.Histogram) float64, // compute the statistic
-	name string,
-) (err error) {
-	if c == nil {
+type statistic struct {
+	c    *config.DistributionPlot
+	f    func(*stats.Histogram) float64 // compute the statistic
+	name string
+}
+
+func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error {
+	if len(sts) == 0 {
 		return nil
-	}
-	xform := func(d stats.Distribution) float64 {
-		rd := d.Copy().(*stats.RandDistribution) // use a fresh copy to recompute the histogram
-		return f(rd.Histogram())
 	}
 	// Do NOT directly compute dist.Histogram() or statistics that require it, so
 	// that copies would have to compute it every time.
@@ -208,11 +224,52 @@ func (d *PowerDist) plotStatistic(
 	if err != nil {
 		return errors.Annotate(err, "failed to create source distribution")
 	}
-	statDist := stats.NewRandDistribution(ctx, dist, xform, d.config.StatSamples, &c.Buckets)
-	h := statDist.Histogram()
-	fullName := d.prefix(distName + " " + name)
-	if err = experiments.PlotDistribution(ctx, h, c, fullName); err != nil {
-		return errors.Annotate(err, "failed to plot %s", fullName)
+
+	jobs := []parallel.Job{}
+	workers := 2 * runtime.NumCPU()
+	step := d.config.StatSamples / workers
+	if step < 1 {
+		step = 1
+	}
+	for i := 0; i < d.config.StatSamples; i += step {
+		start := i
+		end := start + step
+		if end > d.config.StatSamples {
+			end = d.config.StatSamples
+		}
+		distCopy := dist.Copy()
+		jobs = append(jobs, func() interface{} {
+			hs := make([]*stats.Histogram, len(sts))
+			for j := 0; j < len(sts); j++ {
+				hs[j] = stats.NewHistogram(&sts[j].c.Buckets)
+			}
+			for k := start; k < end; k++ {
+				h := distCopy.Copy().(*stats.RandDistribution).Histogram()
+				for j, s := range sts {
+					hs[j].Add(s.f(h))
+				}
+			}
+			return hs
+		})
+	}
+	res := parallel.MapSlice(ctx, workers, jobs)
+
+	hs := make([]*stats.Histogram, len(sts))
+	for j := 0; j < len(sts); j++ {
+		hs[j] = stats.NewHistogram(&sts[j].c.Buckets)
+	}
+	for i := 0; i < len(res); i++ {
+		hr := res[i].([]*stats.Histogram)
+		for i, h := range hr {
+			hs[i].AddHistogram(h)
+		}
+	}
+	for j, s := range sts {
+		fullName := d.prefix(distName + " " + s.name)
+		err := experiments.PlotDistribution(ctx, hs[j], s.c, fullName)
+		if err != nil {
+			return errors.Annotate(err, "failed to plot %s", fullName)
+		}
 	}
 	return nil
 }
