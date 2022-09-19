@@ -224,10 +224,6 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 	if err != nil {
 		return errors.Annotate(err, "failed to create source distribution")
 	}
-	hs := make([]*stats.Histogram, len(sts))
-	for j := 0; j < len(sts); j++ {
-		hs[j] = stats.NewHistogram(&sts[j].c.Buckets)
-	}
 
 	jobs := []parallel.Job{}
 	workers := 2 * runtime.NumCPU()
@@ -241,13 +237,14 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 		if end > d.config.StatSamples {
 			end = d.config.StatSamples
 		}
+		distCopy := dist.Copy()
 		jobs = append(jobs, func() interface{} {
 			hs := make([]*stats.Histogram, len(sts))
 			for j := 0; j < len(sts); j++ {
 				hs[j] = stats.NewHistogram(&sts[j].c.Buckets)
 			}
 			for k := start; k < end; k++ {
-				h := dist.Copy().(*stats.RandDistribution).Histogram()
+				h := distCopy.Copy().(*stats.RandDistribution).Histogram()
 				for j, s := range sts {
 					hs[j].Add(s.f(h))
 				}
@@ -256,18 +253,17 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 		})
 	}
 	res := parallel.MapSlice(ctx, workers, jobs)
+
+	hs := make([]*stats.Histogram, len(sts))
+	for j := 0; j < len(sts); j++ {
+		hs[j] = stats.NewHistogram(&sts[j].c.Buckets)
+	}
 	for i := 0; i < len(res); i++ {
 		hr := res[i].([]*stats.Histogram)
 		for i, h := range hr {
 			hs[i].AddHistogram(h)
 		}
 	}
-	// for i := 0; i < d.config.StatSamples; i++ {
-	// 	h := dist.Copy().(*stats.RandDistribution).Histogram()
-	// 	for j, s := range sts {
-	// 		hs[j].Add(s.f(h))
-	// 	}
-	// }
 	for j, s := range sts {
 		fullName := d.prefix(distName + " " + s.name)
 		err := experiments.PlotDistribution(ctx, hs[j], s.c, fullName)
