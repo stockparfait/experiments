@@ -344,7 +344,7 @@ precisely the parameter `a` estimated using the method above.
 
 `N=5K`, `k=10`:
 
-![Alpha distribution for N=5K](assets/t-N=5K-alpha.jpeg)
+![Alpha distribution for N=5K](assets/t-N-5K-alpha.jpeg)
 
 The confidence interval here is too wide to make any meaningful conclusions, and
 experimentally `k=10` is about as good as we can get for `N=5K`.  Reducing `k`
