@@ -15,17 +15,44 @@
           "log Y": true,
           "percentiles": [
             0.5,
+            5,
+            95,
             99.5
           ],
           "plot mean": true
+        },
+        "alpha distribution": {
+          "buckets": {
+            "maxval": 10,
+            "minval": 1.5,
+            "n": 201,
+            "spacing": "linear"
+          },
+          "chart type": "line",
+          "graph": "alphas",
+          "log Y": true,
+          "percentiles": [
+            0.5,
+            5,
+            95,
+            99.5
+          ],
+          "plot mean": true
+        },
+        "alpha params": {
+          "epsilon": 0.01,
+          "ignore counts": 10,
+          "max iterations": 10000,
+          "max x": 10,
+          "min x": 1.1
         },
         "distribution": {
           "MAD": 1.0,
           "alpha": 3,
           "buckets": {
-            "maxval": 15,
+            "maxval": 20,
             "minval": 0.1,
-            "n": 101,
+            "n": 201,
             "spacing": "symmetric exponential"
           },
           "compound": 1,
@@ -47,15 +74,17 @@
           "log Y": true,
           "percentiles": [
             0.5,
+            5,
+            95,
             99.5
           ],
           "plot mean": true
         },
         "sample plot": {
           "buckets": {
-            "maxval": 15,
+            "maxval": 20,
             "minval": 0.1,
-            "n": 101,
+            "n": 201,
             "spacing": "symmetric exponential"
           },
           "counts graph": "counts",
@@ -63,6 +92,8 @@
           "log Y": true,
           "percentiles": [
             0.5,
+            5,
+            95,
             99.5
           ],
           "reference distribution": {
@@ -75,6 +106,7 @@
           "buckets": {
             "maxval": 10,
             "minval": 1,
+            "n": 201,
             "spacing": "linear"
           },
           "chart type": "line",
@@ -82,6 +114,8 @@
           "log Y": true,
           "percentiles": [
             0.5,
+            5,
+            95,
             99.5
           ],
           "plot mean": true
@@ -139,6 +173,17 @@
       "id": "sigmas group",
       "timeseries": false,
       "title": "Sigma"
+    },
+    {
+      "graphs": [
+        {
+          "id": "alphas",
+          "title": "Alpha x 10000 samples"
+        }
+      ],
+      "id": "alphas group",
+      "timeseries": false,
+      "title": "Alpha"
     }
   ]
 }
