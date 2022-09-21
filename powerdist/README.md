@@ -344,7 +344,7 @@ precisely the parameter `a` estimated using the method above.
 
 `N=5K`, `k=10`:
 
-![Alpha distribution for N=5K](assets/t-5K-alpha.jpeg)
+![Alpha distribution for N=5K](assets/t-N=5K-alpha.jpeg)
 
 The confidence interval here is too wide to make any meaningful conclusions, and
 experimentally `k=10` is about as good as we can get for `N=5K`.  Reducing `k`
@@ -354,11 +354,11 @@ the reason I didn't even try it for `N=250`.
 
 `N=20M`, `k=10`:
 
-![Alpha distribution for N=20M, k=10](assets/t-20M-alpha-i10.jpeg)
+![Alpha distribution for N=20M, k=10](assets/t-N-20M-alpha-i10.jpeg)
 
 `N=20M`, `k=100`:
 
-![Alpha distribution for N=20M, k=100](assets/t-20M-alpha-i100.jpeg)
+![Alpha distribution for N=20M, k=100](assets/t-N-20M-alpha-i100.jpeg)
 
 Here the CIs become a lot more reasonable.  The buckets with 10+ counts appear
 around 67 MADs away from the mean, and 100 counts - near 33 MADs, which is still
