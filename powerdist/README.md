@@ -134,7 +134,7 @@ following values of `N`:
 ![Sigma](assets/normal-N-5K-sigma.jpeg)
 
 `N=20,000,000` ([config](assets/normal-N-20M-mean-mad-sigma.json) - warning:
-very long runtime, ~50m on my Macbook Air M1):
+long runtime, ~50m on my Macbook Air M1):
 
 ![Source distribution](assets/normal-N-20M-source.jpeg)
 
@@ -180,7 +180,7 @@ A few things to note:
 ![Sigma](assets/t-N-5K-sigma.jpeg)
 
 `N=20,000,000` ([config](assets/t-N-20M-all-dist.json) - warning:
-very long runtime, 85m on my Macbook Air M1):
+long runtime, 85m on my Macbook Air M1):
 
 ![Source distribution](assets/t-N-20M-source.jpeg)
 
@@ -217,10 +217,10 @@ give an indication whether the price series is rising or falling on average, and
 a lot narrower to estimate its actual value.
 
 For a 1-year period, the 99% mean's CI is +-20% of MAD for the normal, and 25%
-for the t-distribution, which is quite a bit wider than necessary. In fact, the
-required +-5% width can only be obtained for a CI with a confidence level of 45%
-for the normal, and 40% for the t-distribution, which is a dubious confidence
-level to say it nicely.
+for the t-distribution, which is too wide to estimate anything useful about the
+mean.  In fact, the required +-5% width can only be obtained for a CI with a
+confidence level of 45% for the normal, and 40% for the t-distribution, which is
+a dubious confidence level to say it nicely.
 
 For a 20-year period, the normal's 99% mean's CI is now a bit below +-5%, but
 the t-distribution is closer to +-6%, and the required 5% is obtained by the 98%
@@ -244,7 +244,7 @@ to use it as a model.
 Recall that the p.d.f. of the [t-distribution] with `a` degrees of freedom is:
 
 ```
-f_a(x) = C * (1 + x^2/a)^(-(a+1)/2)
+t[a](x) = C * (1 + (x^2)/a)^(-(a+1)/2)
 ```
 
 where `C=Gamma((a+1)/2) / [ sqrt[a*Pi] * Gamma(a/2) ]` is a normalizing
@@ -253,7 +253,7 @@ approaches infinity, the p.d.f. becomes proportional to a [power law] with the
 exponent `a+1`:
 
 ```
-f_a(x) [ abs(x) --> Inf] ~  1/ [ abs(x)^(a+1) ]
+t[a](x) [ abs(x) --> Inf] ~  1/ [ abs(x)^(a+1) ]
 ```
 
 and hence, the c.d.f. (cumulative distribution function) approaches 0 or 1 as a
@@ -275,14 +275,14 @@ distribution.  But if we want to estimate the confidence interval of `a` we need
 to come up with an automated method for estimating `a`. Perhaps, the simplest
 way is to formalize what we informally did before: try a few reference
 distributions with different `a` and pick the one which fits the best.  Or, more
-accurately, the one that "differs the least". In other words, we need some sort
-of a distance measure for distributions.
+accurately, the one that _differs the least_. For that, we need some sort of a
+distance measure for distributions.
 
 In most statistics textbooks, such a measure between distributions with p.d.f.'s
 `f` and `g` is often defined as the maximum pointwise distance:
 
 ```
-D0(f, g) = max { abs(f(x) - g(x)) } for all x in [-inf..inf]
+D_linear(f, g) = max { abs(f(x) - g(x)) } for all x in [-inf..inf]
 ```
 
 Since our sample p.d.f. is generated as a histogram, it has a fixed number of
@@ -290,35 +290,36 @@ points (the values of `x` corresponding to the buckets), and our measure
 becomes:
 
 ```
-D0(f, g) = max { abs(f(x) - g(x)) } for all x in histogram's buckets
+D_linear(f, g) = max { abs(f(x) - g(x)) } for all x in histogram's buckets
 ```
 
 However, such measure heavily favors the points near the mean, since this is
 where the value of p.d.f. is the largest, and effectively ignores the tails as
 they become very close to zero. As an illustration, let's look at the
-t-distributions with `a=3` and `a=10` plotted with linear scale Y axis:
+t-distributions with `a=2.8` and `a=3.2` plotted with linear scale Y axis
+([config](assets/t-a28-vs-a32-linear.json)):
 
-![a=3 vs a=10 linear](assets/t-a3-vs-a10-linear.jpeg)
+![a=3 vs a=10 linear](assets/t-a28-vs-a32-linear.jpeg)
 
-We can clearly see that any meaningful difference is within about 3 MADs away
-from the mean, and the remaining tails are too close to zero to contribute
-anything to the distance measure. This creates a situation when the sample noise
-in the less important region near the mean may be higher than the useful signal
-in the far tails.
+We can clearly see that any meaningful difference is tiny and is mostly within
+about 0.5 MAD away from the mean, and the remaining tails are too close to zero
+to contribute anything to the distance measure. This creates a situation when
+the sample noise in the less important region near the mean may be higher than
+the useful signal in the far tails.
 
 However, if we plot the same distributions on a log-scale `Y` axis, the
-difference in the tails becomes a lot more significant than near the mean:
+difference in the tails becomes a lot more significant than near the mean
+([config](assets/t-a28-vs-a32-log.json)):
 
-![a=3 vs a=10 linear](assets/t-a3-vs-a10-log.jpeg)
+![a=3 vs a=10 linear](assets/t-a28-vs-a32-log.jpeg)
 
 In fact, this is precisely why we've been plotting all the distributions on a
 log-scale `Y`, to see the details in the tails.
 
 This gives the idea of a modified measure:
 
-
 ```
-D(f, g) = max { abs(log(f(x)) - log(g(x))) } for all x in buckets
+D_log(f, g) = max { abs(log(f(x)) - log(g(x))) } for all x in buckets
 ```
 
 This measure, judging by the plots above, heavily favors the far tails over the
@@ -327,7 +328,7 @@ near-mean values.
 Thus, an algorithm for finding the best `a` reduces to minimizing the function
 
 ```
-F(a) = D(f_sample, t[a])
+F(a) = D_log(f_sample, t[a])
 ```
 
 where `t[a]` is the p.d.f. of a t-distribution with the parameter `a`.
