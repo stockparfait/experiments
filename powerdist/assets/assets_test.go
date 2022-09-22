@@ -32,6 +32,8 @@ func TestConfigs(t *testing.T) {
 		"t-N-250-mean-mad-sigma.json",
 		"t-N-5K-all-dist.json",
 		"t-N-20M-all-dist.json",
+		"t-a28-vs-a32-linear.json",
+		"t-a28-vs-a32-log.json",
 	}
 
 	Convey("Configs parse successfully", t, func() {
