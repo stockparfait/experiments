@@ -1,0 +1,93 @@
+{
+  "experiments": [
+    {
+      "power distribution": {
+        "distribution": {
+          "MAD": 1.0,
+          "alpha": 2.8,
+          "buckets": {
+            "maxval": 30,
+            "minval": 0.1,
+            "n": 201,
+            "spacing": "symmetric exponential"
+          },
+          "compound": 1,
+          "mean": 0.0,
+          "name": "t",
+          "normalize": true,
+          "samples": 20000000
+        },
+        "id": "N=20000000 @ 1",
+        "sample plot": {
+          "buckets": {
+            "maxval": 30,
+            "minval": 0.1,
+            "n": 201,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "dist",
+          "log Y": false,
+          "percentiles": [],
+          "reference distribution": {
+            "MAD": 1.0,
+            "alpha": 2.8,
+            "mean": 0.0,
+            "name": "t"
+          }
+        },
+        "statistic samples": 100
+      }
+    },
+    {
+      "power distribution": {
+        "distribution": {
+          "MAD": 1.0,
+          "alpha": 3.2,
+          "buckets": {
+            "maxval": 30,
+            "minval": 0.1,
+            "n": 201,
+            "spacing": "symmetric exponential"
+          },
+          "compound": 1,
+          "mean": 0.0,
+          "name": "t",
+          "normalize": true,
+          "samples": 20000000
+        },
+        "id": "N=20000000 @ 1",
+        "sample plot": {
+          "buckets": {
+            "maxval": 30,
+            "minval": 0.1,
+            "n": 201,
+            "spacing": "symmetric exponential"
+          },
+          "graph": "dist",
+          "log Y": false,
+          "percentiles": [],
+          "reference distribution": {
+            "MAD": 1.0,
+            "alpha": 3.2,
+            "mean": 0.0,
+            "name": "t"
+          }
+        },
+        "statistic samples": 10000
+      }
+    }
+  ],
+  "groups": [
+    {
+      "graphs": [
+        {
+          "id": "dist",
+          "title": "T Distribution, N=20000000"
+        }
+      ],
+      "id": "dist group",
+      "timeseries": false,
+      "title": "Source Distribution"
+    }
+  ]
+}

@@ -26,12 +26,12 @@ func TestConfigs(t *testing.T) {
 	t.Parallel()
 
 	configs := []string{
-		"normal-N-20M-mean-mad-sigma.json",
 		"normal-N-250-mean-mad-sigma.json",
 		"normal-N-5K-mean-mad-sigma.json",
-		"t-N-20M-mean-mad-sigma.json",
+		"normal-N-20M-mean-mad-sigma.json",
 		"t-N-250-mean-mad-sigma.json",
-		"t-N-5K-mean-mad-sigma.json",
+		"t-N-5K-all-dist.json",
+		"t-N-20M-all-dist.json",
 	}
 
 	Convey("Configs parse successfully", t, func() {
