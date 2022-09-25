@@ -91,14 +91,15 @@ func (h *Hold) Name() string { return "hold" }
 
 // AnalyticalDistribution configures the type and parameters of a distibution.
 type AnalyticalDistribution struct {
-	Name      string        `json:"name" required:"true" choices:"t,normal"`
-	Mean      float64       `json:"mean" default:"0.0"`
-	MAD       float64       `json:"MAD" default:"1.0"`
-	Alpha     float64       `json:"alpha" default:"3.0"`    // T dist. parameter
-	Compound  int           `json:"compound" default:"1"`   // sum of N samples
-	Normalize bool          `json:"normalize"`              // divide by Compound
-	Samples   int           `json:"samples" default:"1000"` // #samples for estimating statistics
-	Buckets   stats.Buckets `json:"buckets"`
+	Name     string  `json:"name" required:"true" choices:"t,normal"`
+	Mean     float64 `json:"mean" default:"0.0"`
+	MAD      float64 `json:"MAD" default:"1.0"`
+	Alpha    float64 `json:"alpha" default:"3.0"`  // T dist. parameter
+	Compound int     `json:"compound" default:"1"` // sum of N samples
+	// Use Y_i = sum(X_i, ..., X_N+i) for a single stream of X_i.
+	FastCompound bool                         `json:"fast compound"`
+	Normalize    bool                         `json:"normalize"` // divide by Compound
+	DistConfig   stats.RandDistributionConfig `json:"distribution config"`
 }
 
 var _ message.Message = &AnalyticalDistribution{}
@@ -115,9 +116,6 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 	}
 	if d.Compound < 1 {
 		return errors.Reason("Compound=%d must be >= 1", d.Compound)
-	}
-	if d.Samples < 1 {
-		return errors.Reason("Samples=%d must be >= 1", d.Samples)
 	}
 	return nil
 }

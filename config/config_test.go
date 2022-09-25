@@ -103,6 +103,8 @@ func TestConfig(t *testing.T) {
 			So(defaultReader.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
 			var defaultBuckets stats.Buckets
 			So(defaultBuckets.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
+			var defaultRandDist stats.RandDistributionConfig
+			So(defaultRandDist.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
 
 			So(c, ShouldResemble, &Config{
 				Groups: []*Group{
@@ -166,13 +168,12 @@ func TestConfig(t *testing.T) {
 							ChartType: "line",
 							Normalize: true,
 							RefDist: &AnalyticalDistribution{
-								Name:     "t",
-								Mean:     0.0,
-								MAD:      1.0,
-								Alpha:    3.0,
-								Compound: 1,
-								Samples:  1000,
-								Buckets:  defaultBuckets,
+								Name:       "t",
+								Mean:       0.0,
+								MAD:        1.0,
+								Alpha:      3.0,
+								Compound:   1,
+								DistConfig: defaultRandDist,
 							},
 							DeriveAlpha: &DeriveAlpha{
 								MinX:          2.0,
@@ -188,12 +189,11 @@ func TestConfig(t *testing.T) {
 					}},
 					{Config: &PowerDist{
 						Dist: AnalyticalDistribution{
-							Name:     "normal",
-							MAD:      1.0,
-							Alpha:    3.0,
-							Compound: 1,
-							Samples:  1000,
-							Buckets:  defaultBuckets,
+							Name:       "normal",
+							MAD:        1.0,
+							Alpha:      3.0,
+							Compound:   1,
+							DistConfig: defaultRandDist,
 						},
 						CumulMean: &CumulativeStatistic{
 							Graph:   "cumul mean",

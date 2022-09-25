@@ -282,7 +282,7 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 		return
 	}
 	if c.Compound > 1 {
-		xform := func(d stats.Distribution) float64 {
+		fn := func(d stats.Distribution, s interface{}) (float64, interface{}) {
 			acc := 0.0
 			for i := 0; i < c.Compound; i++ {
 				acc += d.Rand()
@@ -290,9 +290,34 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 			if c.Normalize {
 				acc /= float64(c.Compound)
 			}
-			return acc
+			return acc, nil
 		}
-		dist = stats.NewRandDistribution(ctx, dist, xform, c.Samples, &c.Buckets)
+		if c.FastCompound {
+			fn = func(d stats.Distribution, state interface{}) (float64, interface{}) {
+				sums := state.([]float64)
+				if len(sums) > 0 {
+					sums = sums[1:]
+				}
+				n := c.Compound
+				for len(sums) < n {
+					var last float64
+					if len(sums) > 0 {
+						last = sums[len(sums)-1]
+					}
+					sums = append(sums, last+d.Rand())
+				}
+				x := sums[n-1] - sums[0]
+				if c.Normalize {
+					x /= float64(c.Compound)
+				}
+				return x, sums
+			}
+		}
+		xform := &stats.Transform{
+			InitState: func() interface{} { return []float64{} },
+			Fn:        fn,
+		}
+		dist = stats.NewRandDistribution(ctx, dist, xform, &c.DistConfig)
 		distName += fmt.Sprintf(" x %d", c.Compound)
 	}
 	return

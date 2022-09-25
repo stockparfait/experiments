@@ -22,17 +22,19 @@
         "distribution": {
           "MAD": 1.0,
           "alpha": 3,
-          "buckets": {
-            "maxval": 7,
-            "minval": 0.1,
-            "n": 101,
-            "spacing": "symmetric exponential"
-          },
           "compound": 1,
           "mean": 0.0,
           "name": "normal",
           "normalize": true,
-          "samples": 20000000
+          "distribution config": {
+            "buckets": {
+              "maxval": 7,
+              "minval": 0.1,
+              "n": 101,
+              "spacing": "symmetric exponential"
+	    },
+            "samples": 20000000
+	  }
         },
         "id": "N=20000000 @ 1",
         "mean distribution": {
