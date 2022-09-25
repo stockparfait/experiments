@@ -56,10 +56,13 @@ func randDistribution(ctx context.Context, c *config.AnalyticalDistribution) (so
 	}
 	var ok bool
 	if rand, ok = source.(*stats.RandDistribution); !ok {
-		xform := func(d stats.Distribution) float64 {
-			return d.Rand()
+		xform := &stats.Transform{
+			InitState: func() interface{} { return nil },
+			Fn: func(d stats.Distribution, s interface{}) (float64, interface{}) {
+				return d.Rand(), nil
+			},
 		}
-		rand = stats.NewRandDistribution(ctx, source, xform, c.Samples, &c.Buckets)
+		rand = stats.NewRandDistribution(ctx, source, xform, &c.DistConfig)
 	}
 	return
 }
@@ -151,7 +154,7 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		cumulKurt = experiments.NewCumulativeStatistic(d.config.CumulKurt)
 	}
 
-	cumulHist := stats.NewHistogram(&d.config.Dist.Buckets)
+	cumulHist := stats.NewHistogram(&d.config.Dist.DistConfig.Buckets)
 	for i := 0; i < d.config.CumulSamples; i++ {
 		y := d.rand.Rand()
 		cumulMean.AddToAverage(y)

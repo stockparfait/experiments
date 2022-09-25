@@ -65,8 +65,10 @@ func TestDistribution(t *testing.T) {
 {
   "distribution": {
     "name": "t",
-    "buckets": {"n": 5},
-    "samples": 10
+    "distribution config": {
+      "buckets": {"n": 5},
+      "samples": 10
+    }
   },
   "sample plot": {
     "graph": "dist"
