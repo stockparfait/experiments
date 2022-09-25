@@ -36,7 +36,7 @@ long runtime, ~50m on my Macbook Air M1):
 A few things to note:
 
 - Sampling the source distribution even 20M times barely has any samples above 7
-  MADs; at 5K times it hardly crosses 4 MADs.
+  MADs; at 5K samples it hardly crosses 4 MADs.
 - All three statistics converge fairly rapidly with the number samples; the 99%
   confidence interval goes from `+-0.2` for mean at `N=250` to `+-0.045` at
   `N=5K`, and is negligibly small at `N=20M`. In fact, the mean's CI roughly

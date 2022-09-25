@@ -49,6 +49,6 @@ if it's indeed acceptable for them.
 
 *Next: [Market, Random Walks and Log-Profits]*
 
-[Table of Contents]: ../
+[Table of Contents]: ../README.md
 [Market, Random Walks and Log-Profits]: ../logprofits/
 [scientific method]: https://en.wikipedia.org/wiki/Scientific_method

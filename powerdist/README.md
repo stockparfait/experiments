@@ -10,9 +10,11 @@ therefore, will not need any external data.
 - [Theory](theory.md): definitions of hypothesis testing, confidence intervals
   under hypothesis, Monte Carlo method, and introducing basic statistics
 - [Normal distributinon](normal.md): simulating normal distribution with
-  `N=250`, `5K` and `20M` samples, evaluating CIs for basic statistics
-- [Student's t-distribution](students.md): the same simulation of t-distribution
-- [The Tale of Fat Tails](fat_tails.md): finding `a` (alpha) parameter of
+  `N=250`, `5K` and `20M` samples, evaluating CIs for basic statistics and some
+  general observations
+- [Student's t-distribution](students.md): the same simulation of
+  t-distribution, implications for log-profits
+- [The Tale of Fat Tails](fat_tails.md): finding `a` (alpha) parameter for
   t-distribution by simulation
 
 [Distribution of Log-Profits]: ../distribution

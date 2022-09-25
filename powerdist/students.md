@@ -1,5 +1,7 @@
 # Student's T-Distribution
 
+*Previous: [Normal distributinon](normal.md)*
+
 `N=250` ([config](assets/t-N-250-mean-mad-sigma.json)):
 
 ![Source distribution](assets/t-N-250-source.jpeg)
@@ -79,3 +81,5 @@ pretty lousy accuracy, even if somewhat reassuring.
 Since the normal distribution has comparable ranges for the mean, the precision
 and the confidence are not much higher, even if we take a wild chance and decide
 to use it as a model.
+
+* Next: [The Tale of Fat Tails](fat_tails.md)*
