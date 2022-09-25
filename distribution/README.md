@@ -1,5 +1,7 @@
 # Distribution of Log-Profits
 
+*Previous: [Market, Random Walks and Log-Profits](../logprofits/)*
+
 In the [previous section](../logprofits/) we have defined a quantity `X`
 representing log-profits of an equity price series.  Our working hypothesis is
 that `X ` is a _random variable_, which means that it can be reasonably
@@ -244,6 +246,8 @@ Gaussian-based trading theories, where sigma, Sharpe ratio and the likes are
 routinely used to estimate risk.  For a lot more detail and entertainment, read
 "Fooled by Randomness" and "Black Swan" by Nassim Taleb.  And make your own
 conclusions.
+
+*Next: [Hypothesis Testing, Confidence Intervals and Monte Carlo](../powerdist/)*
 
 [survivorship bias]: https://en.wikipedia.org/wiki/Survivorship_bias
 [Nasdaq Data Link]: https://data.nasdaq.com/databases/SFB/data

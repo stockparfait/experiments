@@ -1,5 +1,7 @@
 # Methodology
 
+*Up: [Table of Contents]*
+
 I purposefully do not follow any speficific textbook, any established trading or
 investment approaches, indicators, quantitative trading strategies, or
 econometric theories. Instead, I decided to start from the ground up with the
@@ -45,4 +47,8 @@ In any case, the justification for such shortcuts needs to be spelled out
 explicitly, so that a thorough reader may challenge the justification and decide
 if it's indeed acceptable for them.
 
+*Next: [Market, Random Walks and Log-Profits]*
+
+[Table of Contents]: ../README.md
+[Market, Random Walks and Log-Profits]: ../logprofits/
 [scientific method]: https://en.wikipedia.org/wiki/Scientific_method

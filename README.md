@@ -33,6 +33,10 @@ section for details on how to use such configs with the tool.
 - [Market, Random Walks and Log-Profits](logprofits/)
 - [Distribution of Log-Profits](distribution/)
 - [Hypothesis Testing, Confidence Intervals and Monte Carlo](powerdist/)
+  - [Theory](powerdist/theory.md)
+  - [Normal distributinon](powerdist/normal.md)
+  - [Student's t-distribution](powerdist/students.md)
+  - [The Tale of Fat Tails](powerdist/fat_tails.md) - finding `a` (alpha)
 
 ## Installation
 
@@ -60,15 +64,20 @@ GOPATH` to find out where your `GOPATH` is).
   details.
 - Copy `stockparfait/stockparfait/js` folder contents to a separate working
   directory, for example `~/plots/`; here I'll refer to it as `${PLOTS}`.
-- Run an experiment as:
+- Run an experiment.
+
+An example of these steps together:
 
 ```sh
+${GOPATH}/bin/sharadar
+mkdir -p ${PLOTS}
+cp stockparfait/stockparfait/js/* ${PLOTS}
 experiments -conf ${CONFIG}.json -js ${PLOTS}/data.js
 ```
 
-  where `${CONFIG}.json` is the config of your choice from one of the
-  experiments, or your own. The schema of such configs is in
-  [config/config.go](config/config.go).
+where `${CONFIG}.json` is the config of your choice from one of the experiments,
+or your own. The schema of such configs is in
+[config/config.go](config/config.go).
 
 - Open `${PLOTS}/plot.html` in your browser to see the resulting plots.
 

@@ -1,5 +1,7 @@
 # Market, Random Walks and Log-Profits
 
+*Previous: [Methodology]*
+
 Before we begin our studies, let's decide on what exactly is worth studying.
 
 ## Traders and Investors
@@ -171,6 +173,9 @@ mention it because these experiments are done using their data, and there is an
 app in [stockparfait/stockparfait] repository for downloading their price series
 tables.
 
+*Next: [Distribution of Log-Profits]*
+
 [Methodology]: ../methodology/
+[Distribution of Log-Profits]: ../distribution/
 [Nasdaq Data Link]: https://data.nasdaq.com/databases/SFB/data
 [stockparfait/stockparfait]: https://github.com/stockparfait/stockparfait
