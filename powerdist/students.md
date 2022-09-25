@@ -82,4 +82,4 @@ Since the normal distribution has comparable ranges for the mean, the precision
 and the confidence are not much higher, even if we take a wild chance and decide
 to use it as a model.
 
-* Next: [The Tale of Fat Tails](fat_tails.md)*
+ *Next: [The Tale of Fat Tails](fat_tails.md)*
