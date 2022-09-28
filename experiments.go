@@ -299,14 +299,14 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 					sums = sums[1:]
 				}
 				n := c.Compound
-				for len(sums) < n {
+				for len(sums) <= n {
 					var last float64
 					if len(sums) > 0 {
 						last = sums[len(sums)-1]
 					}
 					sums = append(sums, last+d.Rand())
 				}
-				x := sums[n-1] - sums[0]
+				x := sums[n] - sums[0]
 				if c.Normalize {
 					x /= float64(c.Compound)
 				}
@@ -318,6 +318,13 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 			Fn:        fn,
 		}
 		dist = stats.NewRandDistribution(ctx, dist, xform, &c.DistConfig)
+		if c.UseSampleDist {
+			if c.SampleSeed > 0 {
+				dist.Seed(uint64(c.SampleSeed))
+			}
+			dist = stats.NewSampleDistributionFromRand(
+				dist, c.DistConfig.Samples, &c.DistConfig.Buckets)
+		}
 		distName += fmt.Sprintf(" x %d", c.Compound)
 	}
 	return

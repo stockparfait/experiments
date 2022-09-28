@@ -27,13 +27,18 @@ import (
 	"github.com/stockparfait/stockparfait/stats"
 )
 
+type DistributionWithHistogram interface {
+	stats.Distribution
+	Histogram() *stats.Histogram
+}
+
 // PowerDist is an Experiment implementation for studying properties of
 // analytical power and normal distributions.
 type PowerDist struct {
 	config   *config.PowerDist
 	distName string
 	source   stats.Distribution // true source distribution
-	rand     *stats.RandDistribution
+	rand     DistributionWithHistogram
 }
 
 var _ experiments.Experiment = &PowerDist{}
@@ -46,16 +51,16 @@ func (d *PowerDist) prefix(s string) string {
 	return d.config.ID + " " + s
 }
 
-// randDistribution wraps analytical distribution into RandDistribution, as
+// distributionWithHistogram wraps analytical distribution into RandDistribution, as
 // necessary.
-func randDistribution(ctx context.Context, c *config.AnalyticalDistribution) (source stats.Distribution, rand *stats.RandDistribution, name string, err error) {
+func distributionWithHistogram(ctx context.Context, c *config.AnalyticalDistribution) (source stats.Distribution, rand DistributionWithHistogram, name string, err error) {
 	source, name, err = experiments.AnalyticalDistribution(ctx, c)
 	if err != nil {
 		err = errors.Annotate(err, "failed to create analytical distribution")
 		return
 	}
 	var ok bool
-	if rand, ok = source.(*stats.RandDistribution); !ok {
+	if rand, ok = source.(DistributionWithHistogram); !ok {
 		xform := &stats.Transform{
 			InitState: func() interface{} { return nil },
 			Fn: func(d stats.Distribution, s interface{}) (float64, interface{}) {
@@ -73,7 +78,7 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	if d.config, ok = cfg.(*config.PowerDist); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
-	d.source, d.rand, d.distName, err = randDistribution(ctx, &d.config.Dist)
+	d.source, d.rand, d.distName, err = distributionWithHistogram(ctx, &d.config.Dist)
 	if err != nil {
 		return errors.Annotate(err, "failed to create RandDistribution")
 	}
@@ -223,7 +228,7 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 	}
 	// Do NOT directly compute dist.Histogram() or statistics that require it, so
 	// that copies would have to compute it every time.
-	_, dist, distName, err := randDistribution(ctx, &d.config.Dist)
+	_, dist, distName, err := distributionWithHistogram(ctx, &d.config.Dist)
 	if err != nil {
 		return errors.Annotate(err, "failed to create source distribution")
 	}
@@ -247,7 +252,7 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 				hs[j] = stats.NewHistogram(&sts[j].c.Buckets)
 			}
 			for k := start; k < end; k++ {
-				h := distCopy.Copy().(*stats.RandDistribution).Histogram()
+				h := distCopy.Copy().(DistributionWithHistogram).Histogram()
 				for j, s := range sts {
 					hs[j].Add(s.f(h))
 				}

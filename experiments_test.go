@@ -62,8 +62,81 @@ func TestExperiments(t *testing.T) {
 		cg, err := plot.EnsureGraph(ctx, plot.KindXY, "counts", "top")
 		So(err, ShouldBeNil)
 
+		Convey("AnalyticalDistribution works", func() {
+			var seed uint64 = 42
+			var cfg config.AnalyticalDistribution
+
+			Convey("Normal distribution", func() {
+				js := testutil.JSON(`
+{
+  "name": "normal",
+  "mean": 1.0
+}`)
+				So(cfg.InitMessage(js), ShouldBeNil)
+				d, name, err := AnalyticalDistribution(ctx, &cfg)
+				So(err, ShouldBeNil)
+				So(name, ShouldEqual, "Gauss")
+				So(d.Mean(), ShouldEqual, 1.0)
+			})
+
+			Convey("t-distribution", func() {
+				js := testutil.JSON(`
+{
+  "name": "t",
+  "mean": 1.0,
+  "alpha": 2.0
+}`)
+				So(cfg.InitMessage(js), ShouldBeNil)
+				d, name, err := AnalyticalDistribution(ctx, &cfg)
+				So(err, ShouldBeNil)
+				So(name, ShouldEqual, "T(a=2.00)")
+				So(d.Mean(), ShouldEqual, 1.0)
+			})
+
+			Convey("Fast Compounded normal distribution", func() {
+				js := testutil.JSON(`
+{
+  "name": "normal",
+  "mean": 1.0,
+  "compound": 10,
+  "fast compound": true,
+  "normalize": true,
+  "distribution config": {
+    "samples": 1000,
+    "workers": 1
+  }
+}`)
+				So(cfg.InitMessage(js), ShouldBeNil)
+				d, name, err := AnalyticalDistribution(ctx, &cfg)
+				So(err, ShouldBeNil)
+				So(name, ShouldEqual, "Gauss x 10")
+				d.Seed(seed)
+				So(testutil.Round(d.Mean(), 2), ShouldEqual, 1.0)
+			})
+
+			Convey("Compounded normal sample distribution", func() {
+				js := testutil.JSON(`
+{
+  "name": "normal",
+  "mean": 1.0,
+  "compound": 10,
+  "use sample distribution": true,
+  "sample seed": 42,
+  "normalize": true,
+  "distribution config": {
+    "samples": 1000,
+    "workers": 1
+  }
+}`)
+				So(cfg.InitMessage(js), ShouldBeNil)
+				d, name, err := AnalyticalDistribution(ctx, &cfg)
+				So(err, ShouldBeNil)
+				So(name, ShouldEqual, "Gauss x 10")
+				So(testutil.Round(d.Mean(), 2), ShouldEqual, 1.0)
+			})
+		})
+
 		Convey("PlotDistribution works", func() {
-			So(err, ShouldBeNil)
 			var cfg config.DistributionPlot
 			js := testutil.JSON(`
 {
