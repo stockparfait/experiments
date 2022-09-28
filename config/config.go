@@ -100,8 +100,8 @@ type AnalyticalDistribution struct {
 	FastCompound bool `json:"fast compound"`
 	// Divide by Compound to preserve mean.
 	Normalize bool `json:"normalize"`
-	// Accumulate DistConfig.Samples to model the compounded distribution, rather
-	// than generating new samples every time.
+	// Accumulate DistConfig.Samples in SampleDistribution to model the compounded
+	// distribution, rather than generating new samples every time.
 	UseSampleDist bool `json:"use sample distribution"`
 	// When > 0, use this to seed the compound distribution populating the final
 	// sample distribution, for use in tests.
