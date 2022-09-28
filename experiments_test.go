@@ -120,8 +120,8 @@ func TestExperiments(t *testing.T) {
   "name": "normal",
   "mean": 1.0,
   "compound": 10,
-  "use sample distribution": true,
-  "sample seed": 42,
+  "source samples": 1000,
+  "seed": 42,
   "normalize": true,
   "distribution config": {
     "samples": 1000,
@@ -131,7 +131,7 @@ func TestExperiments(t *testing.T) {
 				So(cfg.InitMessage(js), ShouldBeNil)
 				d, name, err := AnalyticalDistribution(ctx, &cfg)
 				So(err, ShouldBeNil)
-				So(name, ShouldEqual, "Gauss x 10")
+				So(name, ShouldEqual, "Gauss[samples=1000] x 10")
 				So(testutil.Round(d.Mean(), 2), ShouldEqual, 1.0)
 			})
 		})

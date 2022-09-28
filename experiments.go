@@ -281,6 +281,14 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 		err = errors.Reason("unsuppoted distribution type: '%s'", c.Name)
 		return
 	}
+	if c.SourceSamples > 0 {
+		if c.Seed > 0 {
+			dist.Seed(uint64(c.Seed))
+		}
+		dist = stats.NewSampleDistributionFromRand(
+			dist, c.SourceSamples, &c.DistConfig.Buckets)
+		distName += fmt.Sprintf("[samples=%d]", c.SourceSamples)
+	}
 	if c.Compound > 1 {
 		fn := func(d stats.Distribution, s interface{}) (float64, interface{}) {
 			acc := 0.0
@@ -318,13 +326,6 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 			Fn:        fn,
 		}
 		dist = stats.NewRandDistribution(ctx, dist, xform, &c.DistConfig)
-		if c.UseSampleDist {
-			if c.SampleSeed > 0 {
-				dist.Seed(uint64(c.SampleSeed))
-			}
-			dist = stats.NewSampleDistributionFromRand(
-				dist, c.DistConfig.Samples, &c.DistConfig.Buckets)
-		}
 		distName += fmt.Sprintf(" x %d", c.Compound)
 	}
 	return
