@@ -97,9 +97,16 @@ type AnalyticalDistribution struct {
 	Alpha    float64 `json:"alpha" default:"3.0"`  // T dist. parameter
 	Compound int     `json:"compound" default:"1"` // sum of N samples
 	// Use Y_i = sum(X_i, ..., X_N+i) for a single stream of X_i.
-	FastCompound bool                         `json:"fast compound"`
-	Normalize    bool                         `json:"normalize"` // divide by Compound
-	DistConfig   stats.RandDistributionConfig `json:"distribution config"`
+	FastCompound bool `json:"fast compound"`
+	// Divide by Compound to preserve mean.
+	Normalize bool `json:"normalize"`
+	// Accumulate DistConfig.Samples to model the compounded distribution, rather
+	// than generating new samples every time.
+	UseSampleDist bool `json:"use sample distribution"`
+	// When > 0, use this to seed the compound distribution populating the final
+	// sample distribution, for use in tests.
+	SampleSeed int                          `json:"sample seed"`
+	DistConfig stats.RandDistributionConfig `json:"distribution config"`
 }
 
 var _ message.Message = &AnalyticalDistribution{}
