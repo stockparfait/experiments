@@ -77,13 +77,13 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	if d.histogram.Size() == 0 {
 		return nil
 	}
-	if err := experiments.PlotDistribution(ctx, d.histogram, d.config.LogProfits, d.prefix("log-profit")); err != nil {
+	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.histogram), d.config.LogProfits, d.prefix("log-profit")); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' sample distribution", d.config.ID)
 	}
-	if err := experiments.PlotDistribution(ctx, d.meansHistogram, d.config.Means, d.prefix("means")); err != nil {
+	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.meansHistogram), d.config.Means, d.prefix("means")); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' means distribution", d.config.ID)
 	}
-	if err := experiments.PlotDistribution(ctx, d.madsHistogram, d.config.MADs, d.prefix("MADs")); err != nil {
+	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.madsHistogram), d.config.MADs, d.prefix("MADs")); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' MADs distribution", d.config.ID)
 	}
 	if d.meansHistogram != nil {

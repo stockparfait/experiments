@@ -157,9 +157,9 @@ func TestExperiments(t *testing.T) {
     }
 }`)
 			So(cfg.InitMessage(js), ShouldBeNil)
-			h := stats.NewHistogram(&cfg.Buckets)
-			h.Add(-2.0, -0.5, 0.5, 2.0)
-			So(PlotDistribution(ctx, h, &cfg, "test"), ShouldBeNil)
+			d := stats.NewSampleDistribution(
+				[]float64{-2.0, -0.5, 0.5, 2.0}, &cfg.Buckets)
+			So(PlotDistribution(ctx, d, &cfg, "test"), ShouldBeNil)
 			So(len(g.Plots), ShouldEqual, 4)
 			So(len(cg.Plots), ShouldEqual, 1)
 			So(g.Plots[0].Legend, ShouldEqual, "test p.d.f.")
