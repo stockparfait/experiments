@@ -91,21 +91,21 @@ func (h *Hold) Name() string { return "hold" }
 
 // AnalyticalDistribution configures the type and parameters of a distibution.
 type AnalyticalDistribution struct {
-	Name     string  `json:"name" required:"true" choices:"t,normal"`
-	Mean     float64 `json:"mean" default:"0.0"`
-	MAD      float64 `json:"MAD" default:"1.0"`
-	Alpha    float64 `json:"alpha" default:"3.0"`  // T dist. parameter
-	Compound int     `json:"compound" default:"1"` // sum of N samples
+	Name  string  `json:"name" required:"true" choices:"t,normal"`
+	Mean  float64 `json:"mean" default:"0.0"`
+	MAD   float64 `json:"MAD" default:"1.0"`
+	Alpha float64 `json:"alpha" default:"3.0"` // T dist. parameter
+	// When > 0, use SampleDistribution with this many samples from the source
+	// distribution, rather than the source distribution directly.
+	SourceSamples int `json:"source samples"`
+	// When > 0, use it to seed the source distribution populating the sample
+	// distribution. For use in tests.
+	Seed     int `json:"seed"`
+	Compound int `json:"compound" default:"1"` // sum of N samples
 	// Use Y_i = sum(X_i, ..., X_N+i) for a single stream of X_i.
 	FastCompound bool `json:"fast compound"`
 	// Divide by Compound to preserve mean.
-	Normalize bool `json:"normalize"`
-	// Accumulate DistConfig.Samples in SampleDistribution to model the compounded
-	// distribution, rather than generating new samples every time.
-	UseSampleDist bool `json:"use sample distribution"`
-	// When > 0, use this to seed the compound distribution populating the final
-	// sample distribution, for use in tests.
-	SampleSeed int                          `json:"sample seed"`
+	Normalize  bool                         `json:"normalize"`
 	DistConfig stats.RandDistributionConfig `json:"distribution config"`
 }
 
