@@ -51,8 +51,8 @@ github.com/stockparfait/logging v0.0.4 h1:ds+sVkyJP5mE0PjEeHBN9+gMHx67XduL0Xg/yk
 github.com/stockparfait/logging v0.0.4/go.mod h1:wLrsscPazhCAjC/sGmqSA+GghnWUwiSDT/kDwxC0XEI=
 github.com/stockparfait/parallel v0.0.2 h1:EjACOojMU6UZ2yxJNRPhQRFByoFICiobNThKo4CX6l8=
 github.com/stockparfait/parallel v0.0.2/go.mod h1:tbZ3EkWvXo9qbqC2UHr6FynuIaRL9vSBARqFHug7hxA=
-github.com/stockparfait/stockparfait v0.1.4 h1:5O/YP0aryVCJX7r0hFOwi54+tULJzac58T7ypgS3kmw=
-github.com/stockparfait/stockparfait v0.1.4/go.mod h1:doDcKD9L1e+jXM1RNBQcQhHt5QUpqtI+5FOdkx4JE04=
+github.com/stockparfait/stockparfait v0.1.5 h1:4j1/njRevumSZnU0hWK2PCKavxmsCUNQf6QvQTurgUE=
+github.com/stockparfait/stockparfait v0.1.5/go.mod h1:doDcKD9L1e+jXM1RNBQcQhHt5QUpqtI+5FOdkx4JE04=
 github.com/stockparfait/testutil v0.0.1 h1:Qq4RzSl+pA0y+3Jr1fF9CbjTJBwHOWZy8c4RLomHVpc=
 github.com/stockparfait/testutil v0.0.1/go.mod h1:Tr0oAxbuEQ+XjD0BlQLG2wkKDhE2EotCuPAchxH6zew=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

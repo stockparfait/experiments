@@ -123,13 +123,15 @@ func minMax(ys []float64) (float64, float64) {
 	return min, max
 }
 
-func PlotDistribution(ctx context.Context, h *stats.Histogram, c *config.DistributionPlot, legend string) error {
+func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, legend string) error {
 	if c == nil {
 		return nil
 	}
 	var xs0 []float64
 	var ys []float64
 	yLabel := "p.d.f."
+
+	h := dh.Histogram()
 
 	if c.UseMeans {
 		xs0 = h.Xs()
@@ -160,14 +162,14 @@ func PlotDistribution(ctx context.Context, h *stats.Histogram, c *config.Distrib
 		return errors.Annotate(err, "failed to plot '%s counts'", legend)
 	}
 	if c.PlotMean {
-		if err := plotMean(ctx, h, c.Graph, min, max, legend); err != nil {
+		if err := plotMean(ctx, dh, c.Graph, min, max, legend); err != nil {
 			return errors.Annotate(err, "failed to plot '%s mean'", legend)
 		}
 	}
-	if err := plotPercentiles(ctx, h, c, min, max, legend); err != nil {
+	if err := plotPercentiles(ctx, dh, c, min, max, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s percentiles'", legend)
 	}
-	if err := plotAnalytical(ctx, h, c, legend); err != nil {
+	if err := plotAnalytical(ctx, dh, c, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s ref dist'", legend)
 	}
 	return nil
@@ -197,8 +199,8 @@ func plotCounts(ctx context.Context, h *stats.Histogram, xs []float64, c *config
 	return nil
 }
 
-func plotMean(ctx context.Context, h *stats.Histogram, graph string, min, max float64, legend string) error {
-	x := h.Mean()
+func plotMean(ctx context.Context, dh stats.DistributionWithHistogram, graph string, min, max float64, legend string) error {
+	x := dh.Mean()
 	plt, err := plot.NewXYPlot([]float64{x, x}, []float64{min, max})
 	if err != nil {
 		return errors.Annotate(err, "failed to create plot '%s mean'", legend)
@@ -211,9 +213,9 @@ func plotMean(ctx context.Context, h *stats.Histogram, graph string, min, max fl
 	return nil
 }
 
-func plotPercentiles(ctx context.Context, h *stats.Histogram, c *config.DistributionPlot, min, max float64, legend string) error {
+func plotPercentiles(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, min, max float64, legend string) error {
 	for _, p := range c.Percentiles {
-		x := h.Quantile(p / 100.0)
+		x := dh.Quantile(p / 100.0)
 		plt, err := plot.NewXYPlot([]float64{x, x}, []float64{min, max})
 		if err != nil {
 			return errors.Annotate(err, "failed to create plot '%s %gth %%-ile'",
@@ -342,15 +344,17 @@ func DeriveAlpha(h *stats.Histogram, mean, MAD float64, c *config.DeriveAlpha) f
 	return FindMin(f, c.MinX, c.MaxX, c.Epsilon, c.MaxIterations)
 }
 
-func plotAnalytical(ctx context.Context, h *stats.Histogram, c *config.DistributionPlot, legend string) error {
+func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, legend string) error {
 	if c.RefDist == nil {
 		return nil
 	}
 	dc := *c.RefDist // shallow copy, to modify locally
 	if c.AdjustRef {
-		dc.Mean = h.Mean()
-		dc.MAD = h.MAD()
+		dc.Mean = dh.Mean()
+		dc.MAD = dh.MAD()
 	}
+
+	h := dh.Histogram()
 	var xs []float64
 	if c.UseMeans {
 		xs = h.Xs()
