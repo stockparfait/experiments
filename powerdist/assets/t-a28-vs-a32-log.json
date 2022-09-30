@@ -11,8 +11,8 @@
           "normalize": true,
           "distribution config": {
             "buckets": {
-              "maxval": 300,
-              "minval": 0.1,
+              "max": 300,
+              "min": 0.1,
               "n": 201,
               "spacing": "symmetric exponential"
             },
@@ -22,8 +22,8 @@
         "id": "N=20000000 @ 1",
         "sample plot": {
           "buckets": {
-            "maxval": 300,
-            "minval": 0.1,
+            "max": 300,
+            "min": 0.1,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -51,8 +51,8 @@
           "normalize": true,
           "distribution config": {
             "buckets": {
-              "maxval": 300,
-              "minval": 0.1,
+              "max": 300,
+              "min": 0.1,
               "n": 201,
               "spacing": "symmetric exponential"
             },
@@ -62,8 +62,8 @@
         "id": "N=20000000 @ 1",
         "sample plot": {
           "buckets": {
-            "maxval": 300,
-            "minval": 0.1,
+            "max": 300,
+            "min": 0.1,
             "n": 201,
             "spacing": "symmetric exponential"
           },

@@ -142,7 +142,7 @@ func TestExperiments(t *testing.T) {
 {
     "graph": "main",
     "counts graph": "counts",
-    "buckets": {"n": 9, "minval": -5, "maxval": 5},
+    "buckets": {"n": 9, "min": -5, "max": 5, "auto bounds": false},
     "normalize": false,
     "use means": true,
     "log Y": true,

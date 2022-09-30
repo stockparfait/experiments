@@ -3,12 +3,6 @@
     {
       "power distribution": {
         "MAD distribution": {
-          "buckets": {
-            "maxval": 1.18,
-            "minval": 0.8,
-            "n": 201,
-            "spacing": "linear"
-          },
           "chart type": "line",
           "graph": "mads",
           "keep zeros": false,
@@ -22,12 +16,6 @@
           "plot mean": true
         },
         "alpha distribution": {
-          "buckets": {
-            "maxval": 10,
-            "minval": 1.5,
-            "n": 201,
-            "spacing": "linear"
-          },
           "chart type": "line",
           "graph": "alphas",
           "log Y": true,
@@ -43,7 +31,7 @@
           "epsilon": 0.01,
           "ignore counts": 10,
           "max iterations": 10000,
-          "max x": 10,
+          "max x": 20,
           "min x": 1.1
         },
         "distribution": {
@@ -55,8 +43,8 @@
           "normalize": true,
           "distribution config": {
             "buckets": {
-              "maxval": 20,
-              "minval": 0.1,
+              "max": 20,
+              "min": 0.1,
               "n": 201,
               "spacing": "symmetric exponential"
             },
@@ -65,11 +53,6 @@
         },
         "id": "N=5000 @ 1",
         "mean distribution": {
-          "buckets": {
-            "maxval": 0.1,
-            "minval": -0.1,
-            "n": 201
-          },
           "chart type": "line",
           "graph": "means",
           "keep zeros": false,
@@ -84,8 +67,8 @@
         },
         "sample plot": {
           "buckets": {
-            "maxval": 20,
-            "minval": 0.1,
+            "max": 20,
+            "min": 0.1,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -105,12 +88,6 @@
           }
         },
         "sigma distribution": {
-          "buckets": {
-            "maxval": 10,
-            "minval": 1,
-            "n": 201,
-            "spacing": "linear"
-          },
           "chart type": "line",
           "graph": "sigmas",
           "log Y": true,
