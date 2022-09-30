@@ -114,10 +114,13 @@ func TestDistribution(t *testing.T) {
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
 			So(values, ShouldResemble, experiments.Values{
-				"test samples":      "4",
-				"test tickers":      "2",
-				"test average MAD":  "0.1347",
-				"test average mean": "0.04766",
+				"test samples":          "4",
+				"test tickers":          "2",
+				"test average MAD":      "0.1347",
+				"test average mean":     "0.04766",
+				"test log-profit mean":  "0",
+				"test log-profit MAD":   "1",
+				"test log-profit alpha": "3",
 			})
 			So(len(g.Plots), ShouldEqual, 8)
 			So(g.Plots[1].Legend, ShouldEqual, "test log-profit counts")
