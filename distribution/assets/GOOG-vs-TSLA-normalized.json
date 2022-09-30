@@ -18,8 +18,8 @@
         "id": "GOOG",
         "log-profits": {
           "buckets": {
-            "maxval": 15,
-            "minval": 0.2,
+            "max": 15,
+            "min": 0.2,
             "n": 101,
             "spacing": "symmetric exponential"
           },
@@ -48,8 +48,8 @@
         "id": "TSLA",
         "log-profits": {
           "buckets": {
-            "maxval": 15,
-            "minval": 0.2,
+            "max": 15,
+            "min": 0.2,
             "n": 101,
             "spacing": "symmetric exponential"
           },

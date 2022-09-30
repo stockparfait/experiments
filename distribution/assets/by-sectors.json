@@ -21,8 +21,8 @@
         "id": "Basic Materials",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -54,8 +54,8 @@
         "id": "Communication Services",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -87,8 +87,8 @@
         "id": "Consumer Cyclical",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -120,8 +120,8 @@
         "id": "Consumer Defensive",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -153,8 +153,8 @@
         "id": "Energy",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -190,8 +190,8 @@
         "id": "Financial Services",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -223,8 +223,8 @@
         "id": "Healthcare",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -256,8 +256,8 @@
         "id": "Industrials",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -289,8 +289,8 @@
         "id": "Real Estate",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -322,8 +322,8 @@
         "id": "Technology",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -355,8 +355,8 @@
         "id": "Utilities",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },

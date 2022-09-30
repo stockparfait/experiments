@@ -99,7 +99,7 @@ func TestDistribution(t *testing.T) {
   "log-profits": {
     "graph": "g",
     "counts graph": "g",
-    "buckets": {"n": 3, "minval": -0.4, "maxval": 0.4},
+    "buckets": {"n": 3, "min": -0.4, "max": 0.4},
     "normalize": false,
     "use means": true,
     "log Y": true,

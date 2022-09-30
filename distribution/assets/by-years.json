@@ -18,8 +18,8 @@
         "id": "1998-2003",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -48,8 +48,8 @@
         "id": "2004-2009",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -78,8 +78,8 @@
         "id": "2010-2015",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
@@ -108,8 +108,8 @@
         "id": "2016-2022",
         "log-profits": {
           "buckets": {
-            "maxval": 200,
-            "minval": 0.2,
+            "max": 200,
+            "min": 0.2,
             "n": 201,
             "spacing": "symmetric exponential"
           },
