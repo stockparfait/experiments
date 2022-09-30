@@ -131,6 +131,7 @@ func TestExperiments(t *testing.T) {
 				So(cfg.InitMessage(js), ShouldBeNil)
 				d, name, err := AnalyticalDistribution(ctx, &cfg)
 				So(err, ShouldBeNil)
+				d.Seed(seed)
 				So(name, ShouldEqual, "Gauss[samples=1000] x 10")
 				So(testutil.Round(d.Mean(), 2), ShouldEqual, 1.0)
 			})
