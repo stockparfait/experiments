@@ -363,6 +363,15 @@ func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *
 	}
 	if c.DeriveAlpha != nil {
 		dc.Alpha = DeriveAlpha(h, dc.Mean, dc.MAD, c.DeriveAlpha)
+	}
+
+	if err := AddValue(ctx, legend+" mean", fmt.Sprintf("%.4g", dc.Mean)); err != nil {
+		return errors.Annotate(err, "failed to add value for '%s mean'", legend)
+	}
+	if err := AddValue(ctx, legend+" MAD", fmt.Sprintf("%.4g", dc.MAD)); err != nil {
+		return errors.Annotate(err, "failed to add value for '%s MAD'", legend)
+	}
+	if dc.Name == "t" {
 		if err := AddValue(ctx, legend+" alpha", fmt.Sprintf("%.4g", dc.Alpha)); err != nil {
 			return errors.Annotate(err, "failed to add value for '%s alpha'", legend)
 		}
