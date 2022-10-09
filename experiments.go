@@ -263,14 +263,16 @@ func plotPercentiles(ctx context.Context, dh stats.DistributionWithHistogram, c 
 
 // DistributionDistance computes a measure between the sample distribution given
 // by h and an analytical distribution d in xs points corresponding to h's
-// buckets, ignoring the points with less than ignoreCounts counts in h.
+// buckets, ignoring the buckets with less than ignoreCounts samples. The two
+// most extreme buckets are always ignored, as they are catch-all buckets and
+// may not accurately represent the p.d.f. value.
 func DistributionDistance(h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
 	var res float64
 	if ignoreCounts < 0 {
 		ignoreCounts = 0
 	}
 	n := h.Buckets().N
-	for i := 0; i < n; i++ {
+	for i := 1; i < n-1; i++ {
 		if h.Count(i) <= uint(ignoreCounts) {
 			continue
 		}
