@@ -102,11 +102,14 @@ type AnalyticalDistribution struct {
 	// distribution. For use in tests.
 	Seed     int `json:"seed"`
 	Compound int `json:"compound" default:"1"` // sum of N samples
-	// Use Y_i = sum(X_i, ..., X_N+i) for a single stream of X_i.
-	FastCompound bool `json:"fast compound"`
-	// Divide by Compound to preserve mean.
-	Normalize  bool                         `json:"normalize"`
-	DistConfig stats.RandDistributionConfig `json:"distribution config"`
+	// How to compute the histogram for the compounded distribution:
+	//
+	// - direct: just sample the source N times for each compound sample;
+	// - fast: use Y_i = sum(X_i, ..., X_N+i) for a single stream of X_i;
+	// - biased: use variable substitution and Monte Carlo integration.
+	CompoundType string `json:"compound type" choices:"direct,fast,biased" default:"biased"`
+	// Compound algorithm parameters.
+	DistConfig stats.ParallelSamplingConfig `json:"distribution config"`
 }
 
 var _ message.Message = &AnalyticalDistribution{}
@@ -163,6 +166,7 @@ func (f *DeriveAlpha) InitMessage(js interface{}) error {
 type DistributionPlot struct {
 	Graph          string                  `json:"graph" required:"true"`
 	CountsGraph    string                  `json:"counts graph"` // plot buckets' counts
+	ErrorsGraph    string                  `json:"errors graph"` // plot bucket's standard errors
 	Buckets        stats.Buckets           `json:"buckets"`
 	ChartType      string                  `json:"chart type" choices:"line,bars" default:"line"`
 	Normalize      bool                    `json:"normalize"`  // to mean=0, MAD=1
@@ -171,6 +175,7 @@ type DistributionPlot struct {
 	LogY           bool                    `json:"log Y"`      // plot log10(y)
 	LeftAxis       bool                    `json:"left axis"`
 	CountsLeftAxis bool                    `json:"counts left axis"`
+	ErrorsLeftAxis bool                    `json:"errors left axis"`
 	RefDist        *AnalyticalDistribution `json:"reference distribution"`
 	AdjustRef      bool                    `json:"adjust reference distribution"`
 	DeriveAlpha    *DeriveAlpha            `json:"derive alpha"` // for ref. dist. from data

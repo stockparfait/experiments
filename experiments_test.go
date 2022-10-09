@@ -61,6 +61,8 @@ func TestExperiments(t *testing.T) {
 		So(err, ShouldBeNil)
 		cg, err := plot.EnsureGraph(ctx, plot.KindXY, "counts", "top")
 		So(err, ShouldBeNil)
+		eg, err := plot.EnsureGraph(ctx, plot.KindXY, "errors", "top")
+		So(err, ShouldBeNil)
 
 		Convey("AnalyticalDistribution works", func() {
 			var seed uint64 = 42
@@ -99,8 +101,7 @@ func TestExperiments(t *testing.T) {
   "name": "normal",
   "mean": 1.0,
   "compound": 10,
-  "fast compound": true,
-  "normalize": true,
+  "compound type": "fast",
   "distribution config": {
     "samples": 1000,
     "workers": 1
@@ -111,18 +112,18 @@ func TestExperiments(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(name, ShouldEqual, "Gauss x 10")
 				d.Seed(seed)
-				So(testutil.Round(d.Mean(), 2), ShouldEqual, 1.0)
+				So(testutil.Round(d.Mean(), 2), ShouldEqual, 10.0)
 			})
 
-			Convey("Compounded normal sample distribution", func() {
+			Convey("Directly compounded normal sample distribution", func() {
 				js := testutil.JSON(`
 {
   "name": "normal",
   "mean": 1.0,
   "compound": 10,
-  "source samples": 1000,
+  "compound type": "direct",
+  "source samples": 2000,
   "seed": 42,
-  "normalize": true,
   "distribution config": {
     "samples": 1000,
     "workers": 1
@@ -132,8 +133,36 @@ func TestExperiments(t *testing.T) {
 				d, name, err := AnalyticalDistribution(ctx, &cfg)
 				So(err, ShouldBeNil)
 				d.Seed(seed)
-				So(name, ShouldEqual, "Gauss[samples=1000] x 10")
-				So(testutil.Round(d.Mean(), 2), ShouldEqual, 1.0)
+				So(testutil.Round(d.Mean(), 2), ShouldEqual, 10.0)
+				So(name, ShouldEqual, "Gauss[samples=2000] x 10")
+			})
+
+			Convey("Biased compounded normal distribution", func() {
+				js := testutil.JSON(`
+{
+  "name": "normal",
+  "mean": 1.0,
+  "compound": 10,
+  "compound type": "biased",
+  "distribution config": {
+    "buckets": {
+      "min": -4,
+      "max": 6
+    },
+    "bias scale": 3,
+    "bias power": 3,
+    "bias shift": 1,
+    "samples": 1000,
+    "workers": 1,
+    "seed": 42
+  }
+}`)
+				So(cfg.InitMessage(js), ShouldBeNil)
+				d, name, err := AnalyticalDistribution(ctx, &cfg)
+				So(err, ShouldBeNil)
+				d.Seed(seed)
+				So(testutil.Round(d.Mean(), 2), ShouldEqual, 10.0)
+				So(name, ShouldEqual, "Gauss x 10")
 			})
 		})
 
@@ -143,6 +172,7 @@ func TestExperiments(t *testing.T) {
 {
     "graph": "main",
     "counts graph": "counts",
+    "errors graph": "errors",
     "buckets": {"n": 9, "min": -5, "max": 5, "auto bounds": false},
     "normalize": false,
     "use means": true,
@@ -161,13 +191,19 @@ func TestExperiments(t *testing.T) {
 			d := stats.NewSampleDistribution(
 				[]float64{-2.0, -0.5, 0.5, 2.0}, &cfg.Buckets)
 			So(PlotDistribution(ctx, d, &cfg, "test"), ShouldBeNil)
+
 			So(len(g.Plots), ShouldEqual, 4)
-			So(len(cg.Plots), ShouldEqual, 1)
 			So(g.Plots[0].Legend, ShouldEqual, "test p.d.f.")
+
+			So(len(cg.Plots), ShouldEqual, 1)
 			So(cg.Plots[0].Legend, ShouldEqual, "test counts")
 			So(cg.Plots[0].YLabel, ShouldEqual, "counts")
 			So(cg.Plots[0].X, ShouldResemble, []float64{-2, 0, 2})
 			So(cg.Plots[0].Y, ShouldResemble, []float64{1, 2, 1})
+
+			So(len(eg.Plots), ShouldEqual, 1)
+			So(eg.Plots[0].Legend, ShouldEqual, "test errors")
+			So(cg.Plots[0].YLabel, ShouldEqual, "counts")
 		})
 
 		Convey("CumulativeStatistic works", func() {
