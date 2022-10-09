@@ -161,6 +161,9 @@ func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c
 	if err := plotCounts(ctx, h, xs0, c, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s counts'", legend)
 	}
+	if err := plotErrors(ctx, h, xs0, c, legend); err != nil {
+		return errors.Annotate(err, "failed to plot '%s errors'", legend)
+	}
 	if c.PlotMean {
 		if err := plotMean(ctx, dh, c.Graph, min, max, legend); err != nil {
 			return errors.Annotate(err, "failed to plot '%s mean'", legend)
@@ -195,6 +198,34 @@ func plotCounts(ctx context.Context, h *stats.Histogram, xs []float64, c *config
 	}
 	if err := plot.Add(ctx, plt, c.CountsGraph); err != nil {
 		return errors.Annotate(err, "failed to add plot '%s counts'", legend)
+	}
+	return nil
+}
+
+func plotErrors(ctx context.Context, h *stats.Histogram, xs []float64, c *config.DistributionPlot, legend string) error {
+	if c.ErrorsGraph == "" {
+		return nil
+	}
+	n := h.Buckets().N
+	es := make([]float64, n)
+	for i, y := range h.StdErrors() {
+		es[i] = y
+	}
+	xs, es = filterXY(xs, es, c)
+	plt, err := plot.NewXYPlot(xs, es)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s errors'", legend)
+	}
+	plt.SetLegend(legend + " errors").SetYLabel("errors")
+	if c.LogY {
+		plt.SetYLabel("log10(errors)")
+	}
+	plt.SetLeftAxis(c.ErrorsLeftAxis)
+	if c.ChartType == "bars" {
+		plt.SetChartType(plot.ChartBars)
+	}
+	if err := plot.Add(ctx, plt, c.ErrorsGraph); err != nil {
+		return errors.Annotate(err, "failed to add plot '%s errors'", legend)
 	}
 	return nil
 }
@@ -270,6 +301,44 @@ func FindMin(f func(float64) float64, min, max, epsilon float64, maxIter int) fl
 	return (max + min) / 2.0
 }
 
+func directCompound(ctx context.Context, d stats.Distribution, n int, c *stats.ParallelSamplingConfig) stats.Distribution {
+	fn := func(d stats.Distribution, s interface{}) (float64, interface{}) {
+		acc := 0.0
+		for i := 0; i < n; i++ {
+			acc += d.Rand()
+		}
+		return acc, nil
+	}
+	xform := &stats.Transform{
+		InitState: func() interface{} { return nil },
+		Fn:        fn,
+	}
+	return stats.NewRandDistribution(ctx, d, xform, c)
+}
+
+func fastCompound(ctx context.Context, d stats.Distribution, n int, c *stats.ParallelSamplingConfig) stats.Distribution {
+	fn := func(d stats.Distribution, state interface{}) (float64, interface{}) {
+		sums := state.([]float64)
+		if len(sums) > 0 {
+			sums = sums[1:]
+		}
+		for len(sums) <= n {
+			var last float64
+			if len(sums) > 0 {
+				last = sums[len(sums)-1]
+			}
+			sums = append(sums, last+d.Rand())
+		}
+		x := sums[n] - sums[0]
+		return x, sums
+	}
+	xform := &stats.Transform{
+		InitState: func() interface{} { return []float64{} },
+		Fn:        fn,
+	}
+	return stats.NewRandDistribution(ctx, d, xform, c)
+}
+
 // AnalyticalDistribution instantiated from the corresponding config.
 func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistribution) (dist stats.Distribution, distName string, err error) {
 	switch c.Name {
@@ -291,45 +360,22 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 			dist, c.SourceSamples, &c.DistConfig.Buckets)
 		distName += fmt.Sprintf("[samples=%d]", c.SourceSamples)
 	}
-	if c.Compound > 1 {
-		fn := func(d stats.Distribution, s interface{}) (float64, interface{}) {
-			acc := 0.0
-			for i := 0; i < c.Compound; i++ {
-				acc += d.Rand()
-			}
-			if c.Normalize {
-				acc /= float64(c.Compound)
-			}
-			return acc, nil
-		}
-		if c.FastCompound {
-			fn = func(d stats.Distribution, state interface{}) (float64, interface{}) {
-				sums := state.([]float64)
-				if len(sums) > 0 {
-					sums = sums[1:]
-				}
-				n := c.Compound
-				for len(sums) <= n {
-					var last float64
-					if len(sums) > 0 {
-						last = sums[len(sums)-1]
-					}
-					sums = append(sums, last+d.Rand())
-				}
-				x := sums[n] - sums[0]
-				if c.Normalize {
-					x /= float64(c.Compound)
-				}
-				return x, sums
-			}
-		}
-		xform := &stats.Transform{
-			InitState: func() interface{} { return []float64{} },
-			Fn:        fn,
-		}
-		dist = stats.NewRandDistribution(ctx, dist, xform, &c.DistConfig)
-		distName += fmt.Sprintf(" x %d", c.Compound)
+	if c.Compound == 1 {
+		return
 	}
+	switch c.CompoundType {
+	case "direct":
+		dist = directCompound(ctx, dist, c.Compound, &c.DistConfig)
+	case "fast":
+		dist = fastCompound(ctx, dist, c.Compound, &c.DistConfig)
+	case "biased":
+		h := stats.CompoundHistogram(ctx, dist, c.Compound, &c.DistConfig)
+		dist = stats.NewHistogramDistribution(h)
+	default:
+		err = errors.Reason("unsupported compound type: %s", c.CompoundType)
+		return
+	}
+	distName += fmt.Sprintf(" x %d", c.Compound)
 	return
 }
 

@@ -8,7 +8,6 @@
           "compound": 1,
           "mean": 0.0,
           "name": "t",
-          "normalize": true,
           "distribution config": {
             "buckets": {
               "max": 300,
@@ -48,7 +47,6 @@
           "compound": 1,
           "mean": 0.0,
           "name": "t",
-          "normalize": true,
           "distribution config": {
             "buckets": {
               "max": 300,

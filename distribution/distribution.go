@@ -70,11 +70,11 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 		return errors.Annotate(err, "failed to add '%s' tickers value", d.config.ID)
 	}
 	if d.histogram != nil {
-		if err := experiments.AddValue(ctx, d.prefix("samples"), fmt.Sprintf("%d", d.histogram.Size())); err != nil {
+		if err := experiments.AddValue(ctx, d.prefix("samples"), fmt.Sprintf("%d", d.histogram.CountsTotal())); err != nil {
 			return errors.Annotate(err, "failed to add '%s' samples value", d.config.ID)
 		}
 	}
-	if d.histogram.Size() == 0 {
+	if d.histogram.CountsTotal() == 0 {
 		return nil
 	}
 	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.histogram), d.config.LogProfits, d.prefix("log-profit")); err != nil {

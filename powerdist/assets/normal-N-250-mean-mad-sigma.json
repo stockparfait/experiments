@@ -20,7 +20,6 @@
           "compound": 1,
           "mean": 0.0,
           "name": "normal",
-          "normalize": true,
           "distribution config": {
 	    "buckets": {
 	      "max": 5,

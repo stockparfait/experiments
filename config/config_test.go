@@ -103,8 +103,8 @@ func TestConfig(t *testing.T) {
 			So(defaultReader.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
 			var defaultBuckets stats.Buckets
 			So(defaultBuckets.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
-			var defaultRandDist stats.RandDistributionConfig
-			So(defaultRandDist.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
+			var defaultParallelSampling stats.ParallelSamplingConfig
+			So(defaultParallelSampling.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
 
 			So(c, ShouldResemble, &Config{
 				Groups: []*Group{
@@ -168,12 +168,13 @@ func TestConfig(t *testing.T) {
 							ChartType: "line",
 							Normalize: true,
 							RefDist: &AnalyticalDistribution{
-								Name:       "t",
-								Mean:       0.0,
-								MAD:        1.0,
-								Alpha:      3.0,
-								Compound:   1,
-								DistConfig: defaultRandDist,
+								Name:         "t",
+								Mean:         0.0,
+								MAD:          1.0,
+								Alpha:        3.0,
+								Compound:     1,
+								CompoundType: "biased",
+								DistConfig:   defaultParallelSampling,
 							},
 							DeriveAlpha: &DeriveAlpha{
 								MinX:          2.0,
@@ -189,11 +190,12 @@ func TestConfig(t *testing.T) {
 					}},
 					{Config: &PowerDist{
 						Dist: AnalyticalDistribution{
-							Name:       "normal",
-							MAD:        1.0,
-							Alpha:      3.0,
-							Compound:   1,
-							DistConfig: defaultRandDist,
+							Name:         "normal",
+							MAD:          1.0,
+							Alpha:        3.0,
+							Compound:     1,
+							CompoundType: "biased",
+							DistConfig:   defaultParallelSampling,
 						},
 						CumulMean: &CumulativeStatistic{
 							Graph:   "cumul mean",
