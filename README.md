@@ -1,5 +1,8 @@
 # Statistical experiments with stock data
 
+[![Build Status](https://github.com/stockparfait/experiments/workflows/Tests/badge.svg)](https://github.com/stockparfait/experiments/actions?query=workflow%3ATests)
+[![GoDoc](https://godoc.org/github.com/stockparfait/experiments?status.svg)](http://godoc.org/github.com/stockparfait/experiments)
+
 The purpose of this repository is to hold and document a series of statistical
 experiments with real financial data, primarily over the US stock market daily
 price data from 1998 to mid-2022. The code and the necessary configurations are
