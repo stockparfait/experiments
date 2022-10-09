@@ -310,7 +310,7 @@ func directCompound(ctx context.Context, d stats.Distribution, n int, c *stats.P
 		return acc, nil
 	}
 	xform := &stats.Transform{
-		InitState: func() interface{} { return []float64{} },
+		InitState: func() interface{} { return nil },
 		Fn:        fn,
 	}
 	return stats.NewRandDistribution(ctx, d, xform, c)
