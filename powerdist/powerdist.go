@@ -223,16 +223,17 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	return nil
 }
 
+type statsJobRes struct {
+	samples [][]float64
+	err     error
+}
+
 func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error {
 	if len(sts) == 0 {
 		return nil
 	}
-	// Do NOT directly compute dist.Histogram() or statistics that require it, so
-	// that copies would have to compute it every time.
-	_, dist, distName, err := distributionWithHistogram(ctx, &d.config.Dist)
-	if err != nil {
-		return errors.Annotate(err, "failed to create source distribution")
-	}
+	var dist stats.DistributionWithHistogram
+	var distName string
 
 	jobs := []parallel.Job{}
 	workers := 2 * runtime.NumCPU()
@@ -246,24 +247,33 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 		if end > d.config.StatSamples {
 			end = d.config.StatSamples
 		}
-		distCopy := dist.Copy()
 		jobs = append(jobs, func() interface{} {
-			samples := make([][]float64, len(sts))
+			res := &statsJobRes{samples: make([][]float64, len(sts))}
 			for k := start; k < end; k++ {
-				dh := distCopy.Copy().(stats.DistributionWithHistogram)
+				var err error
+				// Create a fresh distribution every time. This is particularly important
+				// for HistogramDistribution, as its histogram is always fixed.
+				_, dist, distName, err = distributionWithHistogram(ctx, &d.config.Dist)
+				if err != nil {
+					res.err = errors.Annotate(err, "failed to create source distribution")
+					return res
+				}
 				for j, s := range sts {
-					samples[j] = append(samples[j], s.f(dh))
+					res.samples[j] = append(res.samples[j], s.f(dist))
 				}
 			}
-			return samples
+			return res
 		})
 	}
 	res := parallel.MapSlice(ctx, workers, jobs)
 
 	samples := make([][]float64, len(sts))
 	for i := 0; i < len(res); i++ {
-		slice := res[i].([][]float64)
-		for i, s := range slice {
+		r := res[i].(*statsJobRes)
+		if r.err != nil {
+			return errors.Annotate(r.err, "some jobs failed")
+		}
+		for i, s := range r.samples {
 			samples[i] = append(samples[i], s...)
 		}
 	}
