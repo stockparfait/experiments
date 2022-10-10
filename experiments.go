@@ -31,12 +31,12 @@ const (
 	valuesContextKey contextKey = iota
 )
 
-// Values is a key:value map populated by Experiments to be printed on the
-// terminal at the end of the run. It is typically used to print various values
-// of interest not suitable for graphical plots.
+// Values is a key:value map populated by implementations of Experiment to be
+// printed on the terminal at the end of the run. It is typically used to print
+// various values of interest not suitable for graphical plots.
 type Values = map[string]string
 
-// UseValues injects the values map into the context.
+// UseValues injects Values into the context, to be used by AddValue.
 func UseValues(ctx context.Context, v Values) context.Context {
 	return context.WithValue(ctx, valuesContextKey, v)
 }
@@ -262,9 +262,9 @@ func plotPercentiles(ctx context.Context, dh stats.DistributionWithHistogram, c 
 
 // DistributionDistance computes a measure between the sample distribution given
 // by h and an analytical distribution d in xs points corresponding to h's
-// buckets, ignoring the buckets with less than ignoreCounts samples. The two
-// most extreme buckets are always ignored, as they are catch-all buckets and
-// may not accurately represent the p.d.f. value.
+// buckets, ignoring the buckets with less than ignoreCounts samples. The
+// leftmost and rightmost buckets are always ignored, as they are catch-all
+// buckets and may not accurately represent the p.d.f. value.
 func DistributionDistance(h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
 	var res float64
 	if ignoreCounts < 0 {
@@ -469,8 +469,7 @@ type CumulativeStatistic struct {
 	nextPoint   int
 }
 
-// NewCumulativeStatistic creates and correctly initializes an empty
-// CumulativeStatistic object.
+// NewCumulativeStatistic initializes an empty CumulativeStatistic object.
 func NewCumulativeStatistic(cfg *config.CumulativeStatistic) *CumulativeStatistic {
 	return &CumulativeStatistic{
 		config:      cfg,
@@ -540,6 +539,9 @@ func (c *CumulativeStatistic) SetExpected(y float64) {
 
 // Map applies f to all the resulting point values (the statistic and its
 // percentiles).
+//
+// This is useful e.g. for the standard deviation: accumulate variance as the
+// average of (y - mean)^2, and compute the square root using Map.
 func (c *CumulativeStatistic) Map(f func(float64) float64) {
 	if c == nil {
 		return
