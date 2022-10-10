@@ -31,11 +31,12 @@ const (
 	valuesContextKey contextKey = iota
 )
 
+// Values is a key:value map populated by implementations of Experiment to be
+// printed on the terminal at the end of the run. It is typically used to print
+// various values of interest not suitable for graphical plots.
 type Values = map[string]string
 
-// UseValues injects the values map into the context. It is intended to be used
-// by Experiments to add key:value pairs to be printed on the terminal at the
-// end of the run.
+// UseValues injects Values into the context, to be used by AddValue.
 func UseValues(ctx context.Context, v Values) context.Context {
 	return context.WithValue(ctx, valuesContextKey, v)
 }
@@ -50,8 +51,6 @@ func GetValues(ctx context.Context) Values {
 }
 
 // AddValue adds (or overwrites) a key:value pair to the Values in the context.
-// These pairs are intended to be printed on the terminal at the end of the run
-// of all the experiments.
 func AddValue(ctx context.Context, key, value string) error {
 	v := GetValues(ctx)
 	if v == nil {
@@ -61,9 +60,7 @@ func AddValue(ctx context.Context, key, value string) error {
 	return nil
 }
 
-// Experiment is a generic experiment interface. Each implementation is expected
-// to add key:value pairs using AddValue, plots using plot.AddLeft/AddRight, or
-// save data in files.
+// Experiment is a generic interface for a single experiment.
 type Experiment interface {
 	Run(ctx context.Context, cfg config.ExperimentConfig) error
 }
@@ -123,6 +120,8 @@ func minMax(ys []float64) (float64, float64) {
 	return min, max
 }
 
+// PlotDistribution dh, specifically its p.d.f. as approximated by
+// dh.Histogram(), and related plots according to the config c.
 func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, legend string) error {
 	if c == nil {
 		return nil
@@ -263,14 +262,16 @@ func plotPercentiles(ctx context.Context, dh stats.DistributionWithHistogram, c 
 
 // DistributionDistance computes a measure between the sample distribution given
 // by h and an analytical distribution d in xs points corresponding to h's
-// buckets, ignoring the points with less than ignoreCounts counts in h.
+// buckets, ignoring the buckets with less than ignoreCounts samples. The
+// leftmost and rightmost buckets are always ignored, as they are catch-all
+// buckets and may not accurately represent the p.d.f. value.
 func DistributionDistance(h *stats.Histogram, d stats.Distribution, ignoreCounts int) float64 {
 	var res float64
 	if ignoreCounts < 0 {
 		ignoreCounts = 0
 	}
 	n := h.Buckets().N
-	for i := 0; i < n; i++ {
+	for i := 1; i < n-1; i++ {
 		if h.Count(i) <= uint(ignoreCounts) {
 			continue
 		}
@@ -286,7 +287,8 @@ func DistributionDistance(h *stats.Histogram, d stats.Distribution, ignoreCounts
 // interval. Stop when the search interval is less than epsilon, or the number
 // of iterations exceeds maxIter.
 //
-// For correction functionality assumes min < max, epsilon > 0, maxIter >= 1.
+// For correct functionality assumes min < max, epsilon > 0, maxIter >= 1, and f
+// to be continuous and monotone around a single minimum in [min..max].
 func FindMin(f func(float64) float64, min, max, epsilon float64, maxIter int) float64 {
 	for i := 0; i < maxIter && (max-min) > epsilon; i++ {
 		d := (max - min) / 2.1
@@ -339,7 +341,8 @@ func fastCompound(ctx context.Context, d stats.Distribution, n int, c *stats.Par
 	return stats.NewRandDistribution(ctx, d, xform, c)
 }
 
-// AnalyticalDistribution instantiated from the corresponding config.
+// AnalyticalDistribution instantiates a distribution from the corresponding
+// config.
 func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistribution) (dist stats.Distribution, distName string, err error) {
 	switch c.Name {
 	case "t":
@@ -447,6 +450,12 @@ func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *
 	return nil
 }
 
+// CumulativeStatistic tracks the value of a statistic as more samples
+// arrive. It is intended to be plotted as a graph of the statistic as a
+// function of the number of samples.
+//
+// The idea is to evaluate visually the noisiness of the statistic as the number
+// of samples increase.
 type CumulativeStatistic struct {
 	config      *config.CumulativeStatistic
 	h           *stats.Histogram
@@ -460,6 +469,7 @@ type CumulativeStatistic struct {
 	nextPoint   int
 }
 
+// NewCumulativeStatistic initializes an empty CumulativeStatistic object.
 func NewCumulativeStatistic(cfg *config.CumulativeStatistic) *CumulativeStatistic {
 	return &CumulativeStatistic{
 		config:      cfg,
@@ -474,6 +484,9 @@ func (c *CumulativeStatistic) point(i int) int {
 	return int(math.Floor(math.Exp(x)))
 }
 
+// AddDirect adds y as the direct value of the statistic at the next sample. The
+// caller is responsible for computing the statistic from the current and all of
+// the preceding samples.
 func (c *CumulativeStatistic) AddDirect(y float64) {
 	if c == nil {
 		return
@@ -495,6 +508,8 @@ func (c *CumulativeStatistic) AddDirect(y float64) {
 	}
 }
 
+// AddToAverage updates a statistic computed as the average of y(x) values. This
+// is useful e.g. for tracking a mean.
 func (c *CumulativeStatistic) AddToAverage(y float64) {
 	if c == nil {
 		return
@@ -514,6 +529,7 @@ func (c *CumulativeStatistic) Skip() {
 	}
 }
 
+// SetExpected value of the statistic, for visual reference on the graph.
 func (c *CumulativeStatistic) SetExpected(y float64) {
 	if c == nil {
 		return
@@ -521,7 +537,11 @@ func (c *CumulativeStatistic) SetExpected(y float64) {
 	c.Expected = y
 }
 
-// Map applies f to all the resulting point values (averages and percentiles).
+// Map applies f to all the resulting point values (the statistic and its
+// percentiles).
+//
+// This is useful e.g. for the standard deviation: accumulate variance as the
+// average of (y - mean)^2, and compute the square root using Map.
 func (c *CumulativeStatistic) Map(f func(float64) float64) {
 	if c == nil {
 		return
@@ -534,6 +554,8 @@ func (c *CumulativeStatistic) Map(f func(float64) float64) {
 	}
 }
 
+// Plot the accumulated statistic values, percentiles and the expected value, as
+// configured.
 func (c *CumulativeStatistic) Plot(ctx context.Context, yLabel, legend string) error {
 	if c == nil {
 		return nil
@@ -582,7 +604,6 @@ type TestExperiment struct {
 
 var _ Experiment = &TestExperiment{}
 
-// Run implements Experiment.
 func (t *TestExperiment) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	var ok bool
 	t.cfg, ok = cfg.(*config.TestExperimentConfig)
