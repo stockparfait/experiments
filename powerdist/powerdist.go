@@ -54,21 +54,19 @@ func (d *PowerDist) prefix(s string) string {
 
 // distributionWithHistogram wraps analytical distribution into RandDistribution, as
 // necessary.
-func distributionWithHistogram(ctx context.Context, c *config.AnalyticalDistribution) (source stats.Distribution, rand stats.DistributionWithHistogram, name string, err error) {
+func distributionWithHistogram(ctx context.Context, c *config.AnalyticalDistribution) (source stats.Distribution, dh stats.DistributionWithHistogram, name string, err error) {
 	source, name, err = experiments.AnalyticalDistribution(ctx, c)
 	if err != nil {
 		err = errors.Annotate(err, "failed to create analytical distribution")
 		return
 	}
 	var ok bool
-	if rand, ok = source.(stats.DistributionWithHistogram); !ok {
-		xform := &stats.Transform{
-			InitState: func() interface{} { return nil },
-			Fn: func(d stats.Distribution, s interface{}) (float64, interface{}) {
-				return d.Rand(), nil
-			},
+	if dh, ok = source.(stats.DistributionWithHistogram); !ok {
+		dh, err = experiments.Compound(ctx, source, 1, c.CompoundType, &c.DistConfig)
+		if err != nil {
+			err = errors.Annotate(err, "failed to compound the source")
+			return
 		}
-		rand = stats.NewRandDistribution(ctx, source, xform, &c.DistConfig)
 	}
 	return
 }

@@ -303,7 +303,7 @@ func FindMin(f func(float64) float64, min, max, epsilon float64, maxIter int) fl
 	return (max + min) / 2.0
 }
 
-func directCompound(ctx context.Context, d stats.Distribution, n int, c *stats.ParallelSamplingConfig) stats.Distribution {
+func DirectCompound(ctx context.Context, d stats.Distribution, n int, c *stats.ParallelSamplingConfig) stats.DistributionWithHistogram {
 	fn := func(d stats.Distribution, s interface{}) (float64, interface{}) {
 		acc := 0.0
 		for i := 0; i < n; i++ {
@@ -318,7 +318,7 @@ func directCompound(ctx context.Context, d stats.Distribution, n int, c *stats.P
 	return stats.NewRandDistribution(ctx, d, xform, c)
 }
 
-func fastCompound(ctx context.Context, d stats.Distribution, n int, c *stats.ParallelSamplingConfig) stats.Distribution {
+func FastCompound(ctx context.Context, d stats.Distribution, n int, c *stats.ParallelSamplingConfig) stats.DistributionWithHistogram {
 	fn := func(d stats.Distribution, state interface{}) (float64, interface{}) {
 		sums := state.([]float64)
 		if len(sums) > 0 {
@@ -339,6 +339,27 @@ func fastCompound(ctx context.Context, d stats.Distribution, n int, c *stats.Par
 		Fn:        fn,
 	}
 	return stats.NewRandDistribution(ctx, d, xform, c)
+}
+
+// Compound the distribution d; that is, return the distribution of the sum of n
+// samples of d. The compounding is performed according to compType: "direct" (n
+// samples per 1 compounded sample), "fast" (sliding window sum) or "biased"
+// (based on Monte Carlo integration with an appropriate variable substitution),
+// and the configuration used by parallel sampling.
+func Compound(ctx context.Context, d stats.Distribution, n int, compType string, c *stats.ParallelSamplingConfig) (dist stats.DistributionWithHistogram, err error) {
+	switch compType {
+	case "direct":
+		dist = DirectCompound(ctx, d, n, c)
+	case "fast":
+		dist = FastCompound(ctx, d, n, c)
+	case "biased":
+		h := stats.CompoundHistogram(ctx, d, n, c)
+		dist = stats.NewHistogramDistribution(h)
+	default:
+		err = errors.Reason("unsupported compound type: %s", compType)
+		return
+	}
+	return
 }
 
 // AnalyticalDistribution instantiates a distribution from the corresponding
@@ -366,16 +387,9 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 	if c.Compound == 1 {
 		return
 	}
-	switch c.CompoundType {
-	case "direct":
-		dist = directCompound(ctx, dist, c.Compound, &c.DistConfig)
-	case "fast":
-		dist = fastCompound(ctx, dist, c.Compound, &c.DistConfig)
-	case "biased":
-		h := stats.CompoundHistogram(ctx, dist, c.Compound, &c.DistConfig)
-		dist = stats.NewHistogramDistribution(h)
-	default:
-		err = errors.Reason("unsupported compound type: %s", c.CompoundType)
+	dist, err = Compound(ctx, dist, c.Compound, c.CompoundType, &c.DistConfig)
+	if err != nil {
+		err = errors.Annotate(err, "failed to compound the distribution")
 		return
 	}
 	distName += fmt.Sprintf(" x %d", c.Compound)
