@@ -345,7 +345,7 @@ func FastCompound(ctx context.Context, d stats.Distribution, n int, c *stats.Par
 // samples of d. The compounding is performed according to compType: "direct" (n
 // samples per 1 compounded sample), "fast" (sliding window sum) or "biased"
 // (based on Monte Carlo integration with an appropriate variable substitution),
-// and the configuration used by parallel sampling.
+// and the configuration of parallel sampling.
 func Compound(ctx context.Context, d stats.Distribution, n int, compType string, c *stats.ParallelSamplingConfig) (dist stats.DistributionWithHistogram, err error) {
 	switch compType {
 	case "direct":
