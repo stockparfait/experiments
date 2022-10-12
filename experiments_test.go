@@ -65,7 +65,6 @@ func TestExperiments(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		Convey("AnalyticalDistribution works", func() {
-			var seed uint64 = 42
 			var cfg config.AnalyticalDistribution
 
 			Convey("Normal distribution", func() {
@@ -94,21 +93,28 @@ func TestExperiments(t *testing.T) {
 				So(name, ShouldEqual, "T(a=2.00)")
 				So(d.Mean(), ShouldEqual, 1.0)
 			})
+		})
+
+		Convey("CompoundDistribution works", func() {
+			var seed uint64 = 42
+			var cfg config.CompoundDistribution
 
 			Convey("Fast Compounded normal distribution", func() {
 				js := testutil.JSON(`
 {
-  "name": "normal",
-  "mean": 1.0,
-  "compound": 10,
+  "analytical source": {
+    "name": "normal",
+    "mean": 1.0
+  },
+  "n": 10,
   "compound type": "fast",
-  "distribution config": {
+  "parameters": {
     "samples": 1000,
     "workers": 1
   }
 }`)
 				So(cfg.InitMessage(js), ShouldBeNil)
-				d, name, err := AnalyticalDistribution(ctx, &cfg)
+				d, name, err := CompoundDistribution(ctx, &cfg)
 				So(err, ShouldBeNil)
 				So(name, ShouldEqual, "Gauss x 10")
 				d.Seed(seed)
@@ -118,19 +124,21 @@ func TestExperiments(t *testing.T) {
 			Convey("Directly compounded normal sample distribution", func() {
 				js := testutil.JSON(`
 {
-  "name": "normal",
-  "mean": 1.0,
-  "compound": 10,
+  "analytical source": {
+    "name": "normal",
+    "mean": 1.0
+  },
+  "n": 10,
   "compound type": "direct",
   "source samples": 2000,
-  "seed": 42,
-  "distribution config": {
+  "seed samples": 42,
+  "parameters": {
     "samples": 1000,
     "workers": 1
   }
 }`)
 				So(cfg.InitMessage(js), ShouldBeNil)
-				d, name, err := AnalyticalDistribution(ctx, &cfg)
+				d, name, err := CompoundDistribution(ctx, &cfg)
 				So(err, ShouldBeNil)
 				d.Seed(seed)
 				So(testutil.Round(d.Mean(), 2), ShouldEqual, 10.0)
@@ -140,11 +148,13 @@ func TestExperiments(t *testing.T) {
 			Convey("Biased compounded normal distribution", func() {
 				js := testutil.JSON(`
 {
-  "name": "normal",
-  "mean": 1.0,
-  "compound": 10,
+  "analytical source": {
+    "name": "normal",
+    "mean": 1.0
+  },
+  "n": 10,
   "compound type": "biased",
-  "distribution config": {
+  "parameters": {
     "buckets": {
       "min": -4,
       "max": 6
@@ -158,11 +168,58 @@ func TestExperiments(t *testing.T) {
   }
 }`)
 				So(cfg.InitMessage(js), ShouldBeNil)
-				d, name, err := AnalyticalDistribution(ctx, &cfg)
+				d, name, err := CompoundDistribution(ctx, &cfg)
 				So(err, ShouldBeNil)
 				d.Seed(seed)
 				So(testutil.Round(d.Mean(), 2), ShouldEqual, 10.0)
 				So(name, ShouldEqual, "Gauss x 10")
+			})
+
+			Convey("Double compounded distribution", func() {
+				js := testutil.JSON(`
+{
+  "compound source": {
+    "analytical source": {
+      "name": "normal",
+      "mean": 1
+    },
+    "n": 2,
+    "compound type": "biased",
+    "parameters": {
+      "bias power": 2,
+      "bias scale": 3,
+      "bias shift": 1,
+      "buckets": {
+        "min": -8,
+        "max": 12
+      },
+      "bias shift": 1,
+      "samples": 10000,
+      "workers": 1,
+      "seed": 42
+    }
+  },
+  "n": 5,
+  "compound type": "biased",
+  "parameters": {
+    "bias power": 2,
+    "bias scale": 6,
+    "bias shift": 2,
+    "buckets": {
+      "min": -40,
+      "max": 60
+    },
+    "samples": 10000,
+    "workers": 1,
+    "seed": 42
+  }
+}`)
+				So(cfg.InitMessage(js), ShouldBeNil)
+				d, name, err := CompoundDistribution(ctx, &cfg)
+				So(err, ShouldBeNil)
+				d.Seed(seed)
+				So(testutil.Round(d.Mean(), 1), ShouldEqual, 10.0)
+				So(name, ShouldEqual, "Gauss x 2 x 5")
 			})
 		})
 
@@ -180,7 +237,7 @@ func TestExperiments(t *testing.T) {
     "chart type": "bars",
     "plot mean": true,
     "percentiles": [50],
-    "reference distribution": {"name": "t"},
+    "reference distribution": {"analytical source": {"name": "t"}},
     "derive alpha": {
       "min x": 2,
       "max x": 4,

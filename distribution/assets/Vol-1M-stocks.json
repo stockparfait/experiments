@@ -4,7 +4,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -12,6 +11,9 @@
           "exclude tickers": [
             "JWACU",
             "BOALY"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -28,8 +30,10 @@
           "log Y": true,
           "normalize": true,
           "reference distribution": {
-            "alpha": 3.0,
-            "name": "t"
+            "analytical source": {
+              "alpha": 3.0,
+              "name": "t"
+            }
           },
           "use means": true
         }
@@ -45,8 +49,8 @@
         },
         {
           "id": "counts",
-          "title": "Number of Samples",
-          "log scale Y": true
+          "log scale Y": true,
+          "title": "Number of Samples"
         }
       ],
       "id": "dist group",

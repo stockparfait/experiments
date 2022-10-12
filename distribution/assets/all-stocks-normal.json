@@ -4,7 +4,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -12,6 +11,9 @@
           "exclude tickers": [
             "JWACU",
             "BOALY"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -27,7 +29,9 @@
           "log Y": true,
           "normalize": true,
           "reference distribution": {
-            "name": "normal"
+            "analytical source": {
+              "name": "normal"
+            }
           },
           "use means": true
         }

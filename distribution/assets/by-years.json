@@ -4,7 +4,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -12,6 +11,9 @@
           "exclude tickers": [
             "JWACU",
             "BOALY"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -34,7 +36,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -42,6 +43,9 @@
           "exclude tickers": [
             "JWACU",
             "BOALY"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "2004-01-01"
         },
@@ -64,7 +68,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -72,6 +75,9 @@
           "exclude tickers": [
             "JWACU",
             "BOALY"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "2010-01-01"
         },
@@ -94,7 +100,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -102,6 +107,9 @@
           "exclude tickers": [
             "JWACU",
             "BOALY"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "2016-01-01"
         },
@@ -117,8 +125,10 @@
           "log Y": true,
           "normalize": true,
           "reference distribution": {
-            "alpha": 3.0,
-            "name": "t"
+            "analytical source": {
+              "alpha": 3.0,
+              "name": "t"
+            }
           },
           "use means": true
         }

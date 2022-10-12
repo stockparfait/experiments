@@ -14,20 +14,21 @@
           "plot mean": true
         },
         "distribution": {
-          "MAD": 1.0,
-          "alpha": 3,
-          "compound": 1,
-          "mean": 0.0,
-          "name": "t",
-          "distribution config": {
-	    "buckets": {
-	      "max": 8,
-	      "min": 0.1,
-	      "n": 101,
-	      "spacing": "symmetric exponential"
-	    },
-	    "samples": 250
-	  }
+          "analytical source": {
+            "MAD": 1.0,
+            "alpha": 3,
+            "mean": 0.0,
+            "name": "t"
+          },
+          "parameters": {
+            "buckets": {
+              "max": 8,
+              "min": 0.1,
+              "n": 101,
+              "spacing": "symmetric exponential"
+            },
+            "samples": 250
+          }
         },
         "id": "N=250 @ 1",
         "mean distribution": {
@@ -56,9 +57,11 @@
             99.5
           ],
           "reference distribution": {
-            "MAD": 1.0,
-            "mean": 0.0,
-            "name": "t"
+            "analytical source": {
+              "MAD": 1.0,
+              "mean": 0.0,
+              "name": "t"
+            }
           }
         },
         "sigma distribution": {

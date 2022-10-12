@@ -54,15 +54,15 @@ func (d *PowerDist) prefix(s string) string {
 
 // distributionWithHistogram wraps analytical distribution into RandDistribution, as
 // necessary.
-func distributionWithHistogram(ctx context.Context, c *config.AnalyticalDistribution) (source stats.Distribution, dh stats.DistributionWithHistogram, name string, err error) {
-	source, name, err = experiments.AnalyticalDistribution(ctx, c)
+func distributionWithHistogram(ctx context.Context, c *config.CompoundDistribution) (source stats.Distribution, dh stats.DistributionWithHistogram, name string, err error) {
+	source, name, err = experiments.CompoundDistribution(ctx, c)
 	if err != nil {
 		err = errors.Annotate(err, "failed to create analytical distribution")
 		return
 	}
 	var ok bool
 	if dh, ok = source.(stats.DistributionWithHistogram); !ok {
-		dh, err = experiments.Compound(ctx, source, 1, c.CompoundType, &c.DistConfig)
+		dh, err = experiments.Compound(ctx, source, 1, c.CompoundType, &c.Params)
 		if err != nil {
 			err = errors.Annotate(err, "failed to compound the source")
 			return
@@ -155,7 +155,9 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	}
 	if d.config.CumulAlpha != nil {
 		cumulAlpha = experiments.NewCumulativeStatistic(d.config.CumulAlpha)
-		cumulAlpha.SetExpected(d.config.Dist.Alpha)
+		if d.config.Dist.AnalyticalSource != nil {
+			cumulAlpha.SetExpected(d.config.Dist.AnalyticalSource.Alpha)
+		}
 	}
 	if d.config.CumulSkew != nil {
 		cumulSkew = experiments.NewCumulativeStatistic(d.config.CumulSkew)
@@ -164,11 +166,19 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		cumulKurt = experiments.NewCumulativeStatistic(d.config.CumulKurt)
 	}
 
-	cumulHist := stats.NewHistogram(&d.config.Dist.DistConfig.Buckets)
+	cumulHist := stats.NewHistogram(&d.config.Dist.Params.Buckets)
 	for i := 0; i < d.config.CumulSamples; i++ {
 		y := d.rand.Rand()
 		cumulMean.AddToAverage(y)
-		diff := y - d.config.Dist.Mean
+		var mean, mad float64
+		if d.config.Dist.AnalyticalSource != nil {
+			mean = d.config.Dist.AnalyticalSource.Mean
+			mad = d.config.Dist.AnalyticalSource.MAD
+		} else {
+			mean = cumulHist.Mean()
+			mad = cumulHist.MAD()
+		}
+		diff := y - mean
 		cumulMAD.AddToAverage(math.Abs(diff))
 		dd := diff * diff
 		cumulSigma.AddToAverage(dd)
@@ -179,8 +189,8 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		if cumulAlpha != nil {
 			cumulAlpha.AddDirect(experiments.DeriveAlpha(
 				cumulHist,
-				d.config.Dist.Mean,
-				d.config.Dist.MAD,
+				mean,
+				mad,
 				d.config.AlphaParams,
 			))
 		}

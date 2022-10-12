@@ -35,12 +35,13 @@
           "min x": 1.1
         },
         "distribution": {
-          "MAD": 1.0,
-          "alpha": 3,
-          "compound": 1,
-          "mean": 0.0,
-          "name": "t",
-          "distribution config": {
+          "analytical source": {
+            "MAD": 1.0,
+            "alpha": 3,
+            "mean": 0,
+            "name": "t"
+          },
+          "parameters": {
             "buckets": {
               "max": 20,
               "min": 0.1,
@@ -81,9 +82,11 @@
             99.5
           ],
           "reference distribution": {
-            "MAD": 1.0,
-            "mean": 0.0,
-            "name": "t"
+            "analytical source": {
+              "MAD": 1.0,
+              "mean": 0.0,
+              "name": "t"
+            }
           }
         },
         "sigma distribution": {
