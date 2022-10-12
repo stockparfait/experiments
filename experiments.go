@@ -362,8 +362,7 @@ func Compound(ctx context.Context, d stats.Distribution, n int, compType string,
 	return
 }
 
-// AnalyticalDistribution instantiates a distribution from the corresponding
-// config.
+// AnalyticalDistribution instantiates a distribution from config.
 func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistribution) (dist stats.Distribution, distName string, err error) {
 	switch c.Name {
 	case "t":
@@ -376,23 +375,46 @@ func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistributio
 		err = errors.Reason("unsuppoted distribution type: '%s'", c.Name)
 		return
 	}
-	if c.SourceSamples > 0 {
-		if c.Seed > 0 {
-			dist.Seed(uint64(c.Seed))
+	return
+}
+
+// CompoundDistribution instantiates a compounded distribution from config.
+// When c.N=1, the source distribution is passed through as is.
+func CompoundDistribution(ctx context.Context, c *config.CompoundDistribution) (dist stats.Distribution, distName string, err error) {
+	switch {
+	case c.AnalyticalSource != nil:
+		dist, distName, err = AnalyticalDistribution(ctx, c.AnalyticalSource)
+		if err != nil {
+			err = errors.Annotate(err, "failed to create analytical distribution")
+			return
 		}
-		dist = stats.NewSampleDistributionFromRand(
-			dist, c.SourceSamples, &c.DistConfig.Buckets)
-		distName += fmt.Sprintf("[samples=%d]", c.SourceSamples)
-	}
-	if c.Compound == 1 {
+	case c.CompoundSource != nil:
+		dist, distName, err = CompoundDistribution(ctx, c.CompoundSource)
+		if err != nil {
+			err = errors.Annotate(err, "failed to create inner compound distribution")
+			return
+		}
+	default:
+		err = errors.Reason("both analytical and compound sources are nil")
 		return
 	}
-	dist, err = Compound(ctx, dist, c.Compound, c.CompoundType, &c.DistConfig)
+	if c.SourceSamples > 0 {
+		if c.SeedSamples > 0 {
+			dist.Seed(uint64(c.SeedSamples))
+		}
+		dist = stats.NewSampleDistributionFromRand(
+			dist, c.SourceSamples, &c.Params.Buckets)
+		distName += fmt.Sprintf("[samples=%d]", c.SourceSamples)
+	}
+	if c.N == 1 {
+		return
+	}
+	dist, err = Compound(ctx, dist, c.N, c.CompoundType, &c.Params)
 	if err != nil {
 		err = errors.Annotate(err, "failed to compound the distribution")
 		return
 	}
-	distName += fmt.Sprintf(" x %d", c.Compound)
+	distName += fmt.Sprintf(" x %d", c.N)
 	return
 }
 
@@ -411,10 +433,15 @@ func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *
 	if c.RefDist == nil {
 		return nil
 	}
-	dc := *c.RefDist // shallow copy, to modify locally
-	if c.AdjustRef {
-		dc.Mean = dh.Mean()
-		dc.MAD = dh.MAD()
+	dc := *c.RefDist // semi-deep copy, to modify locally
+	var ac config.AnalyticalDistribution
+	if dc.AnalyticalSource != nil {
+		ac = *dc.AnalyticalSource
+		dc.AnalyticalSource = &ac
+	}
+	if c.AdjustRef && dc.N == 1 && dc.AnalyticalSource != nil {
+		ac.Mean = dh.Mean()
+		ac.MAD = dh.MAD()
 	}
 
 	h := dh.Histogram()
@@ -424,22 +451,23 @@ func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *
 	} else {
 		xs = h.Buckets().Xs(0.5)
 	}
-	if c.DeriveAlpha != nil {
-		dc.Alpha = DeriveAlpha(h, dc.Mean, dc.MAD, c.DeriveAlpha)
+	if c.DeriveAlpha != nil && dc.N == 1 && dc.AnalyticalSource != nil && ac.Name == "t" {
+		ac.Alpha = DeriveAlpha(h, ac.Mean, ac.MAD, c.DeriveAlpha)
 	}
 
-	if err := AddValue(ctx, legend+" mean", fmt.Sprintf("%.4g", dc.Mean)); err != nil {
+	if err := AddValue(ctx, legend+" mean", fmt.Sprintf("%.4g", dh.Mean())); err != nil {
 		return errors.Annotate(err, "failed to add value for '%s mean'", legend)
 	}
-	if err := AddValue(ctx, legend+" MAD", fmt.Sprintf("%.4g", dc.MAD)); err != nil {
+	if err := AddValue(ctx, legend+" MAD", fmt.Sprintf("%.4g", dh.MAD())); err != nil {
 		return errors.Annotate(err, "failed to add value for '%s MAD'", legend)
 	}
-	if dc.Name == "t" {
-		if err := AddValue(ctx, legend+" alpha", fmt.Sprintf("%.4g", dc.Alpha)); err != nil {
+	if dc.AnalyticalSource != nil && dc.AnalyticalSource.Name == "t" {
+		alpha := fmt.Sprintf("%.4g", dc.AnalyticalSource.Alpha)
+		if err := AddValue(ctx, legend+" alpha", alpha); err != nil {
 			return errors.Annotate(err, "failed to add value for '%s alpha'", legend)
 		}
 	}
-	dist, distName, err := AnalyticalDistribution(ctx, &dc)
+	dist, distName, err := CompoundDistribution(ctx, &dc)
 	if err != nil {
 		return errors.Annotate(err, "failed to instantiate reference distribution")
 	}

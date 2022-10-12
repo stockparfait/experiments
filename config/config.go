@@ -95,21 +95,6 @@ type AnalyticalDistribution struct {
 	Mean  float64 `json:"mean" default:"0.0"`
 	MAD   float64 `json:"MAD" default:"1.0"`
 	Alpha float64 `json:"alpha" default:"3.0"` // T dist. parameter
-	// When > 0, use SampleDistribution with this many samples from the source
-	// distribution, rather than the source distribution directly.
-	SourceSamples int `json:"source samples"`
-	// When > 0, use it to seed the source distribution populating the sample
-	// distribution. For use in tests.
-	Seed     int `json:"seed"`
-	Compound int `json:"compound" default:"1"` // sum of N samples
-	// How to compute the histogram for the compounded distribution:
-	//
-	// - direct: just sample the source N times for each compound sample;
-	// - fast: use Y_i = sum(X_i, ..., X_N+i) for a single stream of X_i;
-	// - biased: use variable substitution and Monte Carlo integration.
-	CompoundType string `json:"compound type" choices:"direct,fast,biased" default:"biased"`
-	// Compound algorithm parameters.
-	DistConfig stats.ParallelSamplingConfig `json:"distribution config"`
 }
 
 var _ message.Message = &AnalyticalDistribution{}
@@ -124,8 +109,46 @@ func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
 	if d.MAD <= 0.0 {
 		return errors.Reason("MAD=%f must be positive", d.MAD)
 	}
-	if d.Compound < 1 {
-		return errors.Reason("Compound=%d must be >= 1", d.Compound)
+	return nil
+}
+
+// CompoundDistribution specifies a compounded source distribution, that is, the
+// distribution of the sum of N samples from the source distribution. The source
+// can in turn be a CompoundDistribution, yielding N1*N2 compounded source, to
+// arbitrary depth.
+type CompoundDistribution struct {
+	// Exactly one of the AnalyticalSource or CompoundSource must be present.
+	AnalyticalSource *AnalyticalDistribution `json:"analytical source"`
+	CompoundSource   *CompoundDistribution   `json:"compound source"`
+	// When > 0, use SampleDistribution with this many samples from the source
+	// distribution, rather than the source distribution directly.
+	SourceSamples int `json:"source samples"`
+	// When > 0, use it to seed the source distribution populating the sample
+	// distribution. For use in tests.
+	SeedSamples int `json:"seed samples"`
+	N           int `json:"n" default:"1"` // sum of n source samples
+	// How to compute the histogram for the compounded distribution:
+	//
+	// - direct: just sample the source N times for each compound sample;
+	// - fast: use Y_i = sum(X_i, ..., X_N+i) for a single stream of X_i;
+	// - biased: use variable substitution and Monte Carlo integration.
+	CompoundType string `json:"compound type" choices:"direct,fast,biased" default:"biased"`
+	// Compound algorithm parameters.
+	Params stats.ParallelSamplingConfig `json:"parameters"`
+}
+
+var _ message.Message = &CompoundDistribution{}
+
+func (d *CompoundDistribution) InitMessage(js interface{}) error {
+	if err := message.Init(d, js); err != nil {
+		return errors.Annotate(err, "failed to init CompoundDistribution")
+	}
+	if (d.AnalyticalSource == nil) == (d.CompoundSource == nil) {
+		return errors.Reason(
+			`exactly one of "analytical source" or "compound source" must be specified`)
+	}
+	if d.N < 1 {
+		return errors.Reason("n=%d must be >= 1", d.N)
 	}
 	return nil
 }
@@ -161,26 +184,30 @@ func (f *DeriveAlpha) InitMessage(js interface{}) error {
 	return nil
 }
 
-// DistributionPlot is a config for plotting a given distribution, its
-// statistics, and its approximation by an analytical distribution.
+// DistributionPlot is a config for plotting a given distribution's histogram,
+// its statistics, and its approximation by an analytical distribution.
 type DistributionPlot struct {
-	Graph          string                  `json:"graph" required:"true"`
-	CountsGraph    string                  `json:"counts graph"` // plot buckets' counts
-	ErrorsGraph    string                  `json:"errors graph"` // plot bucket's standard errors
-	Buckets        stats.Buckets           `json:"buckets"`
-	ChartType      string                  `json:"chart type" choices:"line,bars" default:"line"`
-	Normalize      bool                    `json:"normalize"`  // to mean=0, MAD=1
-	UseMeans       bool                    `json:"use means"`  // use bucket means rather than middles
-	KeepZeros      bool                    `json:"keep zeros"` // by default, skip y==0 points
-	LogY           bool                    `json:"log Y"`      // plot log10(y)
-	LeftAxis       bool                    `json:"left axis"`
-	CountsLeftAxis bool                    `json:"counts left axis"`
-	ErrorsLeftAxis bool                    `json:"errors left axis"`
-	RefDist        *AnalyticalDistribution `json:"reference distribution"`
-	AdjustRef      bool                    `json:"adjust reference distribution"`
-	DeriveAlpha    *DeriveAlpha            `json:"derive alpha"` // for ref. dist. from data
-	PlotMean       bool                    `json:"plot mean"`
-	Percentiles    []float64               `json:"percentiles"` // in [0..100]
+	Graph          string                `json:"graph" required:"true"`
+	CountsGraph    string                `json:"counts graph"` // plot buckets' counts
+	ErrorsGraph    string                `json:"errors graph"` // plot bucket's standard errors
+	Buckets        stats.Buckets         `json:"buckets"`
+	ChartType      string                `json:"chart type" choices:"line,bars" default:"line"`
+	Normalize      bool                  `json:"normalize"`  // to mean=0, MAD=1
+	UseMeans       bool                  `json:"use means"`  // use bucket means rather than middles
+	KeepZeros      bool                  `json:"keep zeros"` // by default, skip y==0 points
+	LogY           bool                  `json:"log Y"`      // plot log10(y)
+	LeftAxis       bool                  `json:"left axis"`
+	CountsLeftAxis bool                  `json:"counts left axis"`
+	ErrorsLeftAxis bool                  `json:"errors left axis"`
+	RefDist        *CompoundDistribution `json:"reference distribution"`
+	// When RefDist is an uncompounded (N=1) analytical distribution, its mean and
+	// MAD will be automatically adjusted when AdjustRef is true.
+	AdjustRef bool `json:"adjust reference distribution"`
+	// Similarly, for uncompound t-distribution RefDist, alpha is derived from the
+	// data.
+	DeriveAlpha *DeriveAlpha `json:"derive alpha"`
+	PlotMean    bool         `json:"plot mean"`
+	Percentiles []float64    `json:"percentiles"` // in [0..100]
 }
 
 var _ message.Message = &DistributionPlot{}
@@ -272,9 +299,9 @@ func (c *CumulativeStatistic) InitMessage(js interface{}) error {
 }
 
 type PowerDist struct {
-	ID         string                 `json:"id"` // experiment ID, for multiple instances
-	Dist       AnalyticalDistribution `json:"distribution"`
-	SamplePlot *DistributionPlot      `json:"sample plot"` // sampled Dist
+	ID         string               `json:"id"` // experiment ID, for multiple instances
+	Dist       CompoundDistribution `json:"distribution"`
+	SamplePlot *DistributionPlot    `json:"sample plot"` // sampled Dist
 
 	// Graphs of cumulative statistics, up to Samples, all generated from the same
 	// sequence of values.

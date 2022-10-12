@@ -4,7 +4,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -15,6 +14,9 @@
           ],
           "sectors": [
             "Basic Materials"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -37,7 +39,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -48,6 +49,9 @@
           ],
           "sectors": [
             "Communication Services"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -70,7 +74,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -81,6 +84,9 @@
           ],
           "sectors": [
             "Consumer Cyclical"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -103,7 +109,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -114,6 +119,9 @@
           ],
           "sectors": [
             "Consumer Defensive"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -136,7 +144,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -147,6 +154,9 @@
           ],
           "sectors": [
             "Energy"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -162,8 +172,10 @@
           "log Y": true,
           "normalize": true,
           "reference distribution": {
-            "alpha": 3.0,
-            "name": "t"
+            "analytical source": {
+              "alpha": 3.0,
+              "name": "t"
+            }
           },
           "use means": true
         }
@@ -173,7 +185,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -184,6 +195,9 @@
           ],
           "sectors": [
             "Financial Services"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -206,7 +220,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -217,6 +230,9 @@
           ],
           "sectors": [
             "Healthcare"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -239,7 +255,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -250,6 +265,9 @@
           ],
           "sectors": [
             "Industrials"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -272,7 +290,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -283,6 +300,9 @@
           ],
           "sectors": [
             "Real Estate"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -305,7 +325,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -316,6 +335,9 @@
           ],
           "sectors": [
             "Technology"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -338,7 +360,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "min": 1000000
           },
@@ -349,6 +370,9 @@
           ],
           "sectors": [
             "Utilities"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },

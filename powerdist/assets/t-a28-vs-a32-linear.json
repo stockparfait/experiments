@@ -3,12 +3,13 @@
     {
       "power distribution": {
         "distribution": {
-          "MAD": 1.0,
-          "alpha": 2.8,
-          "compound": 1,
-          "mean": 0.0,
-          "name": "t",
-          "distribution config": {
+          "analytical source": {
+            "MAD": 1.0,
+            "alpha": 2.8,
+            "mean": 0.0,
+            "name": "t"
+          },
+          "parameters": {
             "buckets": {
               "max": 30,
               "min": 0.1,
@@ -30,10 +31,12 @@
           "log Y": false,
           "percentiles": [],
           "reference distribution": {
-            "MAD": 1.0,
-            "alpha": 2.8,
-            "mean": 0.0,
-            "name": "t"
+            "analytical source": {
+              "MAD": 1.0,
+              "alpha": 2.8,
+              "mean": 0.0,
+              "name": "t"
+            }
           }
         },
         "statistic samples": 100
@@ -42,12 +45,13 @@
     {
       "power distribution": {
         "distribution": {
-          "MAD": 1.0,
-          "alpha": 3.2,
-          "compound": 1,
-          "mean": 0.0,
-          "name": "t",
-          "distribution config": {
+          "analytical source": {
+            "MAD": 1.0,
+            "alpha": 3.2,
+            "mean": 0.0,
+            "name": "t"
+          },
+          "parameters": {
             "buckets": {
               "max": 30,
               "min": 0.1,
@@ -69,10 +73,12 @@
           "log Y": false,
           "percentiles": [],
           "reference distribution": {
-            "MAD": 1.0,
-            "alpha": 3.2,
-            "mean": 0.0,
-            "name": "t"
+            "analytical source": {
+              "MAD": 1.0,
+              "alpha": 3.2,
+              "mean": 0.0,
+              "name": "t"
+            }
           }
         },
         "statistic samples": 10000

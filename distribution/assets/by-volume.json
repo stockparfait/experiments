@@ -4,7 +4,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "max": 10000000,
             "min": 1000000
@@ -13,6 +12,9 @@
           "exclude tickers": [
             "JWACU",
             "BOALY"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -28,8 +30,10 @@
           "log Y": true,
           "normalize": true,
           "reference distribution": {
-            "alpha": 3.0,
-            "name": "t"
+            "analytical source": {
+              "alpha": 3.0,
+              "name": "t"
+            }
           },
           "use means": true
         }
@@ -39,7 +43,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "max": 100000000,
             "min": 10000000
@@ -48,6 +51,9 @@
           "exclude tickers": [
             "JWACU",
             "BOALY"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },
@@ -70,7 +76,6 @@
       "distribution": {
         "data": {
           "DB": "sharadar",
-          "sources": ["SEP"],
           "cash volume": {
             "max": 1000000000,
             "min": 100000000
@@ -79,6 +84,9 @@
           "exclude tickers": [
             "JWACU",
             "BOALY"
+          ],
+          "sources": [
+            "SEP"
           ],
           "start": "1998-01-01"
         },

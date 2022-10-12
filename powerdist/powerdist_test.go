@@ -51,7 +51,7 @@ func TestDistribution(t *testing.T) {
 			var cfg config.PowerDist
 			JSConfig := `
 {
-  "distribution": {"name": "t"}
+  "distribution": {"analytical source": {"name": "t"}}
 }
 `
 			So(cfg.InitMessage(testutil.JSON(JSConfig)), ShouldBeNil)
@@ -64,8 +64,8 @@ func TestDistribution(t *testing.T) {
 			JSConfig := `
 {
   "distribution": {
-    "name": "t",
-    "distribution config": {
+    "analytical source": {"name": "t"},
+    "parameters": {
       "buckets": {"n": 5},
       "samples": 10
     }

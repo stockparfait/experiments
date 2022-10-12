@@ -106,7 +106,7 @@ func TestDistribution(t *testing.T) {
     "chart type": "bars",
     "plot mean": true,
     "percentiles": [5, 95],
-    "reference distribution": {"name": "t"}
+    "reference distribution": {"analytical source": {"name": "t"}}
   },
   "means": {"graph": "g"},
   "MADs": {"graph": "g"}
@@ -118,8 +118,8 @@ func TestDistribution(t *testing.T) {
 				"test tickers":          "2",
 				"test average MAD":      "0.1347",
 				"test average mean":     "0.04766",
-				"test log-profit mean":  "0",
-				"test log-profit MAD":   "1",
+				"test log-profit mean":  "0.04766",
+				"test log-profit MAD":   "0.1347",
 				"test log-profit alpha": "3",
 			})
 			So(len(g.Plots), ShouldEqual, 8)

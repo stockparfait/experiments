@@ -69,7 +69,7 @@ func TestConfig(t *testing.T) {
       "log-profits": {
         "graph": "dist",
         "normalize": true,
-        "reference distribution": {"name": "t"},
+        "reference distribution": {"analytical source": {"name": "t"}},
         "derive alpha": {
           "min x": 2,
           "max x": 4
@@ -78,7 +78,7 @@ func TestConfig(t *testing.T) {
       "parallel workers": 1
     }},
     {"power distribution": {
-      "distribution": {"name": "normal"},
+      "distribution": {"analytical source": {"name": "normal"}},
       "cumulative mean": {"graph": "cumul mean"}
     }}
   ]
@@ -167,14 +167,16 @@ func TestConfig(t *testing.T) {
 							Buckets:   defaultBuckets,
 							ChartType: "line",
 							Normalize: true,
-							RefDist: &AnalyticalDistribution{
-								Name:         "t",
-								Mean:         0.0,
-								MAD:          1.0,
-								Alpha:        3.0,
-								Compound:     1,
+							RefDist: &CompoundDistribution{
+								AnalyticalSource: &AnalyticalDistribution{
+									Name:  "t",
+									Mean:  0.0,
+									MAD:   1.0,
+									Alpha: 3.0,
+								},
+								N:            1,
 								CompoundType: "biased",
-								DistConfig:   defaultParallelSampling,
+								Params:       defaultParallelSampling,
 							},
 							DeriveAlpha: &DeriveAlpha{
 								MinX:          2.0,
@@ -189,13 +191,15 @@ func TestConfig(t *testing.T) {
 						Workers:   1,
 					}},
 					{Config: &PowerDist{
-						Dist: AnalyticalDistribution{
-							Name:         "normal",
-							MAD:          1.0,
-							Alpha:        3.0,
-							Compound:     1,
+						Dist: CompoundDistribution{
+							AnalyticalSource: &AnalyticalDistribution{
+								Name:  "normal",
+								MAD:   1.0,
+								Alpha: 3.0,
+							},
+							N:            1,
 							CompoundType: "biased",
-							DistConfig:   defaultParallelSampling,
+							Params:       defaultParallelSampling,
 						},
 						CumulMean: &CumulativeStatistic{
 							Graph:   "cumul mean",
