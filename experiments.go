@@ -433,7 +433,7 @@ func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *
 	if c.RefDist == nil {
 		return nil
 	}
-	dc := *c.RefDist // shallow copy, to modify locally
+	dc := *c.RefDist // semi-deep copy, to modify locally
 	var ac config.AnalyticalDistribution
 	if dc.AnalyticalSource != nil {
 		ac = *dc.AnalyticalSource

@@ -141,7 +141,7 @@ var _ message.Message = &CompoundDistribution{}
 
 func (d *CompoundDistribution) InitMessage(js interface{}) error {
 	if err := message.Init(d, js); err != nil {
-		return errors.Annotate(err, "failed to init AnalyticalDistribution")
+		return errors.Annotate(err, "failed to init CompoundDistribution")
 	}
 	if (d.AnalyticalSource == nil) == (d.CompoundSource == nil) {
 		return errors.Reason(
