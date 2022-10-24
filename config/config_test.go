@@ -82,6 +82,7 @@ func TestConfig(t *testing.T) {
       "cumulative mean": {"graph": "cumul mean"}
     }},
     {"portfolio": {
+      "data": {"DB": "test"},
       "positions": [{
         "ticker": "ABCD",
         "shares": 10,
@@ -225,6 +226,7 @@ func TestConfig(t *testing.T) {
 						StatSamples:  10000,
 					}},
 					{Config: &Portfolio{
+						Reader: &defaultReader,
 						Positions: []PortfolioPosition{{
 							Ticker:       "ABCD",
 							Shares:       10,
