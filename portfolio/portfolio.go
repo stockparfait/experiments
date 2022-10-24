@@ -31,8 +31,7 @@ import (
 
 // Portfolio is an Experiment implementation for analyzing an existing portfolio.
 type Portfolio struct {
-	config  *config.Portfolio
-	context context.Context
+	config *config.Portfolio
 }
 
 var _ experiments.Experiment = &Portfolio{}
@@ -49,7 +48,6 @@ func (p *Portfolio) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	if p.config, ok = cfg.(*config.Portfolio); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
-	p.context = ctx
 
 	t := table.NewTable(p.header()...)
 	for _, pos := range p.config.Positions {
@@ -70,7 +68,7 @@ func (p *Portfolio) header() []string {
 	for i, c := range p.config.Columns {
 		switch c.Kind {
 		case "price", "value":
-			r[i] = fmt.Sprintf("%s %s", c.Kind, c.Date.String())
+			r[i] = fmt.Sprintf("%s %s", c.Kind, c.Date)
 		default:
 			r[i] = c.Kind
 		}
