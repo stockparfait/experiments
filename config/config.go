@@ -351,6 +351,61 @@ func (e *PowerDist) InitMessage(js interface{}) error {
 
 func (e *PowerDist) Name() string { return "power distribution" }
 
+type PortfolioPosition struct {
+	Ticker string `json:"ticker" required:"true"`
+	Shares int    `json:"shares" required:"true"` // number of shares owned
+	// Total cost of purchase; default is closing price at purchase date * shares.
+	CostBasis    float64 `json:"cost basis"`
+	PurchaseDate db.Date `json:"purchase date" required:"true"`
+}
+
+var _ message.Message = &PortfolioPosition{}
+
+func (e *PortfolioPosition) InitMessage(js interface{}) error {
+	if err := message.Init(e, js); err != nil {
+		return errors.Annotate(err, "failed to init PortfolioPosition")
+	}
+	return nil
+}
+
+type PortfolioColumn struct {
+	Kind string  `json:"kind" required:"true" choices:"ticker,purchase date,cost basis,value"`
+	Date db.Date `json:"date"` // required for "value"
+}
+
+var _ message.Message = &PortfolioColumn{}
+
+func (e *PortfolioColumn) InitMessage(js interface{}) error {
+	if err := message.Init(e, js); err != nil {
+		return errors.Annotate(err, "failed to init PortfolioColumn")
+	}
+	if e.Kind == "value" && e.Date.IsZero() {
+		return errors.Reason("date is required for kind=value")
+	}
+	return nil
+}
+
+type Portfolio struct {
+	ID        string              `json:"id"`
+	Positions []PortfolioPosition `json:"positions"`
+	Columns   []PortfolioColumn   `json:"columns"` // default: [{"kind": "ticker"}]
+}
+
+var _ message.Message = &Portfolio{}
+var _ ExperimentConfig = &Portfolio{}
+
+func (e *Portfolio) InitMessage(js interface{}) error {
+	if err := message.Init(e, js); err != nil {
+		return errors.Annotate(err, "failed to init Portfolio")
+	}
+	if len(e.Columns) == 0 {
+		e.Columns = []PortfolioColumn{{Kind: "ticker"}}
+	}
+	return nil
+}
+
+func (e *Portfolio) Name() string { return "portfolio" }
+
 // ExpMap represents a Message which reads a single-element map {name:
 // Experiment} and knows how to populate specific implementations of the
 // Experiment interface.
@@ -375,6 +430,8 @@ func (e *ExpMap) InitMessage(js interface{}) error {
 			e.Config = &Distribution{}
 		case "power distribution":
 			e.Config = &PowerDist{}
+		case "portfolio":
+			e.Config = &Portfolio{}
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}
