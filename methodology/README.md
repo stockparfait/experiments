@@ -2,7 +2,7 @@
 
 *Up: [Table of Contents]*
 
-I purposefully do not follow any speficific textbook, any established trading or
+I purposefully do not follow any specific textbook, any established trading or
 investment approaches, indicators, quantitative trading strategies, or
 econometric theories. Instead, I decided to start from the ground up with the
 actual historical data, and see for myself what the data can tell me.

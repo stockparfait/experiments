@@ -80,6 +80,13 @@ func TestConfig(t *testing.T) {
     {"power distribution": {
       "distribution": {"analytical source": {"name": "normal"}},
       "cumulative mean": {"graph": "cumul mean"}
+    }},
+    {"portfolio": {
+      "positions": [{
+        "ticker": "ABCD",
+        "shares": 10,
+        "purchase date": "2020-01-01"
+      }]
     }}
   ]
 }`
@@ -216,6 +223,14 @@ func TestConfig(t *testing.T) {
 						},
 						CumulSamples: 10000,
 						StatSamples:  10000,
+					}},
+					{Config: &Portfolio{
+						Positions: []PortfolioPosition{{
+							Ticker:       "ABCD",
+							Shares:       10,
+							PurchaseDate: db.NewDate(2020, 1, 1),
+						}},
+						Columns: []PortfolioColumn{{Kind: "ticker"}},
 					}},
 				},
 			})
