@@ -118,10 +118,11 @@ func (p *Portfolio) addPosition(ctx context.Context, pos config.PortfolioPositio
 		case "cost basis":
 			cb := pos.CostBasis
 			if cb == 0 {
-				cb, err = dataOnDate(ts, pos.PurchaseDate)
+				price, err := dataOnDate(ts, pos.PurchaseDate)
 				if err != nil {
 					return nil, errors.Annotate(err, "no cost basis and no price data")
 				}
+				cb = price * float64(pos.Shares)
 			}
 			r[i] = fmt.Sprintf("%.2f", cb)
 		case "shares":
