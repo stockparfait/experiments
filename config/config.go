@@ -356,9 +356,9 @@ func (e *PowerDist) Name() string { return "power distribution" }
 // price (cost basis) on a given date.
 type PortfolioPosition struct {
 	Ticker string `json:"ticker" required:"true"`
-	Shares int    `json:"shares" required:"true"` // number of shares owned
+	Shares int    `json:"shares" required:"true"` // number of shares owned, >= 0
 	// Total cost of purchase; default is closing price at purchase date * shares.
-	CostBasis    float64 `json:"cost basis"`
+	CostBasis    float64 `json:"cost basis"` // >= 0
 	PurchaseDate db.Date `json:"purchase date" required:"true"`
 }
 
@@ -368,12 +368,18 @@ func (e *PortfolioPosition) InitMessage(js interface{}) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init PortfolioPosition")
 	}
+	if e.Shares < 0 {
+		return errors.Reason("shares=%d must be >= 0", e.Shares)
+	}
+	if e.CostBasis < 0 {
+		return errors.Reason("cost basis=%g must be >= 0", e.CostBasis)
+	}
 	return nil
 }
 
 // PortfolioColumn defines the data for a single output table column.
 type PortfolioColumn struct {
-	Kind string  `json:"kind" required:"true" choices:"ticker,name,exchange,category,sector,industry,purchase date,cost basis,price,value"`
+	Kind string  `json:"kind" required:"true" choices:"ticker,name,exchange,category,sector,industry,purchase date,cost basis,shares,price,value"`
 	Date db.Date `json:"date"` // required for "price" and "value"
 }
 
@@ -383,9 +389,10 @@ func (e *PortfolioColumn) InitMessage(js interface{}) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init PortfolioColumn")
 	}
-	for _, k := range []string{"value", "price"} {
-		if e.Kind == k && e.Date.IsZero() {
-			return errors.Reason("date is required for kind=%s", k)
+	switch e.Kind {
+	case "value", "price":
+		if e.Date.IsZero() {
+			return errors.Reason("date is required for kind=%s", e.Kind)
 		}
 	}
 	return nil
@@ -395,9 +402,12 @@ func (e *PortfolioColumn) InitMessage(js interface{}) error {
 // configurable position rows. This is not really an experiment but a
 // convenience tool for analyizing an existing portfolio.
 type Portfolio struct {
+	Reader    *db.Reader          `json:"data" required:"true"`
 	ID        string              `json:"id"`
 	Positions []PortfolioPosition `json:"positions"`
 	Columns   []PortfolioColumn   `json:"columns"` // default: [{"kind": "ticker"}]
+	// CSV output file; empty string == text on stdout.
+	File string `json:"file"`
 }
 
 var _ message.Message = &Portfolio{}
