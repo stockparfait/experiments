@@ -85,8 +85,10 @@ func TestDistribution(t *testing.T) {
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
 			So(values, ShouldResemble, experiments.Values{
-				"samples": "4",
-				"tickers": "2",
+				"log-profit P(X < mean-10*sigma)": "0.5481",
+				"log-profit P(X > mean+10*sigma)": "0.4519",
+				"samples":                         "4",
+				"tickers":                         "2",
 			})
 			So(len(g.Plots), ShouldEqual, 1)
 		})
@@ -114,14 +116,19 @@ func TestDistribution(t *testing.T) {
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
 			So(values, ShouldResemble, experiments.Values{
-				"test samples":          "4",
-				"test tickers":          "2",
-				"test average MAD":      "0.1347",
-				"test average mean":     "0.04766",
-				"test log-profit mean":  "0.04766",
-				"test log-profit MAD":   "0.1347",
-				"test log-profit alpha": "3",
-			})
+				"test samples":                         "4",
+				"test tickers":                         "2",
+				"test average MAD":                     "0.1347",
+				"test MADs P(X < mean-10*sigma)":       "0.636",
+				"test MADs P(X > mean+10*sigma)":       "0.364",
+				"test average mean":                    "0.04766",
+				"test means P(X < mean-10*sigma)":      "0.5481",
+				"test means P(X > mean+10*sigma)":      "0.4519",
+				"test log-profit mean":                 "0.04766",
+				"test log-profit MAD":                  "0.1347",
+				"test log-profit alpha":                "3",
+				"test log-profit P(X < mean-10*sigma)": "0",
+				"test log-profit P(X > mean+10*sigma)": "0"})
 			So(len(g.Plots), ShouldEqual, 8)
 			So(g.Plots[1].Legend, ShouldEqual, "test log-profit counts")
 			// The first value is skipped due to 0 count.
