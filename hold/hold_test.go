@@ -51,35 +51,25 @@ func TestHold(t *testing.T) {
 			"A": {},
 			"B": {},
 		}
-		actions := map[string][]db.ActionRow{
-			"A": {
-				db.TestAction(db.NewDate(2019, 1, 1), 1.0, 1.0, true),
-			},
-			"B": {
-				db.TestAction(db.NewDate(2019, 1, 1), 1.0, 1.0, true),
-				db.TestAction(db.NewDate(2020, 1, 1), 1.0, 1.0, false),
-			},
-		}
 		prices := map[string][]db.PriceRow{
 			"A": {
-				db.TestPrice(db.NewDate(2019, 1, 1), 10.0, 10.0, 1000.0, true),
-				db.TestPrice(db.NewDate(2019, 1, 2), 11.0, 11.0, 1100.0, true),
-				db.TestPrice(db.NewDate(2019, 1, 3), 12.0, 12.0, 1200.0, true),
+				db.TestPrice(db.NewDate(2019, 1, 1), 10.0, 10.0, 10.0, 1000.0, true),
+				db.TestPrice(db.NewDate(2019, 1, 2), 11.0, 11.0, 11.0, 1100.0, true),
+				db.TestPrice(db.NewDate(2019, 1, 3), 12.0, 12.0, 12.0, 1200.0, true),
 			},
 			"B": {
-				db.TestPrice(db.NewDate(2019, 1, 1), 100.0, 100.0, 100.0, true),
-				db.TestPrice(db.NewDate(2019, 1, 2), 110.0, 110.0, 110.0, true),
-				db.TestPrice(db.NewDate(2019, 1, 3), 120.0, 120.0, 120.0, true),
+				db.TestPrice(db.NewDate(2019, 1, 1), 100.0, 100.0, 100.0, 100.0, true),
+				db.TestPrice(db.NewDate(2019, 1, 2), 110.0, 110.0, 110.0, 110.0, true),
+				db.TestPrice(db.NewDate(2019, 1, 3), 120.0, 120.0, 120.0, 120.0, true),
 			},
 		}
 
 		w := db.NewWriter(tmpdir, dbName)
 		So(w.WriteTickers(tickers), ShouldBeNil)
-		So(w.WriteActions(actions), ShouldBeNil)
 		for t, p := range prices {
 			So(w.WritePrices(t, p), ShouldBeNil)
 		}
-		So(w.WriteMetadata(), ShouldBeNil)
+		So(w.WriteMetadata(w.Metadata), ShouldBeNil)
 
 		pg, err := canvas.EnsureGraph(plot.KindSeries, "pg", "plots")
 		So(err, ShouldBeNil)
