@@ -16,7 +16,6 @@ package hold
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -31,7 +30,7 @@ import (
 
 func TestHold(t *testing.T) {
 	t.Parallel()
-	tmpdir, tmpdirErr := ioutil.TempDir("", "test_hold")
+	tmpdir, tmpdirErr := os.MkdirTemp("", "test_hold")
 	defer os.RemoveAll(tmpdir)
 
 	Convey("Test setup succeeded", t, func() {

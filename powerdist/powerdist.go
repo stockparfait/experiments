@@ -243,7 +243,7 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 	var dist stats.DistributionWithHistogram
 	var distName string
 
-	jobs := []parallel.Job{}
+	jobs := []parallel.Job[*statsJobRes]{}
 	workers := 2 * runtime.NumCPU()
 	step := d.config.StatSamples / workers
 	if step < 1 {
@@ -255,7 +255,7 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 		if end > d.config.StatSamples {
 			end = d.config.StatSamples
 		}
-		jobs = append(jobs, func() interface{} {
+		jobs = append(jobs, func() *statsJobRes {
 			res := &statsJobRes{samples: make([][]float64, len(sts))}
 			for k := start; k < end; k++ {
 				var err error
@@ -277,7 +277,7 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 
 	samples := make([][]float64, len(sts))
 	for i := 0; i < len(res); i++ {
-		r := res[i].(*statsJobRes)
+		r := res[i]
 		if r.err != nil {
 			return errors.Annotate(r.err, "some jobs failed")
 		}

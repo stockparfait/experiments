@@ -17,7 +17,6 @@ package distribution
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -34,7 +33,7 @@ import (
 func TestDistribution(t *testing.T) {
 	t.Parallel()
 
-	tmpdir, tmpdirErr := ioutil.TempDir("", "test_distribution")
+	tmpdir, tmpdirErr := os.MkdirTemp("", "test_distribution")
 	defer os.RemoveAll(tmpdir)
 
 	Convey("Test setup succeeded", t, func() {
