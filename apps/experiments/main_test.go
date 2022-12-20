@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -24,6 +23,7 @@ import (
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/plot"
+	"github.com/stockparfait/testutil"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -53,16 +53,7 @@ func TestMain(t *testing.T) {
   "experiments": [{"test": {"graph": "r1"}}]
 }`
 		confPath := filepath.Join(tmpdir, "config.json")
-
-		// Run in a function closure to ensure the written file is closed before
-		// reading it.
-		(func() {
-			f, err := os.OpenFile(confPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-			So(err, ShouldBeNil)
-			defer f.Close()
-			_, err = f.WriteString(confJSON)
-			So(err, ShouldBeNil)
-		})()
+		So(testutil.WriteFile(confPath, confJSON), ShouldBeNil)
 
 		dataJs := filepath.Join(tmpdir, "data.js")
 		dataJSON := filepath.Join(tmpdir, "data.json")
@@ -85,24 +76,10 @@ func TestMain(t *testing.T) {
 			"test":  "failed",
 		})
 
-		jsonFile, err := os.Open(dataJSON)
-		So(err, ShouldBeNil)
-		defer jsonFile.Close()
-
-		var JSONbuf bytes.Buffer
-		_, err = JSONbuf.ReadFrom(jsonFile)
-		So(err, ShouldBeNil)
 		expectedJSON := `{"Groups":[{"Kind":"KindXY","Title":"xy","XLogScale":false,"Graphs":[{"Kind":"KindXY","Title":"","XLabel":"","YLogScale":false,"Plots":[{"Kind":"KindXY","X":[1,2],"Y":[21.5,42],"YLabel":"values","Legend":"Unnamed","ChartType":"ChartLine","LeftAxis":false}]}],"MinX":1,"MaxX":2}]}`
-		So(JSONbuf.String(), ShouldContainSubstring, expectedJSON)
 
-		jsFile, err := os.Open(dataJs)
-		So(err, ShouldBeNil)
-		defer jsonFile.Close()
-
-		var jsBuf bytes.Buffer
-		_, err = jsBuf.ReadFrom(jsFile)
-		So(err, ShouldBeNil)
-		So(jsBuf.String(), ShouldContainSubstring, "var DATA = "+expectedJSON)
+		So(testutil.ReadFile(dataJSON), ShouldContainSubstring, expectedJSON)
+		So(testutil.ReadFile(dataJs), ShouldContainSubstring, "var DATA = "+expectedJSON)
 
 	})
 }

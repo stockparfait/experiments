@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -107,20 +106,13 @@ func TestPortfolio(t *testing.T) {
 			var pe Portfolio
 			So(pe.Run(ctx, &cfg), ShouldBeNil)
 
-			var csvRows [][]string
 			f, err := os.Open(csvFile)
 			So(err, ShouldBeNil)
 			defer f.Close()
 
 			r := csv.NewReader(f)
-			for {
-				row, err := r.Read()
-				if err == io.EOF {
-					break
-				}
-				So(err, ShouldBeNil)
-				csvRows = append(csvRows, row)
-			}
+			csvRows, err := r.ReadAll()
+			So(err, ShouldBeNil)
 			So(csvRows, ShouldResemble, [][]string{
 				{"ticker", "name", "exchange", "category", "sector",
 					"industry", "purchase date", "cost basis", "shares",

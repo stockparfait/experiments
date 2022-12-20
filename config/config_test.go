@@ -92,16 +92,7 @@ func TestConfig(t *testing.T) {
 }`
 
 			confPath := filepath.Join(tmpdir, "config.json")
-
-			// Run in a function closure to ensure the written file is closed before
-			// reading it.
-			(func() {
-				f, err := os.OpenFile(confPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-				So(err, ShouldBeNil)
-				defer f.Close()
-				_, err = f.WriteString(confJSON)
-				So(err, ShouldBeNil)
-			})()
+			So(testutil.WriteFile(confPath, confJSON), ShouldBeNil)
 
 			c, err := Load(confPath)
 			So(err, ShouldBeNil)
