@@ -19,7 +19,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -34,7 +33,7 @@ import (
 func TestPortfolio(t *testing.T) {
 	t.Parallel()
 
-	tmpdir, tmpdirErr := ioutil.TempDir("", "test_portfolio")
+	tmpdir, tmpdirErr := os.MkdirTemp("", "test_portfolio")
 	defer os.RemoveAll(tmpdir)
 
 	Convey("Test setup succeeded", t, func() {

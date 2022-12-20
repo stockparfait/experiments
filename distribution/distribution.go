@@ -40,7 +40,7 @@ type Distribution struct {
 }
 
 var _ experiments.Experiment = &Distribution{}
-var _ parallel.JobsIter = &Distribution{}
+var _ parallel.JobsIter[*jobResult] = &Distribution{}
 
 // prefix the experiment's ID to s, if there is one.
 func (d *Distribution) prefix(s string) string {
@@ -137,7 +137,7 @@ func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 }
 
 // Next implements parallel.JobsIter for processing tickers.
-func (d *Distribution) Next() (parallel.Job, error) {
+func (d *Distribution) Next() (parallel.Job[*jobResult], error) {
 	if len(d.tickers) == 0 {
 		return nil, parallel.Done
 	}
@@ -147,7 +147,7 @@ func (d *Distribution) Next() (parallel.Job, error) {
 	}
 	ts := d.tickers[:batch]
 	d.tickers = d.tickers[batch:]
-	f := func() interface{} {
+	f := func() *jobResult {
 		res := &jobResult{}
 		if d.histogram != nil {
 			res.Histogram = stats.NewHistogram(d.histogram.Buckets())
@@ -165,21 +165,17 @@ func (d *Distribution) Next() (parallel.Job, error) {
 
 func (d *Distribution) processTickers(tickers []string) error {
 	d.tickers = tickers
-	pm := parallel.Map(d.context, d.config.Workers, d)
+	pm := parallel.Map[*jobResult](d.context, d.config.Workers, d)
 
 	var means []float64
 	var mads []float64
 	for {
-		v, err := pm.Next()
+		jr, err := pm.Next()
 		if err == parallel.Done {
 			break
 		}
 		if err != nil {
 			return errors.Annotate(err, "failed to process tickers")
-		}
-		jr, ok := v.(*jobResult)
-		if !ok {
-			return errors.Reason("unexpected result: %T", v)
 		}
 		if jr.Err != nil {
 			return errors.Annotate(jr.Err, "job failed")

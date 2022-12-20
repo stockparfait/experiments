@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,7 +30,7 @@ import (
 
 func TestMain(t *testing.T) {
 	t.Parallel()
-	tmpdir, tmpdirErr := ioutil.TempDir("", "test_exp")
+	tmpdir, tmpdirErr := os.MkdirTemp("", "test_exp")
 	defer os.RemoveAll(tmpdir)
 
 	Convey("Test setup succeeded", t, func() {

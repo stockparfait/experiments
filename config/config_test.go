@@ -16,7 +16,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,7 +30,7 @@ import (
 func TestConfig(t *testing.T) {
 	t.Parallel()
 
-	tmpdir, tmpdirErr := ioutil.TempDir("", "test_config")
+	tmpdir, tmpdirErr := os.MkdirTemp("", "test_config")
 	defer os.RemoveAll(tmpdir)
 
 	Convey("Test setup succeeded", t, func() {

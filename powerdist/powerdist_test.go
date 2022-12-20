@@ -16,7 +16,6 @@ package powerdist
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -32,7 +31,7 @@ import (
 func TestDistribution(t *testing.T) {
 	t.Parallel()
 
-	tmpdir, tmpdirErr := ioutil.TempDir("", "test_powerdist")
+	tmpdir, tmpdirErr := os.MkdirTemp("", "test_powerdist")
 	defer os.RemoveAll(tmpdir)
 
 	Convey("Test setup succeeded", t, func() {
