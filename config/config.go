@@ -47,7 +47,7 @@ var _ ExperimentConfig = &TestExperimentConfig{}
 func (t *TestExperimentConfig) Name() string { return "test" }
 
 // InitMessage implements message.Message.
-func (t *TestExperimentConfig) InitMessage(js interface{}) error {
+func (t *TestExperimentConfig) InitMessage(js any) error {
 	return errors.Annotate(message.Init(t, js), "failed to parse test config")
 }
 
@@ -60,7 +60,7 @@ type HoldPosition struct {
 	StartValue float64 `json:"start value"`
 }
 
-func (p *HoldPosition) InitMessage(js interface{}) error {
+func (p *HoldPosition) InitMessage(js any) error {
 	if err := message.Init(p, js); err != nil {
 		return errors.Annotate(err, "failed to parse HoldPosition")
 	}
@@ -84,7 +84,7 @@ type Hold struct {
 
 var _ ExperimentConfig = &Hold{}
 
-func (h *Hold) InitMessage(js interface{}) error {
+func (h *Hold) InitMessage(js any) error {
 	return errors.Annotate(message.Init(h, js), "failed to parse Hold config")
 }
 
@@ -100,7 +100,7 @@ type AnalyticalDistribution struct {
 
 var _ message.Message = &AnalyticalDistribution{}
 
-func (d *AnalyticalDistribution) InitMessage(js interface{}) error {
+func (d *AnalyticalDistribution) InitMessage(js any) error {
 	if err := message.Init(d, js); err != nil {
 		return errors.Annotate(err, "failed to init AnalyticalDistribution")
 	}
@@ -140,7 +140,7 @@ type CompoundDistribution struct {
 
 var _ message.Message = &CompoundDistribution{}
 
-func (d *CompoundDistribution) InitMessage(js interface{}) error {
+func (d *CompoundDistribution) InitMessage(js any) error {
 	if err := message.Init(d, js); err != nil {
 		return errors.Annotate(err, "failed to init CompoundDistribution")
 	}
@@ -166,7 +166,7 @@ type DeriveAlpha struct {
 
 var _ message.Message = &DeriveAlpha{}
 
-func (f *DeriveAlpha) InitMessage(js interface{}) error {
+func (f *DeriveAlpha) InitMessage(js any) error {
 	if err := message.Init(f, js); err != nil {
 		return errors.Annotate(err, "failed to init DeriveAlpha")
 	}
@@ -213,7 +213,7 @@ type DistributionPlot struct {
 
 var _ message.Message = &DistributionPlot{}
 
-func (dp *DistributionPlot) InitMessage(js interface{}) error {
+func (dp *DistributionPlot) InitMessage(js any) error {
 	if err := message.Init(dp, js); err != nil {
 		return errors.Annotate(err, "failed to init DistributionPlot")
 	}
@@ -244,7 +244,7 @@ type Distribution struct {
 
 var _ ExperimentConfig = &Distribution{}
 
-func (e *Distribution) InitMessage(js interface{}) error {
+func (e *Distribution) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init Distribution")
 	}
@@ -281,7 +281,7 @@ type CumulativeStatistic struct {
 
 var _ message.Message = &CumulativeStatistic{}
 
-func (c *CumulativeStatistic) InitMessage(js interface{}) error {
+func (c *CumulativeStatistic) InitMessage(js any) error {
 	if err := message.Init(c, js); err != nil {
 		return errors.Annotate(err, "failed to init CumulativeDistribution")
 	}
@@ -328,7 +328,7 @@ type PowerDist struct {
 var _ message.Message = &PowerDist{}
 var _ ExperimentConfig = &PowerDist{}
 
-func (e *PowerDist) InitMessage(js interface{}) error {
+func (e *PowerDist) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init PowerDist")
 	}
@@ -365,7 +365,7 @@ type PortfolioPosition struct {
 
 var _ message.Message = &PortfolioPosition{}
 
-func (e *PortfolioPosition) InitMessage(js interface{}) error {
+func (e *PortfolioPosition) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init PortfolioPosition")
 	}
@@ -386,7 +386,7 @@ type PortfolioColumn struct {
 
 var _ message.Message = &PortfolioColumn{}
 
-func (e *PortfolioColumn) InitMessage(js interface{}) error {
+func (e *PortfolioColumn) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init PortfolioColumn")
 	}
@@ -414,7 +414,7 @@ type Portfolio struct {
 var _ message.Message = &Portfolio{}
 var _ ExperimentConfig = &Portfolio{}
 
-func (e *Portfolio) InitMessage(js interface{}) error {
+func (e *Portfolio) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init Portfolio")
 	}
@@ -435,8 +435,8 @@ type ExpMap struct {
 
 var _ message.Message = &ExpMap{}
 
-func (e *ExpMap) InitMessage(js interface{}) error {
-	m, ok := js.(map[string]interface{})
+func (e *ExpMap) InitMessage(js any) error {
+	m, ok := js.(map[string]any)
 	if !ok || len(m) != 1 {
 		return errors.Reason("experiment must be a single-element map: %v", js)
 	}
@@ -469,7 +469,7 @@ type Config struct {
 
 var _ message.Message = &Config{}
 
-func (c *Config) InitMessage(js interface{}) error {
+func (c *Config) InitMessage(js any) error {
 	if err := message.Init(c, js); err != nil {
 		return errors.Annotate(err, "failed to parse top-level config")
 	}
@@ -500,7 +500,7 @@ func Load(configPath string) (*Config, error) {
 	defer f.Close()
 
 	dec := json.NewDecoder(f)
-	var jv interface{}
+	var jv any
 	if err := dec.Decode(&jv); err != nil && err != io.EOF {
 		return nil, errors.Annotate(err, "failed to decode JSON in %s", configPath)
 	}
