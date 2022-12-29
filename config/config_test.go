@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stockparfait/stockparfait/db"
+	"github.com/stockparfait/stockparfait/plot"
 	"github.com/stockparfait/stockparfait/stats"
 	"github.com/stockparfait/testutil"
 
@@ -105,13 +106,13 @@ func TestConfig(t *testing.T) {
 			So(defaultParallelSampling.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
 
 			So(c, ShouldResemble, &Config{
-				Groups: []*Group{
+				Groups: []*plot.GroupConfig{
 					{
 						Timeseries: false,
 						ID:         "real",
 						Title:      "Real Group",
 						XLogScale:  true,
-						Graphs: []*Graph{
+						Graphs: []*plot.GraphConfig{
 							{
 								ID:        "r1",
 								Title:     "Real One",
@@ -131,7 +132,7 @@ func TestConfig(t *testing.T) {
 						ID:         "time",
 						Title:      "time",
 						XLogScale:  false,
-						Graphs: []*Graph{
+						Graphs: []*plot.GraphConfig{
 							{
 								ID:        "t1",
 								Title:     "Time One",
@@ -271,20 +272,6 @@ func TestConfig(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring,
 				"graph[0] in group 'gp2' has a duplicate id 'r1'")
-		})
-
-		Convey("group without ID is an error", func() {
-			var c Config
-			err := c.InitMessage(testutil.JSON(`{"groups": [{"graphs": [{"id": "r1"}]}]}`))
-			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "group must have a non-empty ID")
-		})
-
-		Convey("graph without ID is an error", func() {
-			var c Config
-			err := c.InitMessage(testutil.JSON(`{"groups": [{"id": "g", "graphs": [{}]}]}`))
-			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "graph must have a non-empty ID")
 		})
 
 		Convey("multi-key experiment map is an error", func() {
