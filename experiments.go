@@ -309,44 +309,6 @@ func FindMin(f func(float64) float64, min, max, epsilon float64, maxIter int) fl
 	return (max + min) / 2.0
 }
 
-func DirectCompound(ctx context.Context, d stats.Distribution, n int, c *stats.ParallelSamplingConfig) stats.DistributionWithHistogram {
-	fn := func(d stats.Distribution, s interface{}) (float64, interface{}) {
-		acc := 0.0
-		for i := 0; i < n; i++ {
-			acc += d.Rand()
-		}
-		return acc, nil
-	}
-	xform := &stats.Transform{
-		InitState: func() interface{} { return nil },
-		Fn:        fn,
-	}
-	return stats.NewRandDistribution(ctx, d, xform, c)
-}
-
-func FastCompound(ctx context.Context, d stats.Distribution, n int, c *stats.ParallelSamplingConfig) stats.DistributionWithHistogram {
-	fn := func(d stats.Distribution, state interface{}) (float64, interface{}) {
-		sums := state.([]float64)
-		if len(sums) > 0 {
-			sums = sums[1:]
-		}
-		for len(sums) <= n {
-			var last float64
-			if len(sums) > 0 {
-				last = sums[len(sums)-1]
-			}
-			sums = append(sums, last+d.Rand())
-		}
-		x := sums[n] - sums[0]
-		return x, sums
-	}
-	xform := &stats.Transform{
-		InitState: func() interface{} { return []float64{} },
-		Fn:        fn,
-	}
-	return stats.NewRandDistribution(ctx, d, xform, c)
-}
-
 // Compound the distribution d; that is, return the distribution of the sum of n
 // samples of d. The compounding is performed according to compType: "direct" (n
 // samples per 1 compounded sample), "fast" (sliding window sum) or "biased"
@@ -355,9 +317,9 @@ func FastCompound(ctx context.Context, d stats.Distribution, n int, c *stats.Par
 func Compound(ctx context.Context, d stats.Distribution, n int, compType string, c *stats.ParallelSamplingConfig) (dist stats.DistributionWithHistogram, err error) {
 	switch compType {
 	case "direct":
-		dist = DirectCompound(ctx, d, n, c)
+		dist = stats.CompoundRandDistribution(ctx, d, n, c)
 	case "fast":
-		dist = FastCompound(ctx, d, n, c)
+		dist = stats.FastCompoundRandDistribution(ctx, d, n, c)
 	case "biased":
 		h := stats.CompoundHistogram(ctx, d, n, c)
 		dist = stats.NewHistogramDistribution(h)

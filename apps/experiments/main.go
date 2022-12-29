@@ -63,31 +63,6 @@ func parseFlags(args []string) (*Flags, error) {
 	return &flags, err
 }
 
-func addGroups(ctx context.Context, groups []*config.Group) error {
-	for _, gc := range groups {
-		kind := plot.KindXY
-		if gc.Timeseries {
-			kind = plot.KindSeries
-		}
-		group := plot.NewGroup(kind, gc.ID).SetXLogScale(gc.XLogScale)
-		group.SetTitle(gc.Title)
-		if err := plot.AddGroup(ctx, group); err != nil {
-			return errors.Annotate(err, "cannot add group '%s'", gc.ID)
-		}
-		for _, gpc := range gc.Graphs {
-			graph, err := plot.EnsureGraph(ctx, kind, gpc.ID, gc.ID)
-			if err != nil {
-				return errors.Annotate(err, "cannot ensure graph '%s' in group '%s'",
-					gpc.ID, gc.ID)
-			}
-			graph.SetTitle(gpc.Title).
-				SetXLabel(gpc.XLabel).
-				SetYLogScale(gpc.YLogScale)
-		}
-	}
-	return nil
-}
-
 func runExperiment(ctx context.Context, ec config.ExperimentConfig) error {
 	var e experiments.Experiment
 	switch ec.Name() {
@@ -161,7 +136,7 @@ func run(ctx context.Context, flags *Flags) error {
 	if err != nil {
 		return errors.Annotate(err, "failed to load config")
 	}
-	if err := addGroups(ctx, cfg.Groups); err != nil {
+	if err := plot.ConfigureGroups(ctx, cfg.Groups); err != nil {
 		return errors.Annotate(err, "failed to add groups")
 	}
 	for _, e := range cfg.Experiments {

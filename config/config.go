@@ -24,6 +24,7 @@ import (
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/message"
+	"github.com/stockparfait/stockparfait/plot"
 	"github.com/stockparfait/stockparfait/stats"
 )
 
@@ -460,65 +461,10 @@ func (e *ExpMap) InitMessage(js interface{}) error {
 	return nil
 }
 
-// Graph is a config for a plot graph, a single canvas holding potentially
-// multiple plots.
-type Graph struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	XLabel    string `json:"X label"`
-	YLogScale bool   `json:"log scale Y"`
-}
-
-var _ message.Message = &Graph{}
-
-// InitMessage implements message.Message.
-func (g *Graph) InitMessage(js interface{}) error {
-	if err := message.Init(g, js); err != nil {
-		return errors.Annotate(err, "cannot parse graph")
-	}
-	if g.ID == "" {
-		return errors.Reason("graph must have a non-empty ID")
-	}
-	return nil
-}
-
-// Group is a config for a group of plots with a common X axis.
-type Group struct {
-	Timeseries bool     `json:"timeseries"`
-	ID         string   `json:"id"`
-	Title      string   `json:"title"` // default: same as ID
-	XLogScale  bool     `json:"log scale X"`
-	Graphs     []*Graph `json:"graphs"`
-}
-
-var _ message.Message = &Group{}
-
-// InitMessage implements message.Message.
-func (g *Group) InitMessage(js interface{}) error {
-	if err := message.Init(g, js); err != nil {
-		return errors.Annotate(err, "cannot parse group")
-	}
-	if g.ID == "" {
-		return errors.Reason("group must have a non-empty ID")
-	}
-	if g.Title == "" {
-		g.Title = g.ID
-	}
-	if len(g.Graphs) < 1 {
-		return errors.Reason("at least one graph is required in group '%s'",
-			g.ID)
-	}
-	if g.Timeseries && g.XLogScale {
-		return errors.Reason("timeseries group '%s' cannot have log-scale X",
-			g.ID)
-	}
-	return nil
-}
-
 // Config is the top-level configuration of the app.
 type Config struct {
-	Groups      []*Group  `json:"groups"`
-	Experiments []*ExpMap `json:"experiments"`
+	Groups      []*plot.GroupConfig `json:"groups"`
+	Experiments []*ExpMap           `json:"experiments"`
 }
 
 var _ message.Message = &Config{}
