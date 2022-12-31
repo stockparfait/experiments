@@ -16,9 +16,6 @@
 package config
 
 import (
-	"encoding/json"
-	"io"
-	"os"
 	"runtime"
 
 	"github.com/stockparfait/errors"
@@ -493,21 +490,9 @@ func (c *Config) InitMessage(js any) error {
 }
 
 func Load(configPath string) (*Config, error) {
-	f, err := os.Open(configPath)
-	if err != nil {
-		return nil, errors.Annotate(err, "cannot open config file '%s'", configPath)
-	}
-	defer f.Close()
-
-	dec := json.NewDecoder(f)
-	var jv any
-	if err := dec.Decode(&jv); err != nil && err != io.EOF {
-		return nil, errors.Annotate(err, "failed to decode JSON in %s", configPath)
-	}
-
 	var c Config
-	if err := c.InitMessage(jv); err != nil {
-		return nil, errors.Annotate(err, "cannot interpret config '%s'", configPath)
+	if err := message.FromFile(&c, configPath); err != nil {
+		return nil, errors.Annotate(err, "cannot read config '%s'", configPath)
 	}
 	return &c, nil
 }
