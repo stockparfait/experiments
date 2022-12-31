@@ -7,7 +7,7 @@ require (
 	github.com/stockparfait/errors v0.2.0
 	github.com/stockparfait/logging v0.2.0
 	github.com/stockparfait/parallel v0.2.0
-	github.com/stockparfait/stockparfait v0.2.2
+	github.com/stockparfait/stockparfait v0.2.3
 	github.com/stockparfait/testutil v0.2.0
 )
 
