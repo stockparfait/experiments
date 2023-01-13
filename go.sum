@@ -8,12 +8,12 @@ github.com/smartystreets/goconvey v1.7.2 h1:9RBaZCeXEQ3UselpuwUQHltGVXvdwm6cv1hg
 github.com/smartystreets/goconvey v1.7.2/go.mod h1:Vw0tHAZW6lzCRk3xgdin6fKYcG+G3Pg9vgXWeJpQFMM=
 github.com/stockparfait/errors v0.2.0 h1:LQSUrh+bFz+lXaQRIS+0U+Hbrwo+Zmnx6m3nSmApGMA=
 github.com/stockparfait/errors v0.2.0/go.mod h1:tQW05CIhDc776OHjHzIHtmsK3FRCTviij+S06R0sgIY=
+github.com/stockparfait/iterator v0.1.0 h1:reIzsrqdInShbzYVVIaP8Jkf5FYzLTPJ0Rj0HNy74yE=
+github.com/stockparfait/iterator v0.1.0/go.mod h1:Fv3mu8K38oBeZnDH3NNdgC65bulgpX2OrJtTDWe5gxw=
 github.com/stockparfait/logging v0.2.0 h1:KTRNyL2bK5Edopj51uDY9eth0K7VfqrFjz0948OtdH8=
 github.com/stockparfait/logging v0.2.0/go.mod h1:nvvnmIwvQ4Vktsnxjvvw5v72S4OYwyUD81KYPuXZH1o=
-github.com/stockparfait/parallel v0.2.0 h1:vd2yMKX0QWxpmFU1m3IsNNlKriFLRHH4ta422us4A/Q=
-github.com/stockparfait/parallel v0.2.0/go.mod h1:Rhpc7Bm9tPmKk3D7OkWEVjDOwbnh4jUbNPsoSFGjt24=
-github.com/stockparfait/stockparfait v0.2.3 h1:uQ5X17pqE2eAQ9Lprg79t7iC8fmlzFdUeLii98zYpkM=
-github.com/stockparfait/stockparfait v0.2.3/go.mod h1:2AiQu0Z7F6xnm3spMV77BR5Hcq5fxABOz046u3Mzp2c=
+github.com/stockparfait/stockparfait v0.2.4 h1:5fESmeQgxKEA3S1Pzjg7+uEtVHC/WO1oK/sren3gnSc=
+github.com/stockparfait/stockparfait v0.2.4/go.mod h1:yYHbs056p2yMoIUxZad3ckdO9QL56t8c/T7vmQWwydE=
 github.com/stockparfait/testutil v0.2.0 h1:kxs5zVNM6N4tEO0jAA99LHxK1a0ueK6/bCJAjv59Z3I=
 github.com/stockparfait/testutil v0.2.0/go.mod h1:tDwaH6tBI0cATzjaNpGI37TXhqLpIYtuM8aWJyz1ktM=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=

@@ -23,7 +23,7 @@ import (
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
-	"github.com/stockparfait/parallel"
+	"github.com/stockparfait/iterator"
 	"github.com/stockparfait/stockparfait/stats"
 )
 
@@ -231,6 +231,11 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	return nil
 }
 
+type interval struct {
+	Start int
+	End   int
+}
+
 type statsJobRes struct {
 	samples [][]float64
 	err     error
@@ -243,7 +248,7 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 	var dist stats.DistributionWithHistogram
 	var distName string
 
-	jobs := []parallel.Job[*statsJobRes]{}
+	intervals := []interval{}
 	workers := 2 * runtime.NumCPU()
 	step := d.config.StatSamples / workers
 	if step < 1 {
@@ -255,25 +260,26 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 		if end > d.config.StatSamples {
 			end = d.config.StatSamples
 		}
-		jobs = append(jobs, func() *statsJobRes {
-			res := &statsJobRes{samples: make([][]float64, len(sts))}
-			for k := start; k < end; k++ {
-				var err error
-				// Create a fresh distribution every time. This is particularly important
-				// for HistogramDistribution, as its histogram is always fixed.
-				_, dist, distName, err = distributionWithHistogram(ctx, &d.config.Dist)
-				if err != nil {
-					res.err = errors.Annotate(err, "failed to create source distribution")
-					return res
-				}
-				for j, s := range sts {
-					res.samples[j] = append(res.samples[j], s.f(dist))
-				}
-			}
-			return res
-		})
+		intervals = append(intervals, interval{Start: start, End: end})
 	}
-	res := parallel.MapSlice(ctx, workers, jobs)
+	f := func(i interval) *statsJobRes {
+		res := &statsJobRes{samples: make([][]float64, len(sts))}
+		for k := i.Start; k < i.End; k++ {
+			var err error
+			// Create a fresh distribution every time. This is particularly important
+			// for HistogramDistribution, as its histogram is always fixed.
+			_, dist, distName, err = distributionWithHistogram(ctx, &d.config.Dist)
+			if err != nil {
+				res.err = errors.Annotate(err, "failed to create source distribution")
+				return res
+			}
+			for j, s := range sts {
+				res.samples[j] = append(res.samples[j], s.f(dist))
+			}
+		}
+		return res
+	}
+	res := iterator.ParallelMapSlice(ctx, workers, intervals, f)
 
 	samples := make([][]float64, len(sts))
 	for i := 0; i < len(res); i++ {
