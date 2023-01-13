@@ -22,8 +22,8 @@ import (
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
+	"github.com/stockparfait/iterator"
 	"github.com/stockparfait/logging"
-	"github.com/stockparfait/parallel"
 	"github.com/stockparfait/stockparfait/stats"
 )
 
@@ -40,7 +40,7 @@ type Distribution struct {
 }
 
 var _ experiments.Experiment = &Distribution{}
-var _ parallel.JobsIter[*jobResult] = &Distribution{}
+var _ iterator.Iterator[[]string] = &Distribution{}
 
 // prefix the experiment's ID to s, if there is one.
 func (d *Distribution) prefix(s string) string {
@@ -136,10 +136,23 @@ func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 	return nil
 }
 
-// Next implements parallel.JobsIter for processing tickers.
-func (d *Distribution) Next() (parallel.Job[*jobResult], error) {
+func (d *Distribution) processBatch(tickers []string) *jobResult {
+	res := &jobResult{}
+	if d.histogram != nil {
+		res.Histogram = stats.NewHistogram(d.histogram.Buckets())
+	}
+	for _, t := range tickers {
+		if err := d.processTicker(t, res); err != nil {
+			res.Err = errors.Annotate(err, "failed to process ticker %s", t)
+			return res
+		}
+	}
+	return res
+}
+
+func (d *Distribution) Next() ([]string, bool) {
 	if len(d.tickers) == 0 {
-		return nil, parallel.Done
+		return nil, false
 	}
 	batch := d.config.BatchSize
 	if batch > len(d.tickers) {
@@ -147,36 +160,16 @@ func (d *Distribution) Next() (parallel.Job[*jobResult], error) {
 	}
 	ts := d.tickers[:batch]
 	d.tickers = d.tickers[batch:]
-	f := func() *jobResult {
-		res := &jobResult{}
-		if d.histogram != nil {
-			res.Histogram = stats.NewHistogram(d.histogram.Buckets())
-		}
-		for _, t := range ts {
-			if err := d.processTicker(t, res); err != nil {
-				res.Err = errors.Annotate(err, "failed to process ticker %s", t)
-				return res
-			}
-		}
-		return res
-	}
-	return f, nil
+	return ts, true
 }
 
 func (d *Distribution) processTickers(tickers []string) error {
 	d.tickers = tickers
-	pm := parallel.Map[*jobResult](d.context, d.config.Workers, d)
+	pm := iterator.ParallelMap[[]string, *jobResult](d.context, d.config.Workers, d, d.processBatch)
 
 	var means []float64
 	var mads []float64
-	for {
-		jr, err := pm.Next()
-		if err == parallel.Done {
-			break
-		}
-		if err != nil {
-			return errors.Annotate(err, "failed to process tickers")
-		}
+	for jr, ok := pm.Next(); ok; jr, ok = pm.Next() {
 		if jr.Err != nil {
 			return errors.Annotate(jr.Err, "job failed")
 		}
