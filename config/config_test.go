@@ -88,6 +88,10 @@ func TestConfig(t *testing.T) {
         "shares": 10,
         "purchase date": "2020-01-01"
       }]
+    }},
+    {"auto-correlation": {
+      "data": {"DB": "test"},
+      "graph": "r1"
     }}
   ]
 }`
@@ -224,6 +228,11 @@ func TestConfig(t *testing.T) {
 							PurchaseDate: db.NewDate(2020, 1, 1),
 						}},
 						Columns: []PortfolioColumn{{Kind: "ticker"}},
+					}},
+					{Config: &AutoCorrelation{
+						Reader:   &defaultReader,
+						Graph:    "r1",
+						MaxShift: 5,
 					}},
 				},
 			})
