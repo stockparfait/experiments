@@ -232,7 +232,7 @@ func TestConfig(t *testing.T) {
 					{Config: &AutoCorrelation{
 						Reader:   &defaultReader,
 						Graph:    "r1",
-						MaxShift: 1,
+						MaxShift: 5,
 					}},
 				},
 			})
