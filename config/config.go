@@ -426,7 +426,7 @@ type AutoCorrelation struct {
 	ID       string     `json:"id"` // experiment ID, for multiple instances
 	Reader   *db.Reader `json:"data" required:"true"`
 	Graph    string     `json:"graph" required:"true"` // plot correlation vs. shift
-	MaxShift int        `json:"max shift" default:"1"` // shift range [1..max]
+	MaxShift int        `json:"max shift" default:"5"` // shift range [1..max]
 }
 
 func (e *AutoCorrelation) InitMessage(js any) error {

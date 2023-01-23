@@ -81,6 +81,7 @@ func TestAutoCorrelation(t *testing.T) {
 			var cfg config.AutoCorrelation
 			confJSON := fmt.Sprintf(`
 {
+  "id": "testID",
   "data": {"DB path": "%s", "DB": "%s"},
   "graph": "g",
   "max shift": 2
@@ -90,6 +91,10 @@ func TestAutoCorrelation(t *testing.T) {
 			So(ac.Run(ctx, &cfg), ShouldBeNil)
 			So(len(g.Plots), ShouldEqual, 1)
 			So(len(g.Plots[0].X), ShouldEqual, 2)
+			So(values, ShouldResemble, experiments.Values{
+				"testID tickers": "1",
+				"testID samples": "3",
+			})
 		})
 
 	})
