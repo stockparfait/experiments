@@ -322,7 +322,6 @@ type PowerDist struct {
 	StatSamples int          `json:"statistic samples" default:"10000"` // >= 3
 }
 
-var _ message.Message = &PowerDist{}
 var _ ExperimentConfig = &PowerDist{}
 
 func (e *PowerDist) InitMessage(js any) error {
@@ -408,7 +407,6 @@ type Portfolio struct {
 	File string `json:"file"`
 }
 
-var _ message.Message = &Portfolio{}
 var _ ExperimentConfig = &Portfolio{}
 
 func (e *Portfolio) InitMessage(js any) error {
@@ -422,6 +420,26 @@ func (e *Portfolio) InitMessage(js any) error {
 }
 
 func (e *Portfolio) Name() string { return "portfolio" }
+
+// AutoCorrelation is a config for the auto-correlation experiment.
+type AutoCorrelation struct {
+	ID       string     `json:"id"` // experiment ID, for multiple instances
+	Reader   *db.Reader `json:"data" required:"true"`
+	Graph    string     `json:"graph" required:"true"` // plot correlation vs. shift
+	MaxShift int        `json:"max shift" default:"1"` // shift range [1..max]
+}
+
+func (e *AutoCorrelation) InitMessage(js any) error {
+	if err := message.Init(e, js); err != nil {
+		return errors.Annotate(err, "failed to init AutoCorrelation")
+	}
+	if e.MaxShift <= 0 {
+		return errors.Reason("max shift = %d must be >= 1", e.MaxShift)
+	}
+	return nil
+}
+
+func (e *AutoCorrelation) Name() string { return "auto-correlation" }
 
 // ExpMap represents a Message which reads a single-element map {name:
 // Experiment} and knows how to populate specific implementations of the
@@ -449,6 +467,8 @@ func (e *ExpMap) InitMessage(js any) error {
 			e.Config = &PowerDist{}
 		case "portfolio":
 			e.Config = &Portfolio{}
+		case "auto-correlation":
+			e.Config = &AutoCorrelation{}
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}
