@@ -230,9 +230,11 @@ func TestConfig(t *testing.T) {
 						Columns: []PortfolioColumn{{Kind: "ticker"}},
 					}},
 					{Config: &AutoCorrelation{
-						Reader:   &defaultReader,
-						Graph:    "r1",
-						MaxShift: 5,
+						Reader:    &defaultReader,
+						Graph:     "r1",
+						MaxShift:  5,
+						Samples:   5000,
+						BatchSize: 5000,
 					}},
 				},
 			})
