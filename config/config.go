@@ -423,18 +423,34 @@ func (e *Portfolio) Name() string { return "portfolio" }
 
 // AutoCorrelation is a config for the auto-correlation experiment.
 type AutoCorrelation struct {
-	ID       string     `json:"id"` // experiment ID, for multiple instances
-	Reader   *db.Reader `json:"data" required:"true"`
-	Graph    string     `json:"graph" required:"true"` // plot correlation vs. shift
-	MaxShift int        `json:"max shift" default:"5"` // shift range [1..max]
+	ID string `json:"id"` // experiment ID, for multiple instances
+	// Exactly one of Reader or Analytical must be present.
+	Reader     *db.Reader              `json:"data"`              // price data
+	Analytical *AnalyticalDistribution `json:"analytical source"` // synthetic data
+	// Number of synthetic points to generate.
+	Samples int `json:"samples" default:"5000"`
+	// Number of synthetic samples to process within each parallel job.
+	BatchSize int    `json:"batch size" default:"5000"`
+	Graph     string `json:"graph" required:"true"` // plot correlation vs. shift
+	MaxShift  int    `json:"max shift" default:"5"` // shift range [1..max]
 }
 
 func (e *AutoCorrelation) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init AutoCorrelation")
 	}
+	if (e.Reader == nil) == (e.Analytical == nil) {
+		return errors.Reason(
+			`exactly one of "data" or "analytical source" must be specified`)
+	}
 	if e.MaxShift <= 0 {
 		return errors.Reason("max shift = %d must be >= 1", e.MaxShift)
+	}
+	if e.Samples <= e.MaxShift+2 {
+		return errors.Reason("samples=%d must be >= %d", e.Samples, e.MaxShift+2)
+	}
+	if e.BatchSize <= 1 {
+		return errors.Reason("batch size=%d must be >= 1", e.BatchSize)
 	}
 	return nil
 }
