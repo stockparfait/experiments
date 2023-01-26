@@ -59,7 +59,7 @@ In other words, if the past log-profits `P(t')` happen to be independent from
 `P(t)`, any such attempt at timing the market is doomed from the start.
 Therefore, it is crucial to check these variables for independence.
 
-A quick (but incomplete) test for independence is `correlation`:
+A quick (but incomplete) test for independence is [correlation]:
 
 ```
 Corr(X, Y) = E[(X-E[X]) * (Y - E[Y])] / (sigma(X) * sigma(Y))
@@ -73,7 +73,7 @@ linear.
 In practice, however, and especially for trading purposes, the dependence we
 want to rely on is indeed quite often linear. For example, detecting a "trend"
 and expecting that the trend will continue for some time is certainly an example
-of a linear dependency. It effectively states that if `P(t-1) - P(t-1-m) > 0`
+of a linear dependency. It effectively states that if `P(t-1)+ ... +P(t-1-m) > 0`
 (the price over the last `m` steps grew on average), then `P(t)>0` has a higher
 probability than `P(t)<0`. This property can be expressed e.g. as:
 
@@ -141,8 +141,8 @@ our data source is from 1998), or about 6,000 points
 
 The synthetic noise is a bit larger than the real sample, within `+-0.02`, but
 not by much. If we assume that stocks, while correlated among each other, still
-have some (small) degree of independence, this may bring the correlation noise
-down when averaged across the entire exchange.
+have some (small) degree of independence, this may bring the auto-correlation
+noise down when averaged across the entire exchange.
 
 We still have a case of `k=1` though. Let's look a bit closer at it now. In
 particular, let's see how well it holds up on smaller sample sizes, for
@@ -165,3 +165,4 @@ market, it must be non-linear.
 [MACD]: https://en.wikipedia.org/wiki/MACD
 [RSI]: https://en.wikipedia.org/wiki/Relative_strength_index
 [mean reversion]: https://en.wikipedia.org/wiki/Mean_reversion_(finance)
+[correlation]: https://en.wikipedia.org/wiki/Correlation
