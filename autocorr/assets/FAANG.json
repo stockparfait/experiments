@@ -1,0 +1,128 @@
+{
+  "experiments": [
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "tickers": [
+            "META"
+          ]
+        },
+        "graph": "corr",
+        "id": "META",
+        "max shift": 10
+      }
+    },
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "tickers": [
+            "AAPL"
+          ]
+        },
+        "graph": "corr",
+        "id": "AAPL",
+        "max shift": 10
+      }
+    },
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "tickers": [
+            "AMZN"
+          ]
+        },
+        "graph": "corr",
+        "id": "AMZN",
+        "max shift": 10
+      }
+    },
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "tickers": [
+            "NFLX"
+          ]
+        },
+        "graph": "corr",
+        "id": "NFLX",
+        "max shift": 10
+      }
+    },
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "tickers": [
+            "GOOGL"
+          ]
+        },
+        "graph": "corr",
+        "id": "GOOGL",
+        "max shift": 10
+      }
+    }
+  ],
+  "groups": [
+    {
+      "graphs": [
+        {
+          "X label": "shift",
+          "id": "corr",
+          "title": "Auto-correlation"
+        }
+      ],
+      "id": "autocorr",
+      "timeseries": false,
+      "title": "Auto-correlation"
+    }
+  ]
+}

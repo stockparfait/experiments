@@ -179,9 +179,10 @@ func (e *AutoCorrelation) newJobResult(ticker string) jobResult {
 }
 
 func (j *jobResult) Add(sample *stats.Sample, maxShift int) {
-	sample, err := sample.Normalize()
-	if err != nil {
-		j.err = errors.Annotate(err, "failed to normalize log-profits")
+	mean := sample.Mean()
+	variance := sample.Variance()
+	if variance == 0 {
+		j.err = errors.Reason("log-profits have zero variance")
 		return
 	}
 	samples := sample.Data()
@@ -189,9 +190,9 @@ func (j *jobResult) Add(sample *stats.Sample, maxShift int) {
 		for k := 0; k < maxShift; k++ {
 			shift := k + 1
 			if i+shift >= len(samples) {
-				continue
+				break
 			}
-			j.sums[k] += samples[i] * samples[i+shift]
+			j.sums[k] += (samples[i] - mean) * (samples[i+shift] - mean) / variance
 			j.ns[k]++
 		}
 	}
