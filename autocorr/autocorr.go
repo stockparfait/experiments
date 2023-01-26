@@ -190,7 +190,7 @@ func (j *jobResult) Add(sample *stats.Sample, maxShift int) {
 		for k := 0; k < maxShift; k++ {
 			shift := k + 1
 			if i+shift >= len(samples) {
-				continue
+				break
 			}
 			j.sums[k] += (samples[i] - mean) * (samples[i+shift] - mean) / variance
 			j.ns[k]++
