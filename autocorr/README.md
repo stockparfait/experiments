@@ -10,8 +10,8 @@ gain more profit than one would have just by buying and holding the asset for
 the same period of time.
 
 In discretionary trading this is often achieved by [technical analysis], that
-is, observing and drawing various patterns in the price graph such as "cup and
-handle" or "head and shoulders". Another way is to use [technical indicators],
+is, observing and drawing various patterns on the price graph such as "a cup and
+a handle" or "head and shoulders". Another way is to use [technical indicators],
 which are various numerical manipulations of the price series such as [MACD] or
 [RSI], resulting in another time series which is expected to predict, at least
 with some probability, the next price move or the next longer term trend.
@@ -35,11 +35,11 @@ In all of these cases save for the mean reversion, the most fundamental
 assumption is that historical prices can somehow predict the future price
 moves. In statistical terms, and without loss of generality, the _conditional_
 distribution of log-profit `f(P(t) | cond(P(t')))` for some set of `t'<t` is
-different from the unconditional distribution of log-profit `f(P(t))`.  And most
+different from the unconditional distribution of log-profit `f(P)`.  And most
 notably, its conditional _mean_ `E[P(t) | cond(P(t'))]` is sufficiently
 different from the unconditional mean `E[P]` that it can be exploited for
 profit. The mean of log-profit effectively represents the average growth rate of
-the price, and therefore, a higher conditional mean would mean higher porfolio
+the price, and therefore, a higher conditional mean yields a higher porfolio
 growth rate.
 
 The only trick, it seems, is to find the right condition `cond(P(t'))` on
@@ -55,36 +55,36 @@ matter) is the same as without such a constraint. Intuitively, `X` is random in
 exactly the same way regardless of `Y`. Conversely, `X` is _dependent_ on `Y` if
 it is _not independent_ of `Y`; that is, `f(X | Y) != f(X)`.
 
-If we want to manipulate the distribution of `X` (e.g. change its mean in our
-favor), we can try to pick only those samples of `X` for which `Y` has a certain
-value.  However, if `X` is independent of `Y`, this exercise is going to be
-rather futile.
+In other words, if the past log-profits `P(t')` happen to be independent from
+`P(t)`, any such attempt at timing the market is doomed from the start.
+Therefore, it is crucial to check these variables for independence.
 
-When we use technical or quantitative analysis in trading, we are effectively
-trying to manipulate the distribution of `P(t)` by picking only those time
-instances `t` for which certain past log-profits (or, equivalently, prices)
-satisfy certain constraints.  In other words, we are creating a conditional
-distribution `f(P(t) | cond(P(t')) for t'<t)`.
-
-Of course, this exercise is only fruitful if `P(t)` is _not independent_ on
-`P(t')` for `t'<t`. But is it?
-
-A quick test for dependence is `correlation`:
+A quick (but incomplete) test for independence is `correlation`:
 
 ```
 Corr(X, Y) = E[(X-E[X]) * (Y - E[Y])] / (sigma(X) * sigma(Y))
 ```
 
-If `Corr(X, Y) != 0`, we know for sure that `X` and `Y` are _not_
-independent. Otherwise, even if `Corr(X, Y) == 0`, we only know that the
-dependence cannot be linear.
+If `Corr(X, Y) != 0`, we know for sure that `X` and `Y` are _not_ independent,
+and the correlation sign suggests in which way `Y` can influence `X`.
+Otherwise, even if `Corr(X, Y) == 0`, we only know that the dependence cannot be
+linear.
 
 In practice, however, and especially for trading purposes, the dependence we
 want to rely on is indeed quite often linear. For example, detecting a "trend"
 and expecting that the trend will continue for some time is certainly an example
 of a linear dependency. It effectively states that if `P(t-1) - P(t-1-m) > 0`
 (the price over the last `m` steps grew on average), then `P(t)>0` has a higher
-probability than `P(t)<0`.
+probability than `P(t)<0`. This property can be expressed e.g. as:
+
+```
+P(t) = (P(t-1)+ ... +P(t-1-m))/m + R
+```
+
+where `R` is a random variable with `E[R]=0` representing the remaining
+variability around the expected mean growth. Intuitively, it says that the trend
+will continue as before, modulo some random noise. Clearly, such dependence is
+linear, and therefore, will be detected by correlation.
 
 Therefore, it seems useful to check `Corr(P(t), P(t-k))` for a few values of
 `k>0`.  Since this is a correlation of the log-profit sequence with itself, we
