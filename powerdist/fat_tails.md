@@ -130,6 +130,8 @@ noise with higher counts. The result, of course, is a somewhat tighter
 confidence interval for `k=100`: around +-1% for 90% confidence, and +-1.7% for
 99%, as compared to +-2% and +-4% respectively for `k=10`.
 
+*Next: [History and Market Timing: Auto-Correlation of Log-Profits](autocorr/)*
+
 [Distribution of Log-Profits]: ../distribution
 [t-distribution]: https://en.wikipedia.org/wiki/Student%27s_t-distribution
 [power law]: https://en.wikipedia.org/wiki/Power_law

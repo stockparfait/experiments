@@ -1,0 +1,37 @@
+{
+  "experiments": [
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ]
+        },
+        "graph": "corr",
+        "id": "V>$1M ",
+        "max shift": 100
+      }
+    }
+  ],
+  "groups": [
+    {
+      "graphs": [
+        {
+          "X label": "shift",
+          "id": "corr",
+          "title": "Auto-correlation"
+        }
+      ],
+      "id": "autocorr",
+      "timeseries": false,
+      "title": "Auto-correlation"
+    }
+  ]
+}
