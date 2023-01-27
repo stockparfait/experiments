@@ -33,6 +33,7 @@ type ExperimentConfig interface {
 
 // TestExperimentConfig is only used in tests.
 type TestExperimentConfig struct {
+	ID     string  `json:"id"`
 	Grade  float64 `json:"grade" default:"2.0"`
 	Passed bool    `json:"passed"`
 	Graph  string  `json:"graph" required:"true"`
@@ -69,8 +70,9 @@ func (p *HoldPosition) InitMessage(js any) error {
 	return nil
 }
 
-// Hold "experiment" configuration.
+// Hold experiment configuration.
 type Hold struct {
+	ID             string         `json:"id"`
 	Reader         *db.Reader     `json:"data" required:"true"`
 	Positions      []HoldPosition `json:"positions"`
 	PositionsGraph string         `json:"positions graph"` // plots per position

@@ -42,12 +42,12 @@ type Distribution struct {
 var _ experiments.Experiment = &Distribution{}
 var _ iterator.Iterator[[]string] = &Distribution{}
 
-// prefix the experiment's ID to s, if there is one.
-func (d *Distribution) prefix(s string) string {
-	if d.config.ID == "" {
-		return s
-	}
-	return d.config.ID + " " + s
+func (d *Distribution) Prefix(s string) string {
+	return experiments.Prefix(d.config.ID, s)
+}
+
+func (d *Distribution) AddValue(ctx context.Context, k, v string) error {
+	return experiments.AddValue(ctx, d.config.ID, k, v)
 }
 
 func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) error {
@@ -66,34 +66,34 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	if err := d.processTickers(tickers); err != nil {
 		return errors.Annotate(err, "failed to process tickers")
 	}
-	if err := experiments.AddValue(ctx, d.prefix("tickers"), fmt.Sprintf("%d", d.numTickers)); err != nil {
+	if err := d.AddValue(ctx, "tickers", fmt.Sprintf("%d", d.numTickers)); err != nil {
 		return errors.Annotate(err, "failed to add '%s' tickers value", d.config.ID)
 	}
 	if d.histogram != nil {
-		if err := experiments.AddValue(ctx, d.prefix("samples"), fmt.Sprintf("%d", d.histogram.CountsTotal())); err != nil {
+		if err := d.AddValue(ctx, "samples", fmt.Sprintf("%d", d.histogram.CountsTotal())); err != nil {
 			return errors.Annotate(err, "failed to add '%s' samples value", d.config.ID)
 		}
 	}
 	if d.histogram.CountsTotal() == 0 {
 		return nil
 	}
-	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.histogram), d.config.LogProfits, d.prefix("log-profit")); err != nil {
+	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.histogram), d.config.LogProfits, d.config.ID, "log-profit"); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' sample distribution", d.config.ID)
 	}
-	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.meansHistogram), d.config.Means, d.prefix("means")); err != nil {
+	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.meansHistogram), d.config.Means, d.config.ID, "means"); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' means distribution", d.config.ID)
 	}
-	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.madsHistogram), d.config.MADs, d.prefix("MADs")); err != nil {
+	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.madsHistogram), d.config.MADs, d.config.ID, "MADs"); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' MADs distribution", d.config.ID)
 	}
 	if d.meansHistogram != nil {
-		if err := experiments.AddValue(ctx, d.prefix("average mean"), fmt.Sprintf("%.4g", d.meansHistogram.Mean())); err != nil {
+		if err := d.AddValue(ctx, "average mean", fmt.Sprintf("%.4g", d.meansHistogram.Mean())); err != nil {
 			return errors.Annotate(err,
 				"failed to add '%s' average mean value", d.config.ID)
 		}
 	}
 	if d.madsHistogram != nil {
-		if err := experiments.AddValue(ctx, d.prefix("average MAD"), fmt.Sprintf("%.4g", d.madsHistogram.Mean())); err != nil {
+		if err := d.AddValue(ctx, "average MAD", fmt.Sprintf("%.4g", d.madsHistogram.Mean())); err != nil {
 			return errors.Annotate(err,
 				"failed to add '%s' average MAD value", d.config.ID)
 		}
