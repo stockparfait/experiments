@@ -152,7 +152,14 @@ examples, on the classical FAANG stocks ([config](assets/FAANG.json)):
 
 OK, looks like if there is any `k=1` pattern, it only holds for very large
 numbers, and no single stock, even over 24 years, is sufficient to expose this
-pattern.
+pattern. And how large? Let's slice the liquid stock data into five 5-year time
+periods, each containing 4-5M points, and see how this pattern holds across time
+([config](assets/by-year.json)):
+
+![Correlation by year](assets/by-year.jpeg)
+
+Apparently, only two time periods out of 5, namely 2008-2013 and 2018-2023
+exhibit the "k=1" pattern, but the other three periods do not. 
 
 All in all, this basically seals the fate of any reasonable short term price
 prediction based on historical prices. If there is any hope for timing the

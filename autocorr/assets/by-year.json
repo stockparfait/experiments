@@ -1,0 +1,123 @@
+{
+  "experiments": [
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2003-01-01",
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "start": "1998-01-01"
+        },
+        "graph": "corr",
+        "id": "V>$1M 1998-2003",
+        "max shift": 10
+      }
+    },
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2008-01-01",
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "start": "2003-01-01"
+        },
+        "graph": "corr",
+        "id": "V>$1M 2003-2008",
+        "max shift": 10
+      }
+    },
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2013-01-01",
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "start": "2008-01-01"
+        },
+        "graph": "corr",
+        "id": "V>$1M 2008-2013",
+        "max shift": 10
+      }
+    },
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2018-01-01",
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "start": "2013-01-01"
+        },
+        "graph": "corr",
+        "id": "V>$1M 2013-2018",
+        "max shift": 10
+      }
+    },
+    {
+      "auto-correlation": {
+        "data": {
+          "DB": "sharadar",
+          "cash volume": {
+            "min": 1000000
+          },
+          "end": "2023-01-01",
+          "exclude tickers": [
+            "JWACU"
+          ],
+          "sources": [
+            "SEP"
+          ],
+          "start": "2018-01-01"
+        },
+        "graph": "corr",
+        "id": "V>$1M 2018-2023",
+        "max shift": 10
+      }
+    }
+  ],
+  "groups": [
+    {
+      "graphs": [
+        {
+          "X label": "shift",
+          "id": "corr",
+          "title": "Auto-correlation"
+        }
+      ],
+      "id": "autocorr",
+      "timeseries": false,
+      "title": "Auto-correlation"
+    }
+  ]
+}

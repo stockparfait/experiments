@@ -30,6 +30,7 @@ func TestConfigs(t *testing.T) {
 		"synthetic-25M.json",
 		"synthetic-6K.json",
 		"FAANG.json",
+		"by-year.json",
 	}
 
 	Convey("Configs parse successfully", t, func() {
