@@ -109,6 +109,31 @@ type jobResult struct {
 	Err        error
 }
 
+func reduceJobResult(j, j2 *jobResult) *jobResult {
+	if j.Err != nil {
+		return j
+	}
+	if j2.Err != nil {
+		j.Err = errors.Annotate(j2.Err, "job failed")
+		return j
+	}
+	if j.Histogram != nil {
+		j.Histogram.AddHistogram(j2.Histogram)
+	}
+	j.Means = append(j.Means, j2.Means...)
+	j.MADs = append(j.MADs, j2.MADs...)
+	j.NumTickers += j2.NumTickers
+	return j
+}
+
+func (d *Distribution) newJobResult() *jobResult {
+	res := &jobResult{}
+	if d.histogram != nil {
+		res.Histogram = stats.NewHistogram(d.histogram.Buckets())
+	}
+	return res
+}
+
 func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 	rows, err := d.config.Reader.Prices(ticker)
 	if err != nil {
@@ -137,10 +162,7 @@ func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 }
 
 func (d *Distribution) processBatch(tickers []string) *jobResult {
-	res := &jobResult{}
-	if d.histogram != nil {
-		res.Histogram = stats.NewHistogram(d.histogram.Buckets())
-	}
+	res := d.newJobResult()
 	for _, t := range tickers {
 		if err := d.processTicker(t, res); err != nil {
 			res.Err = errors.Annotate(err, "failed to process ticker %s", t)
@@ -166,24 +188,14 @@ func (d *Distribution) Next() ([]string, bool) {
 func (d *Distribution) processTickers(tickers []string) error {
 	d.tickers = tickers
 	pm := iterator.ParallelMap[[]string, *jobResult](d.context, d.config.Workers, d, d.processBatch)
+	res := iterator.Reduce(pm, d.newJobResult(), reduceJobResult)
 
-	var means []float64
-	var mads []float64
-	for jr, ok := pm.Next(); ok; jr, ok = pm.Next() {
-		if jr.Err != nil {
-			return errors.Annotate(jr.Err, "job failed")
-		}
-		if d.histogram != nil {
-			d.histogram.AddHistogram(jr.Histogram)
-		}
-		means = append(means, jr.Means...)
-		mads = append(mads, jr.MADs...)
-		d.numTickers += jr.NumTickers
-	}
+	d.numTickers = res.NumTickers
+	d.histogram = res.Histogram
 	if d.config.Means != nil {
 		c := d.config.Means
 		d.meansHistogram = stats.NewHistogram(&c.Buckets)
-		sample := stats.NewSample().Init(means)
+		sample := stats.NewSample().Init(res.Means)
 		if c.Normalize && sample.MAD() != 0.0 {
 			var err error
 			sample, err = sample.Normalize()
@@ -197,7 +209,7 @@ func (d *Distribution) processTickers(tickers []string) error {
 	if d.config.MADs != nil {
 		c := d.config.MADs
 		d.madsHistogram = stats.NewHistogram(&c.Buckets)
-		sample := stats.NewSample().Init(mads)
+		sample := stats.NewSample().Init(res.MADs)
 		if c.Normalize && sample.MAD() != 0.0 {
 			var err error
 			sample, err = sample.Normalize()
