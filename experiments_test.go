@@ -247,7 +247,7 @@ func TestExperiments(t *testing.T) {
 			So(cfg.InitMessage(js), ShouldBeNil)
 			d := stats.NewSampleDistribution(
 				[]float64{-2.0, -0.5, 0.5, 2.0}, &cfg.Buckets)
-			So(PlotDistribution(ctx, d, &cfg, "test"), ShouldBeNil)
+			So(PlotDistribution(ctx, d, &cfg, "", "test"), ShouldBeNil)
 
 			So(len(g.Plots), ShouldEqual, 4)
 			So(g.Plots[0].Legend, ShouldEqual, "test p.d.f.")

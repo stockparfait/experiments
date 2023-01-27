@@ -36,11 +36,12 @@ type AutoCorrelation struct {
 
 var _ experiments.Experiment = &AutoCorrelation{}
 
-func (e *AutoCorrelation) prefix(s string) string {
-	if e.config.ID == "" {
-		return s
-	}
-	return e.config.ID + " " + s
+func (e *AutoCorrelation) Prefix(s string) string {
+	return experiments.Prefix(e.config.ID, s)
+}
+
+func (e *AutoCorrelation) AddValue(ctx context.Context, k, v string) error {
+	return experiments.AddValue(ctx, e.config.ID, k, v)
 }
 
 func (e *AutoCorrelation) Run(ctx context.Context, cfg config.ExperimentConfig) error {
@@ -118,7 +119,7 @@ func (e *AutoCorrelation) addPlot(total jobResult) error {
 	if err != nil {
 		return errors.Annotate(err, "failed to create auto-correlation plot")
 	}
-	legend := e.prefix("Auto-correlation")
+	legend := e.Prefix("Auto-correlation")
 	plt.SetLegend(legend).SetYLabel("correlation")
 	if err := plot.Add(e.context, plt, e.config.Graph); err != nil {
 		return errors.Annotate(err, "failed to add '%s' plot", legend)
@@ -153,7 +154,7 @@ func (e *AutoCorrelation) processAnalytical() error {
 		}
 		total.Merge(r)
 	}
-	err = experiments.AddValue(e.context, e.prefix("samples"), fmt.Sprintf("%d", total.ns[0]))
+	err = e.AddValue(e.context, "samples", fmt.Sprintf("%d", total.ns[0]))
 	if err != nil {
 		return errors.Annotate(err, "failed to add value for number of samples")
 	}
@@ -239,11 +240,11 @@ func (e *AutoCorrelation) processTickers(tickers []string) error {
 		numTickers++
 		total.Merge(r)
 	}
-	err := experiments.AddValue(e.context, e.prefix("tickers"), fmt.Sprintf("%d", numTickers))
+	err := e.AddValue(e.context, "tickers", fmt.Sprintf("%d", numTickers))
 	if err != nil {
 		return errors.Annotate(err, "failed to add value for number of tickers")
 	}
-	err = experiments.AddValue(e.context, e.prefix("samples"), fmt.Sprintf("%d", total.ns[0]))
+	err = e.AddValue(e.context, "samples", fmt.Sprintf("%d", total.ns[0]))
 	if err != nil {
 		return errors.Annotate(err, "failed to add value for number of samples")
 	}

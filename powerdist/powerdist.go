@@ -44,12 +44,12 @@ type PowerDist struct {
 
 var _ experiments.Experiment = &PowerDist{}
 
-// prefix the experiment's ID to s, if there is one.
-func (d *PowerDist) prefix(s string) string {
-	if d.config.ID == "" {
-		return s
-	}
-	return d.config.ID + " " + s
+func (d *PowerDist) Prefix(s string) string {
+	return experiments.Prefix(d.config.ID, s)
+}
+
+func (d *PowerDist) AddValue(ctx context.Context, k, v string) error {
+	return experiments.AddValue(ctx, d.config.ID, k, v)
 }
 
 // distributionWithHistogram wraps analytical distribution into RandDistribution, as
@@ -83,8 +83,7 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	}
 	if d.config.SamplePlot != nil {
 		c := d.config.SamplePlot
-		name := d.prefix(d.distName)
-		if err := experiments.PlotDistribution(ctx, d.rand, c, name); err != nil {
+		if err := experiments.PlotDistribution(ctx, d.rand, c, d.config.ID, d.distName); err != nil {
 			return errors.Annotate(err, "failed to plot %s", d.distName)
 		}
 	}
@@ -210,22 +209,22 @@ func (d *PowerDist) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 		return y / (expectVariance * expectVariance)
 	})
 
-	if err := cumulMean.Plot(ctx, "mean", d.prefix("mean")); err != nil {
+	if err := cumulMean.Plot(ctx, "mean", d.Prefix("mean")); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative mean")
 	}
-	if err := cumulMAD.Plot(ctx, "MAD", d.prefix("MAD")); err != nil {
+	if err := cumulMAD.Plot(ctx, "MAD", d.Prefix("MAD")); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative MAD")
 	}
-	if err := cumulSigma.Plot(ctx, "sigma", d.prefix("sigma")); err != nil {
+	if err := cumulSigma.Plot(ctx, "sigma", d.Prefix("sigma")); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative sigma")
 	}
-	if err := cumulAlpha.Plot(ctx, "alpha", d.prefix("alpha")); err != nil {
+	if err := cumulAlpha.Plot(ctx, "alpha", d.Prefix("alpha")); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative alpha")
 	}
-	if err := cumulSkew.Plot(ctx, "skewness", d.prefix("skewness")); err != nil {
+	if err := cumulSkew.Plot(ctx, "skewness", d.Prefix("skewness")); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative skewness")
 	}
-	if err := cumulKurt.Plot(ctx, "kurtosis", d.prefix("kurtosis")); err != nil {
+	if err := cumulKurt.Plot(ctx, "kurtosis", d.Prefix("kurtosis")); err != nil {
 		return errors.Annotate(err, "failed to plot cumulative kurtosis")
 	}
 	return nil
@@ -292,11 +291,11 @@ func (d *PowerDist) plotStatistics(ctx context.Context, sts []*statistic) error 
 		}
 	}
 	for j, s := range sts {
-		fullName := d.prefix(distName + " " + s.name)
+		fullName := distName + " " + s.name
 		dh := stats.NewSampleDistribution(samples[j], &s.c.Buckets)
-		err := experiments.PlotDistribution(ctx, dh, s.c, fullName)
+		err := experiments.PlotDistribution(ctx, dh, s.c, d.config.ID, fullName)
 		if err != nil {
-			return errors.Annotate(err, "failed to plot %s", fullName)
+			return errors.Annotate(err, "failed to plot %s", d.Prefix(fullName))
 		}
 	}
 	return nil

@@ -36,6 +36,14 @@ type Portfolio struct {
 
 var _ experiments.Experiment = &Portfolio{}
 
+func (p *Portfolio) Prefix(s string) string {
+	return experiments.Prefix(p.config.ID, s)
+}
+
+func (p *Portfolio) AddValue(ctx context.Context, k, v string) error {
+	return experiments.AddValue(ctx, p.config.ID, k, v)
+}
+
 // Row of the output table as the list of strings compatible with encoding/csv.
 type Row []string
 

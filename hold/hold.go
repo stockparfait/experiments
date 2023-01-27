@@ -41,6 +41,14 @@ type Hold struct {
 
 var _ experiments.Experiment = &Hold{}
 
+func (h *Hold) Prefix(s string) string {
+	return experiments.Prefix(h.config.ID, s)
+}
+
+func (h *Hold) AddValue(ctx context.Context, k, v string) error {
+	return experiments.AddValue(ctx, h.config.ID, k, v)
+}
+
 // Run implements experiments.Experiment.
 func (h *Hold) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	var ok bool

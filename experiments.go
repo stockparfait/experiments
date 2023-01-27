@@ -25,6 +25,21 @@ import (
 	"github.com/stockparfait/stockparfait/stats"
 )
 
+// Experiment is a generic interface for a single experiment.
+type Experiment interface {
+	Prefix(s string) string
+	AddValue(ctx context.Context, key, value string) error
+	Run(ctx context.Context, cfg config.ExperimentConfig) error
+}
+
+// Prefix adds a space-separated prefix to s, unless prefix is empty.
+func Prefix(prefix, s string) string {
+	if prefix == "" {
+		return s
+	}
+	return prefix + " " + s
+}
+
 type contextKey int
 
 const (
@@ -50,19 +65,15 @@ func GetValues(ctx context.Context) Values {
 	return v
 }
 
-// AddValue adds (or overwrites) a key:value pair to the Values in the context.
-func AddValue(ctx context.Context, key, value string) error {
+// AddValue adds (or overwrites) a <prefix key>:value pair to the Values in the
+// context.
+func AddValue(ctx context.Context, prefix, key, value string) error {
 	v := GetValues(ctx)
 	if v == nil {
 		return errors.Reason("no values map in context")
 	}
-	v[key] = value
+	v[Prefix(prefix, key)] = value
 	return nil
-}
-
-// Experiment is a generic interface for a single experiment.
-type Experiment interface {
-	Run(ctx context.Context, cfg config.ExperimentConfig) error
 }
 
 // maybeSkipZeros removes (x, y) elements where y < 1e-300, if so configured.
@@ -122,7 +133,7 @@ func minMax(ys []float64) (float64, float64) {
 
 // PlotDistribution dh, specifically its p.d.f. as approximated by
 // dh.Histogram(), and related plots according to the config c.
-func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, legend string) error {
+func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, prefix, legend string) error {
 	if c == nil {
 		return nil
 	}
@@ -157,7 +168,7 @@ func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c
 	if err := plot.Add(ctx, plt, c.Graph); err != nil {
 		return errors.Annotate(err, "failed to add plot '%s'", legend)
 	}
-	if err := plotCounts(ctx, h, xs0, c, legend); err != nil {
+	if err := plotCounts(ctx, h, xs0, c, prefix, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s counts'", legend)
 	}
 	if err := plotErrors(ctx, h, xs0, c, legend); err != nil {
@@ -171,22 +182,23 @@ func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c
 	if err := plotPercentiles(ctx, dh, c, min, max, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s percentiles'", legend)
 	}
-	if err := plotAnalytical(ctx, dh, c, legend); err != nil {
+	if err := plotAnalytical(ctx, dh, c, prefix, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s ref dist'", legend)
 	}
-	if err := AddValue(ctx, legend+" P(X < mean-10*sigma)", fmt.Sprintf("%.4g", dh.CDF(dh.Mean()-10*math.Sqrt(dh.Variance())))); err != nil {
+	if err := AddValue(ctx, prefix, legend+" P(X < mean-10*sigma)", fmt.Sprintf("%.4g", dh.CDF(dh.Mean()-10*math.Sqrt(dh.Variance())))); err != nil {
 		return errors.Annotate(err, "failed to add value for '%s P(X < mean-10*sigma)'", legend)
 	}
-	if err := AddValue(ctx, legend+" P(X > mean+10*sigma)", fmt.Sprintf("%.4g", 1.0-dh.CDF(dh.Mean()+10*math.Sqrt(dh.Variance())))); err != nil {
+	if err := AddValue(ctx, prefix, legend+" P(X > mean+10*sigma)", fmt.Sprintf("%.4g", 1.0-dh.CDF(dh.Mean()+10*math.Sqrt(dh.Variance())))); err != nil {
 		return errors.Annotate(err, "failed to add value for '%s P(X > mean+10*sigma)'", legend)
 	}
 	return nil
 }
 
-func plotCounts(ctx context.Context, h *stats.Histogram, xs []float64, c *config.DistributionPlot, legend string) error {
+func plotCounts(ctx context.Context, h *stats.Histogram, xs []float64, c *config.DistributionPlot, prefix, legend string) error {
 	if c.CountsGraph == "" {
 		return nil
 	}
+	legend = Prefix(prefix, legend)
 	cs := make([]float64, len(h.Counts()))
 	for i, y := range h.Counts() {
 		cs[i] = float64(y)
@@ -397,7 +409,7 @@ func DeriveAlpha(h *stats.Histogram, mean, MAD float64, c *config.DeriveAlpha) f
 	return FindMin(f, c.MinX, c.MaxX, c.Epsilon, c.MaxIterations)
 }
 
-func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, legend string) error {
+func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, prefix, legend string) error {
 	if c.RefDist == nil {
 		return nil
 	}
@@ -423,15 +435,15 @@ func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *
 		ac.Alpha = DeriveAlpha(h, ac.Mean, ac.MAD, c.DeriveAlpha)
 	}
 
-	if err := AddValue(ctx, legend+" mean", fmt.Sprintf("%.4g", dh.Mean())); err != nil {
+	if err := AddValue(ctx, prefix, legend+" mean", fmt.Sprintf("%.4g", dh.Mean())); err != nil {
 		return errors.Annotate(err, "failed to add value for '%s mean'", legend)
 	}
-	if err := AddValue(ctx, legend+" MAD", fmt.Sprintf("%.4g", dh.MAD())); err != nil {
+	if err := AddValue(ctx, prefix, legend+" MAD", fmt.Sprintf("%.4g", dh.MAD())); err != nil {
 		return errors.Annotate(err, "failed to add value for '%s MAD'", legend)
 	}
 	if dc.AnalyticalSource != nil && dc.AnalyticalSource.Name == "t" {
 		alpha := fmt.Sprintf("%.4g", dc.AnalyticalSource.Alpha)
-		if err := AddValue(ctx, legend+" alpha", alpha); err != nil {
+		if err := AddValue(ctx, prefix, legend+" alpha", alpha); err != nil {
 			return errors.Annotate(err, "failed to add value for '%s alpha'", legend)
 		}
 	}
@@ -614,20 +626,28 @@ type TestExperiment struct {
 
 var _ Experiment = &TestExperiment{}
 
+func (t *TestExperiment) Prefix(s string) string {
+	return Prefix(t.cfg.ID, s)
+}
+
+func (t *TestExperiment) AddValue(ctx context.Context, k, v string) error {
+	return AddValue(ctx, t.cfg.ID, k, v)
+}
+
 func (t *TestExperiment) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	var ok bool
 	t.cfg, ok = cfg.(*config.TestExperimentConfig)
 	if !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
-	if err := AddValue(ctx, "grade", fmt.Sprintf("%g", t.cfg.Grade)); err != nil {
+	if err := t.AddValue(ctx, "grade", fmt.Sprintf("%g", t.cfg.Grade)); err != nil {
 		return errors.Annotate(err, "cannot add grade value")
 	}
 	passed := "failed"
 	if t.cfg.Passed {
 		passed = "passed"
 	}
-	if err := AddValue(ctx, "test", passed); err != nil {
+	if err := t.AddValue(ctx, "test", passed); err != nil {
 		return errors.Annotate(err, "cannot add pass/fail value")
 	}
 	p, err := plot.NewXYPlot([]float64{1.0, 2.0}, []float64{21.5, 42.0})
