@@ -244,6 +244,8 @@ func TestConfig(t *testing.T) {
 						RefData: &defaultReader,
 						Data:    &defaultReader,
 						Beta:    1,
+						Tickers: 1,
+						Samples: 5000,
 					}},
 				},
 			})
