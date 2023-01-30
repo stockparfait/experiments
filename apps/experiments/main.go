@@ -25,6 +25,7 @@ import (
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/autocorr"
+	"github.com/stockparfait/experiments/beta"
 	"github.com/stockparfait/experiments/config"
 	"github.com/stockparfait/experiments/distribution"
 	"github.com/stockparfait/experiments/hold"
@@ -79,6 +80,8 @@ func runExperiment(ctx context.Context, ec config.ExperimentConfig) error {
 		e = &portfolio.Portfolio{}
 	case "auto-correlation":
 		e = &autocorr.AutoCorrelation{}
+	case "beta":
+		e = &beta.Beta{}
 	default:
 		return errors.Reason("unsupported experiment '%s'", ec.Name())
 	}

@@ -92,6 +92,10 @@ func TestConfig(t *testing.T) {
     {"auto-correlation": {
       "data": {"DB": "test"},
       "graph": "r1"
+    }},
+    {"beta": {
+      "reference data" : {"DB": "test"},
+      "data" : {"DB": "test"}
     }}
   ]
 }`
@@ -235,6 +239,11 @@ func TestConfig(t *testing.T) {
 						MaxShift:  5,
 						Samples:   5000,
 						BatchSize: 5000,
+					}},
+					{Config: &Beta{
+						RefData: &defaultReader,
+						Data:    &defaultReader,
+						Beta:    1,
 					}},
 				},
 			})
