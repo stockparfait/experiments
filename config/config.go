@@ -437,6 +437,8 @@ type AutoCorrelation struct {
 	MaxShift  int    `json:"max shift" default:"5"` // shift range [1..max]
 }
 
+var _ ExperimentConfig = &AutoCorrelation{}
+
 func (e *AutoCorrelation) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init AutoCorrelation")
@@ -458,6 +460,55 @@ func (e *AutoCorrelation) InitMessage(js any) error {
 }
 
 func (e *AutoCorrelation) Name() string { return "auto-correlation" }
+
+// Beta experiment studies cross-correlation between stocks and/or an index.
+type Beta struct {
+	ID string `json:"id"` // experiment ID, for multiple instances
+	// Exactly one of RefData or RefAnalytical must be non-nil.
+	RefData       *db.Reader              `json:"reference data"`
+	RefAnalytical *AnalyticalDistribution `json:"reference analytical"`
+	// Exactly one of Data or AnalyticalR must be non-nil. Each ticker in Data is
+	// analysed separately, contributing to statistics about beta and R.
+	// AnalyticalR is the distribution of R for synthetic tickers.
+	Data        *db.Reader              `json:"data"`
+	AnalyticalR *AnalyticalDistribution `json:"analytical R"`
+	// Model P = beta * Ref + R for synthetic price series.
+	Beta    float64 `json:"beta" default:"1.0"`
+	Tickers int     `json:"tickers" default:"1"`    // #synthetic tickers
+	Samples int     `json:"samples" default:"5000"` // #synthetic prices per ticker
+	// CSV dump with info about each stock's beta and R parameters. When set to
+	// "-", print the table to stdout.
+	File       string `json:"file"`
+	GraphBeta  string `json:"graph beta"`   // distribution of betas
+	GraphR     string `json:"graph R"`      // combined distribution of R
+	GraphMeanR string `json:"graph mean R"` // distribution of means of R
+	GraphMADR  string `json:"graph MAD R"`  // distribution of MADs of R
+}
+
+var _ ExperimentConfig = &Beta{}
+
+func (e *Beta) InitMessage(js any) error {
+	if err := message.Init(e, js); err != nil {
+		return errors.Annotate(err, "failed to init Beta")
+	}
+	if (e.RefData == nil) == (e.RefAnalytical == nil) {
+		return errors.Reason(
+			`exactly one of "reference data" or "reference analytical" must be specified`)
+	}
+	if (e.Data == nil) == (e.AnalyticalR == nil) {
+		return errors.Reason(
+			`exactly one of "data" or "analytical R" must be specified`)
+	}
+	if e.Tickers < 1 {
+		return errors.Reason(`"tickers"=%d must be >= 1`, e.Tickers)
+	}
+	if e.Samples < 5 {
+		return errors.Reason(`"samples"=%d must be >= 5`, e.Samples)
+	}
+	return nil
+}
+
+func (e *Beta) Name() string { return "beta" }
 
 // ExpMap represents a Message which reads a single-element map {name:
 // Experiment} and knows how to populate specific implementations of the
@@ -487,6 +538,8 @@ func (e *ExpMap) InitMessage(js any) error {
 			e.Config = &Portfolio{}
 		case "auto-correlation":
 			e.Config = &AutoCorrelation{}
+		case "beta":
+			e.Config = &Beta{}
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}

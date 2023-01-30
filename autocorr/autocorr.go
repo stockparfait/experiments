@@ -143,7 +143,7 @@ func (e *AutoCorrelation) processAnalytical() error {
 			buf[i] = batch.dist.Rand()
 		}
 		j := e.newJobResult(name)
-		j.Add(stats.NewSample().Init(buf), e.config.MaxShift)
+		j.Add(buf, e.config.MaxShift)
 		return j
 	}
 	pm := iterator.ParallelMap[synthBatch, jobResult](e.context, 2*runtime.NumCPU(), it, f)
@@ -179,14 +179,14 @@ func (e *AutoCorrelation) newJobResult(ticker string) jobResult {
 	}
 }
 
-func (j *jobResult) Add(sample *stats.Sample, maxShift int) {
+func (j *jobResult) Add(samples []float64, maxShift int) {
+	sample := stats.NewSample().Init(samples)
 	mean := sample.Mean()
 	variance := sample.Variance()
 	if variance == 0 {
 		j.err = errors.Reason("log-profits have zero variance")
 		return
 	}
-	samples := sample.Data()
 	for i := 0; i < len(samples); i++ {
 		for k := 0; k < maxShift; k++ {
 			shift := k + 1
@@ -218,12 +218,12 @@ func (e *AutoCorrelation) processTicker(ticker string) jobResult {
 		return res
 	}
 	ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
-	sample := ts.LogProfits(1)
-	if len(sample.Data()) < e.config.MaxShift+2 {
-		res.err = errors.Reason("too few samples: %d", len(sample.Data()))
+	lp := ts.LogProfits(1)
+	if len(lp.Data()) < e.config.MaxShift+2 {
+		res.err = errors.Reason("too few samples: %d", len(lp.Data()))
 		return res
 	}
-	res.Add(sample, e.config.MaxShift)
+	res.Add(lp.Data(), e.config.MaxShift)
 	return res
 }
 

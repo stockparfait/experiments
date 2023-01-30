@@ -144,7 +144,7 @@ func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 		return nil
 	}
 	ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
-	sample := ts.LogProfits(d.config.Compound)
+	sample := stats.NewSample().Init(ts.LogProfits(d.config.Compound).Data())
 	res.Means = append(res.Means, sample.Mean())
 	res.MADs = append(res.MADs, sample.MAD())
 	if res.Histogram != nil {
