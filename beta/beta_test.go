@@ -121,21 +121,48 @@ func TestBeta(t *testing.T) {
     "tickers": ["A", "B"]
   },
   "file": "%s",
-  "graph beta": "beta",
-  "graph R": "R",
-  "graph mean R": "means",
-  "graph MAD R": "mads"
+  "beta plot": {"graph": "beta"},
+  "R plot": {"graph": "R"},
+  "R means": {"graph": "means"},
+  "R MADs": {"graph": "mads"}
 }`, tmpdir, dbName, tmpdir, dbName, csvFile)
 				So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
 				var betaExp Beta
 				So(betaExp.Run(ctx, &cfg), ShouldBeNil)
 
 				So(testutil.FileExists(csvFile), ShouldBeFalse) // TODO
-				So(len(betaGraph.Plots), ShouldEqual, 0)        // TODO
-				So(len(RGraph.Plots), ShouldEqual, 0)
-				So(len(MeansGraph.Plots), ShouldEqual, 0)
-				So(len(MADsGraph.Plots), ShouldEqual, 0)
+				So(len(betaGraph.Plots), ShouldEqual, 1)
+				So(len(RGraph.Plots), ShouldEqual, 1)
+				So(len(MeansGraph.Plots), ShouldEqual, 1)
+				So(len(MADsGraph.Plots), ShouldEqual, 1)
 			})
+		})
+
+		Convey("with synthetic data", func() {
+			var cfg config.Beta
+			csvFile := filepath.Join(tmpdir, "betas.csv")
+			confJSON := fmt.Sprintf(`
+{
+  "id": "testID",
+  "reference analytical": {"name": "t"},
+  "analytical R": {"name": "t"},
+  "tickers": 3,
+  "samples": 10,
+  "file": "%s",
+  "beta plot": {"graph": "beta"},
+  "R plot": {"graph": "R"},
+  "R means": {"graph": "means"},
+  "R MADs": {"graph": "mads"}
+}`, csvFile)
+			So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
+			var betaExp Beta
+			So(betaExp.Run(ctx, &cfg), ShouldBeNil)
+
+			So(testutil.FileExists(csvFile), ShouldBeFalse) // TODO
+			So(len(betaGraph.Plots), ShouldEqual, 1)
+			So(len(RGraph.Plots), ShouldEqual, 1)
+			So(len(MeansGraph.Plots), ShouldEqual, 1)
+			So(len(MADsGraph.Plots), ShouldEqual, 1)
 		})
 	})
 }

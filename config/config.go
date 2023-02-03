@@ -476,13 +476,15 @@ type Beta struct {
 	Beta    float64 `json:"beta" default:"1.0"`
 	Tickers int     `json:"tickers" default:"1"`    // #synthetic tickers
 	Samples int     `json:"samples" default:"5000"` // #synthetic prices per ticker
+	// All synthetic sequences start on this day.
+	StartDate db.Date `json:"start date"` // default:"1998-01-02"
 	// CSV dump with info about each stock's beta and R parameters. When set to
 	// "-", print the table to stdout.
-	File       string `json:"file"`
-	GraphBeta  string `json:"graph beta"`   // distribution of betas
-	GraphR     string `json:"graph R"`      // combined distribution of R
-	GraphMeanR string `json:"graph mean R"` // distribution of means of R
-	GraphMADR  string `json:"graph MAD R"`  // distribution of MADs of R
+	File       string            `json:"file"`
+	BetaPlot   *DistributionPlot `json:"beta plot"` // distribution of betas
+	RPlot      *DistributionPlot `json:"R plot"`    // combined distribution of R
+	RMeansPlot *DistributionPlot `json:"R means"`   // distribution of means of R
+	RMADsPlot  *DistributionPlot `json:"R MADs"`    // distribution of MADs of R
 }
 
 var _ ExperimentConfig = &Beta{}
@@ -504,6 +506,9 @@ func (e *Beta) InitMessage(js any) error {
 	}
 	if e.Samples < 5 {
 		return errors.Reason(`"samples"=%d must be >= 5`, e.Samples)
+	}
+	if e.StartDate.IsZero() {
+		e.StartDate = db.NewDate(1998, 1, 2)
 	}
 	return nil
 }
