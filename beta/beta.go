@@ -136,41 +136,6 @@ func (e *Beta) processRefAnalytical() error {
 	return nil
 }
 
-type dataIter struct {
-	r       *db.Reader
-	tickers []string
-	context context.Context
-	batch   int
-}
-
-var _ iterator.Iterator[[]logProfits] = &dataIter{}
-
-func (it *dataIter) Next() ([]logProfits, bool) {
-	if len(it.tickers) == 0 {
-		return nil, false
-	}
-	n := it.batch
-	if n > len(it.tickers) {
-		n = len(it.tickers)
-	}
-	tickers := it.tickers[:n]
-	it.tickers = it.tickers[n:]
-	res := make([]logProfits, n)
-	for i, ticker := range tickers {
-		var lp logProfits
-		rows, err := it.r.Prices(ticker)
-		if err != nil {
-			lp.err = errors.Annotate(err, "failed to read prices for %s", ticker)
-		} else {
-			ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
-			lp.ts = ts.LogProfits(1)
-			lp.ticker = ticker
-		}
-		res[i] = lp
-	}
-	return res, true
-}
-
 // distIter generates N copies of a Distribution.
 type distIter struct {
 	d stats.Distribution
@@ -195,14 +160,28 @@ func (e *Beta) processData() error {
 	if err != nil {
 		return errors.Annotate(err, "failed to list data tickers")
 	}
-	it := &dataIter{
-		r:       e.config.Data,
-		tickers: tickers,
-		context: e.context,
-		batch:   e.config.BatchSize,
+	it := iterator.Batch(iterator.FromSlice(tickers), e.config.BatchSize)
+	f := func(tickers []string) *lpStats {
+		res := make([]logProfits, len(tickers))
+		for i, ticker := range tickers {
+			var lp logProfits
+			rows, err := e.config.Data.Prices(ticker)
+			if err != nil {
+				lp.err = errors.Annotate(err, "failed to read prices for %s", ticker)
+			} else {
+				ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
+				lp.ts = ts.LogProfits(1)
+				lp.ticker = ticker
+			}
+			res[i] = lp
+		}
+		return e.processLogProfits(res)
 	}
-	if err := e.processLogProfitsIter(it); err != nil {
-		return errors.Annotate(err, "failed to process log-profits")
+	pm := iterator.ParallelMap(e.context, 2*runtime.NumCPU(), it, f)
+	defer pm.Close()
+
+	if err := e.processLpStats(pm); err != nil {
+		return errors.Annotate(err, "failed to process log-profit stats")
 	}
 	return nil
 }
@@ -218,7 +197,7 @@ func (e *Beta) processAnalyticalR() error {
 	}
 	distIt := &distIter{d: d, n: e.config.Tickers}
 	it := iterator.Batch[stats.Distribution](distIt, e.config.BatchSize)
-	f := func(ds []stats.Distribution) []logProfits {
+	f := func(ds []stats.Distribution) *lpStats {
 		res := make([]logProfits, len(ds))
 		for i, d := range ds {
 			lp := e.generateTS(d)
@@ -228,14 +207,14 @@ func (e *Beta) processAnalyticalR() error {
 			}
 			res[i] = lp
 		}
-		return res
+		return e.processLogProfits(res)
 	}
-	pm := iterator.ParallelMap[[]stats.Distribution, []logProfits](
+	pm := iterator.ParallelMap[[]stats.Distribution, *lpStats](
 		e.context, runtime.NumCPU(), it, f)
 	defer pm.Close()
 
-	if err := e.processLogProfitsIter(pm); err != nil {
-		return errors.Annotate(err, "failed to process synthetic log-profits")
+	if err := e.processLpStats(pm); err != nil {
+		return errors.Annotate(err, "failed to process synthetic log-profit stats")
 	}
 	return nil
 }
@@ -328,18 +307,16 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 	return &res
 }
 
-// processLogProfitsIter accumulates statistics from the iterator over log-profits
-// Timeseries. The log-profits may be either the actual historical price series
-// or synthetically generated series.
-func (e *Beta) processLogProfitsIter(it iterator.Iterator[[]logProfits]) error {
-	pm := iterator.ParallelMap(e.context, runtime.NumCPU(), it, e.processLogProfits)
-	defer pm.Close()
+// processLpStats accumulates statistics from the iterator. The log-profits may
+// be either the actual historical price series or synthetically generated
+// series.
+func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 
 	var res lpStats
 	if e.config.RPlot != nil {
 		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
 	}
-	for s, ok := pm.Next(); ok; s, ok = pm.Next() {
+	for s, ok := it.Next(); ok; s, ok = it.Next() {
 		if err := res.Merge(s); err != nil {
 			logging.Warningf(e.context, "failed to merge some tickers", err.Error())
 		}
