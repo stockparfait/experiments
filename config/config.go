@@ -480,11 +480,12 @@ type Beta struct {
 	StartDate db.Date `json:"start date"` // default:"1998-01-02"
 	// CSV dump with info about each stock's beta and R parameters. When set to
 	// "-", print the table to stdout.
-	File       string            `json:"file"`
-	BetaPlot   *DistributionPlot `json:"beta plot"` // distribution of betas
-	RPlot      *DistributionPlot `json:"R plot"`    // combined distribution of R
-	RMeansPlot *DistributionPlot `json:"R means"`   // distribution of means of R
-	RMADsPlot  *DistributionPlot `json:"R MADs"`    // distribution of MADs of R
+	File        string            `json:"file"`
+	BetaPlot    *DistributionPlot `json:"beta plot"` // distribution of betas
+	RPlot       *DistributionPlot `json:"R plot"`    // combined distribution of R
+	RMeansPlot  *DistributionPlot `json:"R means"`   // distribution of E[R]
+	RMADsPlot   *DistributionPlot `json:"R MADs"`    // distribution of MAD[R]/MAD[P]
+	RSigmasPlot *DistributionPlot `json:"R Sigmas"`  // distribution of sigma[R]/sigma[P]
 }
 
 var _ ExperimentConfig = &Beta{}

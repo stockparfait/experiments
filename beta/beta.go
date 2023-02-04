@@ -28,6 +28,7 @@ import (
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
 	"github.com/stockparfait/iterator"
+	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/stats"
 )
@@ -190,7 +191,7 @@ func (e *Beta) processData() error {
 		tickers: tickers,
 		context: e.context,
 	}
-	if err := e.processLogProfits(it); err != nil {
+	if err := e.processLogProfitsIter(it); err != nil {
 		return errors.Annotate(err, "failed to process log-profits")
 	}
 	return nil
@@ -221,7 +222,7 @@ func (e *Beta) processAnalyticalR() error {
 		e.context, 2*runtime.NumCPU(), it, f)
 	defer pm.Close()
 
-	if err := e.processLogProfits(pm); err != nil {
+	if err := e.processLogProfitsIter(pm); err != nil {
 		return errors.Annotate(err, "failed to process synthetic log-profits")
 	}
 	return nil
@@ -252,39 +253,98 @@ func computeBeta(p, ref []float64) float64 {
 	return cov / float64(len(p)) / varRef
 }
 
-// processLogProfits accumulates statistics from the iterator over log-profits
+type lpStats struct {
+	ticker string
+	betas  []float64
+	means  []float64
+	mads   []float64
+	sigmas []float64
+	histR  *stats.Histogram
+	err    error
+}
+
+// Merge s2 into s. If error is returned, s remains unmodified.
+func (s *lpStats) Merge(s2 *lpStats) error {
+	if s.err != nil {
+		return errors.Annotate(s.err, "merging into an error lpStats for %s", s.ticker)
+	}
+	if s2.err != nil {
+		return errors.Annotate(s2.err, "merging an error lpStats for %s", s2.ticker)
+	}
+	if s.histR != nil {
+		if err := s.histR.AddHistogram(s2.histR); err != nil {
+			return errors.Annotate(err, "failed to merge Histograms")
+		}
+	}
+	s.betas = append(s.betas, s2.betas...)
+	s.means = append(s.means, s2.means...)
+	s.mads = append(s.mads, s2.mads...)
+	s.sigmas = append(s.sigmas, s2.sigmas...)
+	return nil
+}
+
+func (e *Beta) processLogProfits(lp logProfits) *lpStats {
+	res := lpStats{ticker: lp.ticker}
+	if e.config.RPlot != nil {
+		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
+	}
+	if lp.err != nil {
+		res.err = errors.Annotate(lp.err, "log-profits error for %s", lp.ticker)
+		return &res
+	}
+	tss := stats.TimeseriesIntersect(lp.ts, e.refTS)
+	p := tss[0]
+	ref := tss[1]
+	beta := computeBeta(p.Data(), ref.Data())
+	r := p.Sub(ref.MultC(beta))
+	sampleP := stats.NewSample().Init(p.Data())
+	sampleR := stats.NewSample().Init(r.Data())
+	if sampleR.MAD() == 0 {
+		res.err = errors.Reason("skipping %s: MAD = 0", lp.ticker)
+		return &res
+	}
+	sampleNorm, err := sampleR.Normalize()
+	if err != nil {
+		res.err = errors.Annotate(err, "failed to normalize R for %s", lp.ticker)
+		return &res
+	}
+	if res.histR != nil {
+		res.histR.Add(sampleNorm.Data()...)
+	}
+	res.betas = append(res.betas, beta)
+	res.means = append(res.means, sampleR.Mean())
+	if madP := sampleP.MAD(); madP != 0 {
+		res.mads = append(res.mads, sampleR.MAD()/madP)
+	}
+	if sigmaP := sampleP.Sigma(); sigmaP != 0 {
+		res.sigmas = append(res.sigmas, sampleR.Sigma()/sigmaP)
+	}
+	return &res
+}
+
+// processLogProfitsIter accumulates statistics from the iterator over log-profits
 // Timeseries. The log-profits may be either the actual historical price series
 // or synthetically generated series.
-func (e *Beta) processLogProfits(it iterator.Iterator[logProfits]) error {
-	var betas, means, MADs []float64
-	var histR *stats.Histogram
-	if e.config.RPlot != nil {
-		histR = stats.NewHistogram(&e.config.RPlot.Buckets)
-	}
-	for lp, ok := it.Next(); ok; lp, ok = it.Next() {
-		if lp.err != nil {
-			return errors.Annotate(lp.err, "error in log-profits for %s", lp.ticker)
-		}
-		tss := stats.TimeseriesIntersect(lp.ts, e.refTS)
-		p := tss[0]
-		ref := tss[1]
-		beta := computeBeta(p.Data(), ref.Data())
-		r := p.Sub(ref.MultC(beta))
-		sampleR := stats.NewSample().Init(r.Data())
-		sampleNorm, err := sampleR.Normalize()
-		if err != nil {
-			return errors.Annotate(err, "failed to normalize R for %s", lp.ticker)
-		}
+func (e *Beta) processLogProfitsIter(it iterator.Iterator[logProfits]) error {
+	pm := iterator.ParallelMap(e.context, runtime.NumCPU(), it, e.processLogProfits)
+	defer pm.Close()
 
-		if histR != nil {
-			histR.Add(sampleNorm.Data()...)
+	var res lpStats
+	if e.config.RPlot != nil {
+		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
+	}
+	for s, ok := pm.Next(); ok; s, ok = pm.Next() {
+		if s.err != nil {
+			logging.Warningf(e.context, "skipping %s: %s", s.ticker, s.err.Error())
+			continue
 		}
-		betas = append(betas, beta)
-		means = append(means, sampleR.Mean())
-		MADs = append(MADs, sampleR.MAD())
+		if err := res.Merge(s); err != nil {
+			logging.Warningf(e.context, "failed to merge %s, skipping: %s",
+				s.ticker, s.err.Error())
+		}
 	}
 	if e.config.BetaPlot != nil {
-		betasDist := stats.NewSampleDistribution(betas, &e.config.BetaPlot.Buckets)
+		betasDist := stats.NewSampleDistribution(res.betas, &e.config.BetaPlot.Buckets)
 		err := experiments.PlotDistribution(e.context, betasDist, e.config.BetaPlot,
 			e.config.ID, "betas")
 		if err != nil {
@@ -292,7 +352,7 @@ func (e *Beta) processLogProfits(it iterator.Iterator[logProfits]) error {
 		}
 	}
 	if e.config.RPlot != nil {
-		RDist := stats.NewHistogramDistribution(histR)
+		RDist := stats.NewHistogramDistribution(res.histR)
 		err := experiments.PlotDistribution(e.context, RDist, e.config.RPlot,
 			e.config.ID, "normalized R")
 		if err != nil {
@@ -300,7 +360,8 @@ func (e *Beta) processLogProfits(it iterator.Iterator[logProfits]) error {
 		}
 	}
 	if e.config.RMeansPlot != nil {
-		meansDist := stats.NewSampleDistribution(means, &e.config.RMeansPlot.Buckets)
+		meansDist := stats.NewSampleDistribution(
+			res.means, &e.config.RMeansPlot.Buckets)
 		err := experiments.PlotDistribution(e.context, meansDist, e.config.RMeansPlot,
 			e.config.ID, "R means")
 		if err != nil {
@@ -308,11 +369,19 @@ func (e *Beta) processLogProfits(it iterator.Iterator[logProfits]) error {
 		}
 	}
 	if e.config.RMADsPlot != nil {
-		MADsDist := stats.NewSampleDistribution(MADs, &e.config.RMADsPlot.Buckets)
+		MADsDist := stats.NewSampleDistribution(res.mads, &e.config.RMADsPlot.Buckets)
 		err := experiments.PlotDistribution(e.context, MADsDist, e.config.RMADsPlot,
 			e.config.ID, "R MADs")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot R MADs")
+		}
+	}
+	if e.config.RSigmasPlot != nil {
+		SigmasDist := stats.NewSampleDistribution(res.sigmas, &e.config.RSigmasPlot.Buckets)
+		err := experiments.PlotDistribution(e.context, SigmasDist, e.config.RSigmasPlot,
+			e.config.ID, "R Sigmas")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot R Sigmas")
 		}
 	}
 	return nil
