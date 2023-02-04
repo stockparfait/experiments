@@ -247,6 +247,7 @@ func TestConfig(t *testing.T) {
 						Tickers:   1,
 						Samples:   5000,
 						StartDate: db.NewDate(1998, 1, 2),
+						BatchSize: 100,
 					}},
 				},
 			})

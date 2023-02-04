@@ -140,25 +140,34 @@ type dataIter struct {
 	r       *db.Reader
 	tickers []string
 	context context.Context
+	batch   int
 }
 
-var _ iterator.Iterator[logProfits] = &dataIter{}
+var _ iterator.Iterator[[]logProfits] = &dataIter{}
 
-func (it *dataIter) Next() (logProfits, bool) {
-	var res logProfits
+func (it *dataIter) Next() ([]logProfits, bool) {
 	if len(it.tickers) == 0 {
-		return res, false
+		return nil, false
 	}
-	ticker := it.tickers[0]
-	it.tickers = it.tickers[1:]
-	rows, err := it.r.Prices(ticker)
-	if err != nil {
-		res.err = errors.Annotate(err, "failed to read prices for %s", ticker)
-		return res, true
+	n := it.batch
+	if n > len(it.tickers) {
+		n = len(it.tickers)
 	}
-	ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
-	res.ts = ts.LogProfits(1)
-	res.ticker = ticker
+	tickers := it.tickers[:n]
+	it.tickers = it.tickers[n:]
+	res := make([]logProfits, n)
+	for i, ticker := range tickers {
+		var lp logProfits
+		rows, err := it.r.Prices(ticker)
+		if err != nil {
+			lp.err = errors.Annotate(err, "failed to read prices for %s", ticker)
+		} else {
+			ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
+			lp.ts = ts.LogProfits(1)
+			lp.ticker = ticker
+		}
+		res[i] = lp
+	}
 	return res, true
 }
 
@@ -190,6 +199,7 @@ func (e *Beta) processData() error {
 		r:       e.config.Data,
 		tickers: tickers,
 		context: e.context,
+		batch:   e.config.BatchSize,
 	}
 	if err := e.processLogProfitsIter(it); err != nil {
 		return errors.Annotate(err, "failed to process log-profits")
@@ -206,20 +216,22 @@ func (e *Beta) processAnalyticalR() error {
 	if err != nil {
 		return errors.Annotate(err, "failed to create synthetic R distribution")
 	}
-	it := &distIter{d: d, n: e.config.Tickers}
-	f := func(d stats.Distribution) logProfits {
-		lp := e.generateTS(d)
-		if lp.err != nil {
-			return logProfits{err: errors.Annotate(lp.err, "failed to generate R")}
+	distIt := &distIter{d: d, n: e.config.Tickers}
+	it := iterator.Batch[stats.Distribution](distIt, e.config.BatchSize)
+	f := func(ds []stats.Distribution) []logProfits {
+		res := make([]logProfits, len(ds))
+		for i, d := range ds {
+			lp := e.generateTS(d)
+			if lp.err == nil {
+				tss := stats.TimeseriesIntersect(e.refTS, lp.ts)
+				lp.ts = tss[0].MultC(e.config.Beta).Add(tss[1])
+			}
+			res[i] = lp
 		}
-		tss := stats.TimeseriesIntersect(e.refTS, lp.ts)
-		return logProfits{
-			ticker: lp.ticker,
-			ts:     tss[0].MultC(e.config.Beta).Add(tss[1]),
-		}
+		return res
 	}
-	pm := iterator.ParallelMap[stats.Distribution, logProfits](
-		e.context, 2*runtime.NumCPU(), it, f)
+	pm := iterator.ParallelMap[[]stats.Distribution, []logProfits](
+		e.context, runtime.NumCPU(), it, f)
 	defer pm.Close()
 
 	if err := e.processLogProfitsIter(pm); err != nil {
@@ -254,23 +266,15 @@ func computeBeta(p, ref []float64) float64 {
 }
 
 type lpStats struct {
-	ticker string
 	betas  []float64
 	means  []float64
 	mads   []float64
 	sigmas []float64
 	histR  *stats.Histogram
-	err    error
 }
 
 // Merge s2 into s. If error is returned, s remains unmodified.
 func (s *lpStats) Merge(s2 *lpStats) error {
-	if s.err != nil {
-		return errors.Annotate(s.err, "merging into an error lpStats for %s", s.ticker)
-	}
-	if s2.err != nil {
-		return errors.Annotate(s2.err, "merging an error lpStats for %s", s2.ticker)
-	}
 	if s.histR != nil {
 		if err := s.histR.AddHistogram(s2.histR); err != nil {
 			return errors.Annotate(err, "failed to merge Histograms")
@@ -283,41 +287,43 @@ func (s *lpStats) Merge(s2 *lpStats) error {
 	return nil
 }
 
-func (e *Beta) processLogProfits(lp logProfits) *lpStats {
-	res := lpStats{ticker: lp.ticker}
+func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
+	var res lpStats
 	if e.config.RPlot != nil {
 		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
 	}
-	if lp.err != nil {
-		res.err = errors.Annotate(lp.err, "log-profits error for %s", lp.ticker)
-		return &res
-	}
-	tss := stats.TimeseriesIntersect(lp.ts, e.refTS)
-	p := tss[0]
-	ref := tss[1]
-	beta := computeBeta(p.Data(), ref.Data())
-	r := p.Sub(ref.MultC(beta))
-	sampleP := stats.NewSample().Init(p.Data())
-	sampleR := stats.NewSample().Init(r.Data())
-	if sampleR.MAD() == 0 {
-		res.err = errors.Reason("skipping %s: MAD = 0", lp.ticker)
-		return &res
-	}
-	sampleNorm, err := sampleR.Normalize()
-	if err != nil {
-		res.err = errors.Annotate(err, "failed to normalize R for %s", lp.ticker)
-		return &res
-	}
-	if res.histR != nil {
-		res.histR.Add(sampleNorm.Data()...)
-	}
-	res.betas = append(res.betas, beta)
-	res.means = append(res.means, sampleR.Mean())
-	if madP := sampleP.MAD(); madP != 0 {
-		res.mads = append(res.mads, sampleR.MAD()/madP)
-	}
-	if sigmaP := sampleP.Sigma(); sigmaP != 0 {
-		res.sigmas = append(res.sigmas, sampleR.Sigma()/sigmaP)
+	for _, lp := range lps {
+		if lp.err != nil {
+			logging.Warningf(e.context, "skipping %s: %s", lp.ticker, lp.err.Error())
+			continue
+		}
+		tss := stats.TimeseriesIntersect(lp.ts, e.refTS)
+		p := tss[0]
+		ref := tss[1]
+		beta := computeBeta(p.Data(), ref.Data())
+		r := p.Sub(ref.MultC(beta))
+		sampleP := stats.NewSample().Init(p.Data())
+		sampleR := stats.NewSample().Init(r.Data())
+		if sampleR.MAD() == 0 {
+			logging.Warningf(e.context, "skipping %s: MAD = 0", lp.ticker)
+			continue
+		}
+		sampleNorm, err := sampleR.Normalize()
+		if err != nil {
+			logging.Warningf(e.context, "skipping %s: failed to normalize R", lp.ticker)
+			continue
+		}
+		if res.histR != nil {
+			res.histR.Add(sampleNorm.Data()...)
+		}
+		res.betas = append(res.betas, beta)
+		res.means = append(res.means, sampleR.Mean())
+		if madP := sampleP.MAD(); madP != 0 {
+			res.mads = append(res.mads, sampleR.MAD()/madP)
+		}
+		if sigmaP := sampleP.Sigma(); sigmaP != 0 {
+			res.sigmas = append(res.sigmas, sampleR.Sigma()/sigmaP)
+		}
 	}
 	return &res
 }
@@ -325,7 +331,7 @@ func (e *Beta) processLogProfits(lp logProfits) *lpStats {
 // processLogProfitsIter accumulates statistics from the iterator over log-profits
 // Timeseries. The log-profits may be either the actual historical price series
 // or synthetically generated series.
-func (e *Beta) processLogProfitsIter(it iterator.Iterator[logProfits]) error {
+func (e *Beta) processLogProfitsIter(it iterator.Iterator[[]logProfits]) error {
 	pm := iterator.ParallelMap(e.context, runtime.NumCPU(), it, e.processLogProfits)
 	defer pm.Close()
 
@@ -334,13 +340,8 @@ func (e *Beta) processLogProfitsIter(it iterator.Iterator[logProfits]) error {
 		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
 	}
 	for s, ok := pm.Next(); ok; s, ok = pm.Next() {
-		if s.err != nil {
-			logging.Warningf(e.context, "skipping %s: %s", s.ticker, s.err.Error())
-			continue
-		}
 		if err := res.Merge(s); err != nil {
-			logging.Warningf(e.context, "failed to merge %s, skipping: %s",
-				s.ticker, s.err.Error())
+			logging.Warningf(e.context, "failed to merge some tickers", err.Error())
 		}
 	}
 	if e.config.BetaPlot != nil {

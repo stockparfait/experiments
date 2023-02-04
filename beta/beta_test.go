@@ -67,6 +67,8 @@ func TestBeta(t *testing.T) {
 		So(err, ShouldBeNil)
 		MADsGraph, err := canvas.EnsureGraph(plot.KindXY, "mads", "group")
 		So(err, ShouldBeNil)
+		SigmasGraph, err := canvas.EnsureGraph(plot.KindXY, "sigmas", "group")
+		So(err, ShouldBeNil)
 
 		Convey("with price data", func() {
 			dbName := "db"
@@ -124,7 +126,8 @@ func TestBeta(t *testing.T) {
   "beta plot": {"graph": "beta"},
   "R plot": {"graph": "R"},
   "R means": {"graph": "means"},
-  "R MADs": {"graph": "mads"}
+  "R MADs": {"graph": "mads"},
+  "R Sigmas": {"graph": "sigmas"}
 }`, tmpdir, dbName, tmpdir, dbName, csvFile)
 				So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
 				var betaExp Beta
@@ -135,6 +138,7 @@ func TestBeta(t *testing.T) {
 				So(len(RGraph.Plots), ShouldEqual, 1)
 				So(len(MeansGraph.Plots), ShouldEqual, 1)
 				So(len(MADsGraph.Plots), ShouldEqual, 1)
+				So(len(SigmasGraph.Plots), ShouldEqual, 1)
 			})
 		})
 
@@ -152,7 +156,8 @@ func TestBeta(t *testing.T) {
   "beta plot": {"graph": "beta"},
   "R plot": {"graph": "R"},
   "R means": {"graph": "means"},
-  "R MADs": {"graph": "mads"}
+  "R MADs": {"graph": "mads"},
+  "R Sigmas": {"graph": "sigmas"}
 }`, csvFile)
 			So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
 			var betaExp Beta
@@ -163,6 +168,7 @@ func TestBeta(t *testing.T) {
 			So(len(RGraph.Plots), ShouldEqual, 1)
 			So(len(MeansGraph.Plots), ShouldEqual, 1)
 			So(len(MADsGraph.Plots), ShouldEqual, 1)
+			So(len(SigmasGraph.Plots), ShouldEqual, 1)
 		})
 	})
 }

@@ -476,8 +476,9 @@ type Beta struct {
 	Beta    float64 `json:"beta" default:"1.0"`
 	Tickers int     `json:"tickers" default:"1"`    // #synthetic tickers
 	Samples int     `json:"samples" default:"5000"` // #synthetic prices per ticker
-	// All synthetic sequences start on this day.
-	StartDate db.Date `json:"start date"` // default:"1998-01-02"
+	// All synthetic sequences start on this day; default:"1998-01-02".
+	StartDate db.Date `json:"start date"`
+	BatchSize int     `json:"batch size" default:"100"` // #tickers in a single job
 	// CSV dump with info about each stock's beta and R parameters. When set to
 	// "-", print the table to stdout.
 	File        string            `json:"file"`
