@@ -241,11 +241,13 @@ func TestConfig(t *testing.T) {
 						BatchSize: 5000,
 					}},
 					{Config: &Beta{
-						RefData: &defaultReader,
-						Data:    &defaultReader,
-						Beta:    1,
-						Tickers: 1,
-						Samples: 5000,
+						RefData:   &defaultReader,
+						Data:      &defaultReader,
+						Beta:      1,
+						Tickers:   1,
+						Samples:   5000,
+						StartDate: db.NewDate(1998, 1, 2),
+						BatchSize: 100,
 					}},
 				},
 			})

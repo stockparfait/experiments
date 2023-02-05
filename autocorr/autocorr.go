@@ -147,6 +147,8 @@ func (e *AutoCorrelation) processAnalytical() error {
 		return j
 	}
 	pm := iterator.ParallelMap[synthBatch, jobResult](e.context, 2*runtime.NumCPU(), it, f)
+	defer pm.Close()
+
 	total := e.newJobResult("total")
 	for r, ok := pm.Next(); ok; r, ok = pm.Next() {
 		if r.err != nil {
@@ -230,6 +232,8 @@ func (e *AutoCorrelation) processTicker(ticker string) jobResult {
 func (e *AutoCorrelation) processTickers(tickers []string) error {
 	pm := iterator.ParallelMap[string, jobResult](
 		e.context, 2*runtime.NumCPU(), iterator.FromSlice(tickers), e.processTicker)
+	defer pm.Close()
+
 	total := e.newJobResult("total")
 	var numTickers int
 	for r, ok := pm.Next(); ok; r, ok = pm.Next() {

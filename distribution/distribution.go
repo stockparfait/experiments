@@ -188,7 +188,9 @@ func (d *Distribution) Next() ([]string, bool) {
 func (d *Distribution) processTickers(tickers []string) error {
 	d.tickers = tickers
 	pm := iterator.ParallelMap[[]string, *jobResult](d.context, d.config.Workers, d, d.processBatch)
-	res := iterator.Reduce(pm, d.newJobResult(), reduceJobResult)
+	defer pm.Close()
+
+	res := iterator.Reduce[*jobResult, *jobResult](pm, d.newJobResult(), reduceJobResult)
 
 	d.numTickers = res.NumTickers
 	d.histogram = res.Histogram

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/pprof"
 	"sort"
 
 	"github.com/stockparfait/errors"
@@ -41,6 +42,7 @@ type Flags struct {
 	LogLevel     logging.Level
 	DataJsPath   string // write data.js to this path
 	DataJSONPath string // write data.json to this path
+	CPUProf      string // write CPU profiling data to this file
 }
 
 func parseFlags(args []string) (*Flags, error) {
@@ -54,6 +56,8 @@ func parseFlags(args []string) (*Flags, error) {
 	fs.Var(&flags.LogLevel, "log-level", "Log level: debug, info, warning, error")
 	fs.StringVar(&flags.DataJsPath, "js", "", "file to write 'data.js' plots")
 	fs.StringVar(&flags.DataJSONPath, "json", "", "file to write 'data.json' plots")
+	fs.StringVar(&flags.CPUProf, "cpuprof", "",
+		"file to write CPU profile data in pprof format. Note: adds performance cost.")
 
 	err := fs.Parse(args)
 	if err != nil {
@@ -138,6 +142,17 @@ func writePlots(ctx context.Context, flags *Flags) error {
 }
 
 func run(ctx context.Context, flags *Flags) error {
+	if flags.CPUProf != "" {
+		f, err := os.OpenFile(flags.CPUProf, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return errors.Annotate(err, "cannot open file for writing :'%s'",
+				flags.CPUProf)
+		}
+		defer f.Close()
+
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 	cfg, err := config.Load(flags.Config)
 	if err != nil {
 		return errors.Annotate(err, "failed to load config")
