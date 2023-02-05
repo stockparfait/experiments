@@ -96,7 +96,6 @@ func (e *Beta) processRefData() error {
 type logProfits struct {
 	ticker string
 	ts     *stats.Timeseries
-	err    error
 }
 
 // generateTS generates a synthetic log-profit Timeseries based on config and
@@ -162,18 +161,18 @@ func (e *Beta) processData() error {
 	}
 	it := iterator.Batch(iterator.FromSlice(tickers), e.config.BatchSize)
 	f := func(tickers []string) *lpStats {
-		res := make([]logProfits, len(tickers))
-		for i, ticker := range tickers {
+		var res []logProfits
+		for _, ticker := range tickers {
 			var lp logProfits
 			rows, err := e.config.Data.Prices(ticker)
 			if err != nil {
-				lp.err = errors.Annotate(err, "failed to read prices for %s", ticker)
-			} else {
-				ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
-				lp.ts = ts.LogProfits(1)
-				lp.ticker = ticker
+				logging.Warningf(e.context, "skipping %s: %s", ticker, err.Error())
+				continue
 			}
-			res[i] = lp
+			ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
+			lp.ts = ts.LogProfits(1)
+			lp.ticker = ticker
+			res = append(res, lp)
 		}
 		return e.processLogProfits(res)
 	}
@@ -183,6 +182,28 @@ func (e *Beta) processData() error {
 	if err := e.processLpStats(pm); err != nil {
 		return errors.Annotate(err, "failed to process log-profit stats")
 	}
+	return nil
+}
+
+type lpStats struct {
+	betas  []float64
+	means  []float64
+	mads   []float64
+	sigmas []float64
+	histR  *stats.Histogram
+}
+
+// Merge s2 into s. If error is returned, s remains unmodified.
+func (s *lpStats) Merge(s2 *lpStats) error {
+	if s.histR != nil {
+		if err := s.histR.AddHistogram(s2.histR); err != nil {
+			return errors.Annotate(err, "failed to merge Histograms")
+		}
+	}
+	s.betas = append(s.betas, s2.betas...)
+	s.means = append(s.means, s2.means...)
+	s.mads = append(s.mads, s2.mads...)
+	s.sigmas = append(s.sigmas, s2.sigmas...)
 	return nil
 }
 
@@ -201,16 +222,14 @@ func (e *Beta) processAnalyticalR() error {
 		res := make([]logProfits, len(ds))
 		for i, d := range ds {
 			lp := e.generateTS(d)
-			if lp.err == nil {
-				tss := stats.TimeseriesIntersect(e.refTS, lp.ts)
-				lp.ts = tss[0].MultC(e.config.Beta).Add(tss[1])
-			}
+			tss := stats.TimeseriesIntersect(e.refTS, lp.ts)
+			lp.ts = tss[0].MultC(e.config.Beta).Add(tss[1])
 			res[i] = lp
 		}
 		return e.processLogProfits(res)
 	}
 	pm := iterator.ParallelMap[[]stats.Distribution, *lpStats](
-		e.context, runtime.NumCPU(), it, f)
+		e.context, 2*runtime.NumCPU(), it, f)
 	defer pm.Close()
 
 	if err := e.processLpStats(pm); err != nil {
@@ -244,38 +263,12 @@ func computeBeta(p, ref []float64) float64 {
 	return cov / float64(len(p)) / varRef
 }
 
-type lpStats struct {
-	betas  []float64
-	means  []float64
-	mads   []float64
-	sigmas []float64
-	histR  *stats.Histogram
-}
-
-// Merge s2 into s. If error is returned, s remains unmodified.
-func (s *lpStats) Merge(s2 *lpStats) error {
-	if s.histR != nil {
-		if err := s.histR.AddHistogram(s2.histR); err != nil {
-			return errors.Annotate(err, "failed to merge Histograms")
-		}
-	}
-	s.betas = append(s.betas, s2.betas...)
-	s.means = append(s.means, s2.means...)
-	s.mads = append(s.mads, s2.mads...)
-	s.sigmas = append(s.sigmas, s2.sigmas...)
-	return nil
-}
-
 func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 	var res lpStats
 	if e.config.RPlot != nil {
 		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
 	}
 	for _, lp := range lps {
-		if lp.err != nil {
-			logging.Warningf(e.context, "skipping %s: %s", lp.ticker, lp.err.Error())
-			continue
-		}
 		tss := stats.TimeseriesIntersect(lp.ts, e.refTS)
 		p := tss[0]
 		ref := tss[1]
@@ -307,11 +300,9 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 	return &res
 }
 
-// processLpStats accumulates statistics from the iterator. The log-profits may
-// be either the actual historical price series or synthetically generated
-// series.
+// processLpStats accumulates partially reduced statistics from the iterator and
+// generates the necessary plots.
 func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
-
 	var res lpStats
 	if e.config.RPlot != nil {
 		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
