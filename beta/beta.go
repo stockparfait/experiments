@@ -189,21 +189,23 @@ func (e *Beta) processData() error {
 }
 
 type csvRow struct {
-	Ticker string
-	Beta   float64
-	Pmean  float64
-	PMAD   float64
-	Rmean  float64
-	RMAD   float64
+	Ticker  string
+	Samples int
+	Beta    float64
+	Pmean   float64
+	PMAD    float64
+	Rmean   float64
+	RMAD    float64
 }
 
 func csvRowHeader() []string {
-	return []string{"Ticker", "E[P]", "MAD[P]", "Beta", "E[R]", "MAD[R]"}
+	return []string{"Ticker", "Samples", "Beta", "E[P]", "MAD[P]", "E[R]", "MAD[R]"}
 }
 
 func (r csvRow) CSV() []string {
 	return []string{
 		r.Ticker,
+		fmt.Sprintf("%d", r.Samples),
 		fmt.Sprintf("%f", r.Beta),
 		fmt.Sprintf("%f", r.Pmean),
 		fmt.Sprintf("%f", r.PMAD),
@@ -356,12 +358,13 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		res.tickers++
 		res.samples += len(p.Data())
 		res.rows = append(res.rows, csvRow{
-			Ticker: lp.ticker,
-			Beta:   beta,
-			Pmean:  sampleP.Mean(),
-			PMAD:   sampleP.MAD(),
-			Rmean:  sampleR.Mean(),
-			RMAD:   sampleR.MAD(),
+			Ticker:  lp.ticker,
+			Samples: len(p.Data()),
+			Beta:    beta,
+			Pmean:   sampleP.Mean(),
+			PMAD:    sampleP.MAD(),
+			Rmean:   sampleR.Mean(),
+			RMAD:    sampleR.MAD(),
 		})
 	}
 	return &res
