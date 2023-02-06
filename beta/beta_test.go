@@ -133,7 +133,7 @@ func TestBeta(t *testing.T) {
 				var betaExp Beta
 				So(betaExp.Run(ctx, &cfg), ShouldBeNil)
 
-				So(testutil.FileExists(csvFile), ShouldBeFalse) // TODO
+				So(testutil.FileExists(csvFile), ShouldBeTrue)
 				So(len(betaGraph.Plots), ShouldEqual, 1)
 				So(len(RGraph.Plots), ShouldEqual, 1)
 				So(len(MeansGraph.Plots), ShouldEqual, 1)
@@ -163,7 +163,7 @@ func TestBeta(t *testing.T) {
 			var betaExp Beta
 			So(betaExp.Run(ctx, &cfg), ShouldBeNil)
 
-			So(testutil.FileExists(csvFile), ShouldBeFalse) // TODO
+			So(testutil.FileExists(csvFile), ShouldBeTrue)
 			So(len(betaGraph.Plots), ShouldEqual, 1)
 			So(len(RGraph.Plots), ShouldEqual, 1)
 			So(len(MeansGraph.Plots), ShouldEqual, 1)

@@ -21,6 +21,8 @@ package beta
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"runtime"
 	"time"
 
@@ -31,6 +33,7 @@ import (
 	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/stats"
+	"github.com/stockparfait/stockparfait/table"
 )
 
 type Beta struct {
@@ -185,12 +188,39 @@ func (e *Beta) processData() error {
 	return nil
 }
 
+type csvRow struct {
+	Ticker string
+	Beta   float64
+	Pmean  float64
+	PMAD   float64
+	Rmean  float64
+	RMAD   float64
+}
+
+func csvRowHeader() []string {
+	return []string{"Ticker", "E[P]", "MAD[P]", "Beta", "E[R]", "MAD[R]"}
+}
+
+func (r csvRow) CSV() []string {
+	return []string{
+		r.Ticker,
+		fmt.Sprintf("%f", r.Beta),
+		fmt.Sprintf("%f", r.Pmean),
+		fmt.Sprintf("%f", r.PMAD),
+		fmt.Sprintf("%f", r.Rmean),
+		fmt.Sprintf("%f", r.RMAD),
+	}
+}
+
 type lpStats struct {
-	betas  []float64
-	means  []float64
-	mads   []float64
-	sigmas []float64
-	histR  *stats.Histogram
+	betas   []float64
+	means   []float64
+	mads    []float64
+	sigmas  []float64
+	histR   *stats.Histogram
+	tickers int
+	samples int
+	rows    []table.Row
 }
 
 // Merge s2 into s. If error is returned, s remains unmodified.
@@ -204,6 +234,33 @@ func (s *lpStats) Merge(s2 *lpStats) error {
 	s.means = append(s.means, s2.means...)
 	s.mads = append(s.mads, s2.mads...)
 	s.sigmas = append(s.sigmas, s2.sigmas...)
+	s.tickers += s2.tickers
+	s.samples += s2.samples
+	s.rows = append(s.rows, s2.rows...)
+	return nil
+}
+
+func (e *Beta) writeTable(rows []table.Row) error {
+	if e.config.File == "" {
+		return nil
+	}
+	t := table.NewTable(csvRowHeader()...)
+	t.AddRow(rows...)
+	if e.config.File == "-" {
+		if err := t.WriteText(os.Stdout, table.Params{}); err != nil {
+			return errors.Annotate(err, "failed to write table to stdout")
+		}
+		return nil
+	}
+	f, err := os.OpenFile(e.config.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return errors.Annotate(err, "failed to open output CSV file '%s'",
+			e.config.File)
+	}
+	defer f.Close()
+	if err = t.WriteCSV(f, table.Params{}); err != nil {
+		return errors.Annotate(err, "failed to write CSV file '%s'", e.config.File)
+	}
 	return nil
 }
 
@@ -296,6 +353,16 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		if sigmaP := sampleP.Sigma(); sigmaP != 0 {
 			res.sigmas = append(res.sigmas, sampleR.Sigma()/sigmaP)
 		}
+		res.tickers++
+		res.samples += len(p.Data())
+		res.rows = append(res.rows, csvRow{
+			Ticker: lp.ticker,
+			Beta:   beta,
+			Pmean:  sampleP.Mean(),
+			PMAD:   sampleP.MAD(),
+			Rmean:  sampleR.Mean(),
+			RMAD:   sampleR.MAD(),
+		})
 	}
 	return &res
 }
@@ -312,6 +379,12 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 			logging.Warningf(e.context, "failed to merge some tickers", err.Error())
 		}
 	}
+	if err := e.AddValue(e.context, "tickers", fmt.Sprintf("%d", res.tickers)); err != nil {
+		return errors.Annotate(err, "failed to add %s value", e.Prefix("tickers"))
+	}
+	if err := e.AddValue(e.context, "samples", fmt.Sprintf("%d", res.samples)); err != nil {
+		return errors.Annotate(err, "failed to add %s value", e.Prefix("samples"))
+	}
 	if e.config.BetaPlot != nil {
 		betasDist := stats.NewSampleDistribution(res.betas, &e.config.BetaPlot.Buckets)
 		err := experiments.PlotDistribution(e.context, betasDist, e.config.BetaPlot,
@@ -319,6 +392,9 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 		if err != nil {
 			return errors.Annotate(err, "failed to plot betas")
 		}
+	}
+	if err := e.writeTable(res.rows); err != nil {
+		return errors.Annotate(err, "failed to write table")
 	}
 	if e.config.RPlot != nil {
 		RDist := stats.NewHistogramDistribution(res.histR)
