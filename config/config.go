@@ -487,6 +487,11 @@ type Beta struct {
 	RMeansPlot  *DistributionPlot `json:"R means"`   // distribution of E[R]
 	RMADsPlot   *DistributionPlot `json:"R MADs"`    // distribution of MAD[R]/MAD[P]
 	RSigmasPlot *DistributionPlot `json:"R Sigmas"`  // distribution of sigma[R]/sigma[P]
+	// Histogram of pairwise cross-correlations of R.
+	RCorrPlot *DistributionPlot `json:"R correlations"`
+	// When >0, sample this many random pairs to compute
+	// cross-correlation. Enumerate all the pairs when 0.
+	RCorrSamples int `json:"R correlations samples"`
 }
 
 var _ ExperimentConfig = &Beta{}
@@ -511,6 +516,10 @@ func (e *Beta) InitMessage(js any) error {
 	}
 	if e.StartDate.IsZero() {
 		e.StartDate = db.NewDate(1998, 1, 2)
+	}
+	if e.RCorrSamples < 0 {
+		return errors.Reason(`"R correlations samples"=%d must be >= 0`,
+			e.RCorrSamples)
 	}
 	return nil
 }

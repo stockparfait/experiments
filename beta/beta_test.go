@@ -23,6 +23,7 @@ import (
 
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
+	"github.com/stockparfait/iterator"
 	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/plot"
@@ -69,6 +70,8 @@ func TestBeta(t *testing.T) {
 		So(err, ShouldBeNil)
 		SigmasGraph, err := canvas.EnsureGraph(plot.KindXY, "sigmas", "group")
 		So(err, ShouldBeNil)
+		CorrGraph, err := canvas.EnsureGraph(plot.KindXY, "corr", "group")
+		So(err, ShouldBeNil)
 
 		Convey("with price data", func() {
 			dbName := "db"
@@ -76,6 +79,7 @@ func TestBeta(t *testing.T) {
 				"I": {},
 				"A": {},
 				"B": {},
+				"C": {},
 			}
 			prices := map[string][]db.PriceRow{
 				"I": {
@@ -98,6 +102,13 @@ func TestBeta(t *testing.T) {
 					price("2020-01-03", 11),
 					price("2020-01-04", 18),
 					price("2020-01-05", 45),
+				},
+				"C": {
+					price("2020-01-01", 5),
+					price("2020-01-02", 5.5),
+					price("2020-01-03", 6),
+					price("2020-01-04", 4.5),
+					price("2020-01-05", 8),
 				},
 			}
 			w := db.NewWriter(tmpdir, dbName)
@@ -157,7 +168,8 @@ func TestBeta(t *testing.T) {
   "R plot": {"graph": "R"},
   "R means": {"graph": "means"},
   "R MADs": {"graph": "mads"},
-  "R Sigmas": {"graph": "sigmas"}
+  "R Sigmas": {"graph": "sigmas"},
+  "R correlations": {"graph": "corr"}
 }`, csvFile)
 			So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
 			var betaExp Beta
@@ -169,6 +181,32 @@ func TestBeta(t *testing.T) {
 			So(len(MeansGraph.Plots), ShouldEqual, 1)
 			So(len(MADsGraph.Plots), ShouldEqual, 1)
 			So(len(SigmasGraph.Plots), ShouldEqual, 1)
+			So(len(CorrGraph.Plots), ShouldEqual, 1)
 		})
+	})
+}
+
+func TestIterators(t *testing.T) {
+	t.Parallel()
+
+	Convey("nxnPairs works", t, func() {
+		So(iterator.ToSlice[intPair](&nxnPairs{n: 4}), ShouldResemble, []intPair{
+			{0, 1},
+			{0, 2},
+			{0, 3},
+			{1, 2},
+			{1, 3},
+			{2, 3},
+		})
+	})
+
+	Convey("randPairs works", t, func() {
+		n, k := 10, 5
+		pairs := iterator.ToSlice[intPair](newRandPairs(n, k, 42))
+		So(len(pairs), ShouldEqual, k)
+		for _, p := range pairs {
+			So(p.x, ShouldBeLessThan, p.y)
+			So(p.y, ShouldBeLessThan, n)
+		}
 	})
 }
