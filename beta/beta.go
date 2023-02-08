@@ -22,6 +22,7 @@ package beta
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"runtime"
 	"time"
@@ -220,6 +221,7 @@ type lpStats struct {
 	mads    []float64
 	sigmas  []float64
 	histR   *stats.Histogram
+	rs      []*stats.Timeseries // for computing cross-correlations
 	tickers int
 	samples int
 	rows    []table.Row
@@ -236,6 +238,7 @@ func (s *lpStats) Merge(s2 *lpStats) error {
 	s.means = append(s.means, s2.means...)
 	s.mads = append(s.mads, s2.mads...)
 	s.sigmas = append(s.sigmas, s2.sigmas...)
+	s.rs = append(s.rs, s2.rs...)
 	s.tickers += s2.tickers
 	s.samples += s2.samples
 	s.rows = append(s.rows, s2.rows...)
@@ -333,6 +336,9 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		ref := tss[1]
 		beta := computeBeta(p.Data(), ref.Data())
 		r := p.Sub(ref.MultC(beta))
+		if e.config.RCorrPlot != nil {
+			res.rs = append(res.rs, r)
+		}
 		sampleP := stats.NewSample().Init(p.Data())
 		sampleR := stats.NewSample().Init(r.Data())
 		if sampleR.MAD() == 0 {
@@ -368,6 +374,137 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		})
 	}
 	return &res
+}
+
+type intPair struct {
+	x int
+	y int
+}
+
+// nIter produces all pairs of n sequential integers from 0 to n-1 above the
+// diagonal. Total of n*(n-1)/2 values.
+type nxnPairs struct {
+	i int
+	j int
+	n int
+}
+
+var _ iterator.Iterator[intPair] = &nxnPairs{}
+
+func (it *nxnPairs) Next() (intPair, bool) {
+	if it.i+1 >= it.n {
+		return intPair{}, false
+	}
+	if it.j <= it.i {
+		it.j = it.i + 1
+	}
+	res := intPair{it.i, it.j}
+	it.j++
+	if it.j >= it.n {
+		it.i++
+		it.j = it.i + 1
+	}
+	return res, true
+}
+
+// randPairs returns k random pairs (i, j) such that i in [0..n-1] and j in
+// [i+1..n-1].
+type randPairs struct {
+	rand *rand.Rand
+	i    int
+	n    int
+	k    int
+}
+
+var _ iterator.Iterator[intPair] = &randPairs{}
+
+// newRandPairs initializes the randPairs iterator. Use seed=0 in production
+// (this creates a new random seed), and >=1 in tests for deterministic
+// behavior.
+func newRandPairs(n, k int, seed int64) *randPairs {
+	if seed <= 0 {
+		seed = int64(time.Now().UnixNano())
+	}
+	return &randPairs{
+		rand: rand.New(rand.NewSource(seed)),
+		n:    n,
+		k:    k,
+	}
+}
+
+func (it *randPairs) Next() (intPair, bool) {
+	if it.n < 2 || it.i >= it.k {
+		return intPair{}, false
+	}
+	it.i++
+	i := it.rand.Intn(it.n - 1)
+	j := it.rand.Intn(it.n-i-1) + i + 1
+	return intPair{i, j}, true
+}
+
+// correlation between t1 and t2, if the second result is true, undefined
+// otherwise.
+func (e *Beta) correlation(t1, t2 *stats.Timeseries) (float64, bool) {
+	aligned := stats.TimeseriesIntersect(t1, t2)
+	t1 = aligned[0]
+	t2 = aligned[1]
+	if len(t1.Data()) < 3 {
+		return 0, false
+	}
+	sample1 := stats.NewSample().Init(t1.Data())
+	sample2 := stats.NewSample().Init(t2.Data())
+	mean1 := sample1.Mean()
+	sigma1 := sample1.Sigma()
+	if sigma1 == 0 {
+		return 0, false
+	}
+	mean2 := sample2.Mean()
+	sigma2 := sample2.Sigma()
+	if sigma2 == 0 {
+		return 0, false
+	}
+	var sum float64
+	for k := 0; k < len(t1.Data()); k++ {
+		sum += (t1.Data()[k] - mean1) * (t2.Data()[k] - mean2)
+	}
+	corr := sum / float64(len(t1.Data())) / sigma1 / sigma2
+	if corr < -1 || corr > 1 {
+		// This usually happens when a sigma is too close to 0.
+		return 0, false
+	}
+	return corr, true
+}
+
+// crossCorrelations computes pairwise correlations between the Timeseries and
+// populates a histogram with the results. The number of pairs is determined by
+// the e.config.RCorrSamples.
+func (e *Beta) crossCorrelations(tss []*stats.Timeseries, buckets *stats.Buckets) stats.DistributionWithHistogram {
+	// Compute correlation(tss[i], tss[j]) for (i, j) in "pairs".
+	f := func(pairs []intPair) *stats.Histogram {
+		h := stats.NewHistogram(buckets)
+		for _, p := range pairs {
+			corr, ok := e.correlation(tss[p.x], tss[p.y])
+			if !ok {
+				continue
+			}
+			h.Add(corr)
+		}
+		return h
+	}
+	var pairsIter iterator.Iterator[intPair]
+	if e.config.RCorrSamples <= 0 || len(tss)*(len(tss)-1)/2 <= e.config.RCorrSamples {
+		pairsIter = &nxnPairs{n: len(tss)}
+	} else {
+		pairsIter = newRandPairs(len(tss), e.config.RCorrSamples, 0)
+	}
+	it := iterator.Batch(pairsIter, e.config.BatchSize)
+	pm := iterator.ParallelMap[[]intPair, *stats.Histogram](e.context, 2*runtime.NumCPU(), it, f)
+	defer pm.Close()
+	h := stats.NewHistogram(buckets)
+	for v, ok := pm.Next(); ok; v, ok = pm.Next() {
+		h.AddHistogram(v)
+	}
+	return stats.NewHistogramDistribution(h)
 }
 
 // processLpStats accumulates partially reduced statistics from the iterator and
@@ -430,6 +567,24 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 			e.config.ID, "R Sigmas")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot R Sigmas")
+		}
+	}
+	if e.config.RCorrPlot != nil {
+		corrDist := e.crossCorrelations(res.rs, &e.config.RCorrPlot.Buckets)
+		counts := corrDist.Histogram().CountsTotal()
+		if counts < 2 { // too few for a plot
+			logging.Warningf(e.context,
+				"skipping R correlations plot: only %d points", counts)
+		} else {
+			err := experiments.PlotDistribution(e.context, corrDist, e.config.RCorrPlot,
+				e.config.ID, "R cross-correlations")
+			if err != nil {
+				return errors.Annotate(err, "failed to plot R cross-correlations")
+			}
+			if err := e.AddValue(e.context, "cross-correlations",
+				fmt.Sprintf("%d", counts)); err != nil {
+				return errors.Annotate(err, "failed to add %s value", e.Prefix("samples"))
+			}
 		}
 	}
 	return nil
