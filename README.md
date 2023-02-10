@@ -57,8 +57,8 @@ make init
 make install
 ```
 
-This installs an executable `experiments` in your `${GOPATH}/bin` (run `go env
-GOPATH` to find out where your `GOPATH` is).
+This installs an executable `experiments` in your `${GOPATH}/bin`, where
+```GOPATH=`go env GOPATH` ```.
 
 ## Quick start
 
