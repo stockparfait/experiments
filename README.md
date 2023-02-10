@@ -46,7 +46,7 @@ section for details on how to use such configs with the tool.
 
 Requirements:
 - [Google Go](https://go.dev/dl/) 1.18 or higher;
-- `sharadar` app to download data; see [stockparfait/stockparfait] for
+- `parfait-sharadar` app to download data; see [stockparfait/stockparfait] for
   installation instructions;
 - Subscription to Sharadar Equities Prices on [Nasdaq Data Link]
 
@@ -57,15 +57,15 @@ make init
 make install
 ```
 
-This installs an executable `experiments` in your `${GOPATH}/bin` (run `go env
-GOPATH` to find out where your `GOPATH` is).
+This installs an executable `experiments` in your `${GOPATH}/bin`, where
+```GOPATH=`go env GOPATH` ```.
 
 ## Quick start
 
 - Subscribe to the data source on [Nasdaq Data Link]; most of these experiments
   use only the equities prices.
-- Download the data by running `sharadar` - see [stockparfait/stockparfait] for
-  details.
+- Download the data by running `parfait-sharadar` - see
+  [stockparfait/stockparfait] for details.
 - Copy `stockparfait/stockparfait/js` folder contents to a separate working
   directory, for example `~/plots/`; here I'll refer to it as `${PLOTS}`.
 - Run an experiment.
@@ -73,7 +73,7 @@ GOPATH` to find out where your `GOPATH` is).
 An example of these steps together:
 
 ```sh
-${GOPATH}/bin/sharadar
+${GOPATH}/bin/parfait-sharadar
 mkdir -p ${PLOTS}
 cp stockparfait/stockparfait/js/* ${PLOTS}
 experiments -conf ${CONFIG}.json -js ${PLOTS}/data.js
