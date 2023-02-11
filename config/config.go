@@ -187,7 +187,8 @@ func (f *DeriveAlpha) InitMessage(js any) error {
 // DistributionPlot is a config for plotting a given distribution's histogram,
 // its statistics, and its approximation by an analytical distribution.
 type DistributionPlot struct {
-	Graph          string                `json:"graph" required:"true"`
+	// At least one of Graph or CountsGraph must be present.
+	Graph          string                `json:"graph"`        // plot distribution
 	CountsGraph    string                `json:"counts graph"` // plot buckets' counts
 	ErrorsGraph    string                `json:"errors graph"` // plot bucket's standard errors
 	Buckets        stats.Buckets         `json:"buckets"`
@@ -215,6 +216,9 @@ var _ message.Message = &DistributionPlot{}
 func (dp *DistributionPlot) InitMessage(js any) error {
 	if err := message.Init(dp, js); err != nil {
 		return errors.Annotate(err, "failed to init DistributionPlot")
+	}
+	if dp.Graph == "" && dp.CountsGraph == "" {
+		return errors.Reason(`expected at least one of "graph" or "counts graph"`)
 	}
 	for _, p := range dp.Percentiles {
 		if p < 0.0 || 100.0 < p {
@@ -492,6 +496,8 @@ type Beta struct {
 	// When >0, sample this many random pairs to compute
 	// cross-correlation. Enumerate all the pairs when 0.
 	RCorrSamples int `json:"R correlations samples"`
+	// Distribution of lengths of correlation log-profit sequences.
+	LengthsPlot *DistributionPlot `json:"lengths plot"`
 }
 
 var _ ExperimentConfig = &Beta{}
