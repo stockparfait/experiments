@@ -220,6 +220,7 @@ type lpStats struct {
 	means   []float64
 	mads    []float64
 	sigmas  []float64
+	lengths []float64
 	histR   *stats.Histogram
 	rs      []*stats.Timeseries // for computing cross-correlations
 	tickers int
@@ -231,13 +232,14 @@ type lpStats struct {
 func (s *lpStats) Merge(s2 *lpStats) error {
 	if s.histR != nil {
 		if err := s.histR.AddHistogram(s2.histR); err != nil {
-			return errors.Annotate(err, "failed to merge Histograms")
+			return errors.Annotate(err, "failed to merge R histograms")
 		}
 	}
 	s.betas = append(s.betas, s2.betas...)
 	s.means = append(s.means, s2.means...)
 	s.mads = append(s.mads, s2.mads...)
 	s.sigmas = append(s.sigmas, s2.sigmas...)
+	s.lengths = append(s.lengths, s2.lengths...)
 	s.rs = append(s.rs, s2.rs...)
 	s.tickers += s2.tickers
 	s.samples += s2.samples
@@ -360,6 +362,7 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		if sigmaP := sampleP.Sigma(); sigmaP != 0 {
 			res.sigmas = append(res.sigmas, sampleR.Sigma()/sigmaP)
 		}
+		res.lengths = append(res.lengths, float64(len(p.Data())))
 		res.tickers++
 		res.samples += len(p.Data())
 		res.rows = append(res.rows, csvRow{
@@ -585,6 +588,14 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 				return errors.Annotate(err, "failed to add %s value",
 					e.Prefix("R cross-correlations"))
 			}
+		}
+	}
+	if e.config.LengthsPlot != nil {
+		dist := stats.NewSampleDistribution(res.lengths, &e.config.LengthsPlot.Buckets)
+		err := experiments.PlotDistribution(e.context, dist, e.config.LengthsPlot,
+			e.config.ID, "lengths")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot lengths")
 		}
 	}
 	return nil

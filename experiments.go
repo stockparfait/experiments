@@ -139,10 +139,8 @@ func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c
 	}
 	var xs0 []float64
 	var ys []float64
-	yLabel := "p.d.f."
 
 	h := dh.Histogram()
-
 	if c.UseMeans {
 		xs0 = h.Xs()
 	} else {
@@ -152,21 +150,8 @@ func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c
 	ys = h.PDFs()
 	xs, ys := filterXY(xs0, ys, c)
 	min, max := minMax(ys)
-	plt, err := plot.NewXYPlot(xs, ys)
-	if err != nil {
-		return errors.Annotate(err, "failed to create plot '%s'", legend)
-	}
-	plt.SetLegend(legend + " " + yLabel)
-	if c.LogY {
-		yLabel = "log10(" + yLabel + ")"
-	}
-	plt.SetYLabel(yLabel)
-	if c.ChartType == "bars" {
-		plt.SetChartType(plot.ChartBars)
-	}
-	plt.SetLeftAxis(c.LeftAxis)
-	if err := plot.Add(ctx, plt, c.Graph); err != nil {
-		return errors.Annotate(err, "failed to add plot '%s'", legend)
+	if err := plotDist(ctx, h, xs, ys, c, prefix, legend); err != nil {
+		return errors.Annotate(err, "failed to plot '%s'", legend)
 	}
 	if err := plotCounts(ctx, h, xs0, c, prefix, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s counts'", legend)
@@ -190,6 +175,31 @@ func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c
 	}
 	if err := AddValue(ctx, prefix, legend+" P(X > mean+10*sigma)", fmt.Sprintf("%.4g", 1.0-dh.CDF(dh.Mean()+10*math.Sqrt(dh.Variance())))); err != nil {
 		return errors.Annotate(err, "failed to add value for '%s P(X > mean+10*sigma)'", legend)
+	}
+	return nil
+}
+
+func plotDist(ctx context.Context, h *stats.Histogram, xs, ys []float64, c *config.DistributionPlot, prefix, legend string) error {
+	if c.Graph == "" {
+		return nil
+	}
+	legend = Prefix(prefix, legend)
+	plt, err := plot.NewXYPlot(xs, ys)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s'", legend)
+	}
+	yLabel := "p.d.f."
+	plt.SetLegend(legend + " " + yLabel)
+	if c.LogY {
+		yLabel = "log10(" + yLabel + ")"
+	}
+	plt.SetYLabel(yLabel)
+	if c.ChartType == "bars" {
+		plt.SetChartType(plot.ChartBars)
+	}
+	plt.SetLeftAxis(c.LeftAxis)
+	if err := plot.Add(ctx, plt, c.Graph); err != nil {
+		return errors.Annotate(err, "failed to add plot '%s'", legend)
 	}
 	return nil
 }
@@ -248,6 +258,9 @@ func plotErrors(ctx context.Context, h *stats.Histogram, xs []float64, c *config
 }
 
 func plotMean(ctx context.Context, dh stats.DistributionWithHistogram, graph string, min, max float64, legend string) error {
+	if graph == "" {
+		return nil
+	}
 	x := dh.Mean()
 	plt, err := plot.NewXYPlot([]float64{x, x}, []float64{min, max})
 	if err != nil {
