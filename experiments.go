@@ -275,6 +275,9 @@ func plotMean(ctx context.Context, dh stats.DistributionWithHistogram, graph str
 }
 
 func plotPercentiles(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, min, max float64, legend string) error {
+	if c.Graph == "" {
+		return nil
+	}
 	for _, p := range c.Percentiles {
 		x := dh.Quantile(p / 100.0)
 		plt, err := plot.NewXYPlot([]float64{x, x}, []float64{min, max})
@@ -423,7 +426,7 @@ func DeriveAlpha(h *stats.Histogram, mean, MAD float64, c *config.DeriveAlpha) f
 }
 
 func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *config.DistributionPlot, prefix, legend string) error {
-	if c.RefDist == nil {
+	if c.RefDist == nil || c.Graph == "" {
 		return nil
 	}
 	dc := *c.RefDist // semi-deep copy, to modify locally
