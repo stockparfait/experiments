@@ -137,6 +137,14 @@ func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c
 	if c == nil {
 		return nil
 	}
+
+	if err := AddValue(ctx, prefix, legend+" P(X < mean-10*sigma)", fmt.Sprintf("%.4g", dh.CDF(dh.Mean()-10*math.Sqrt(dh.Variance())))); err != nil {
+		return errors.Annotate(err, "failed to add value for '%s P(X < mean-10*sigma)'", legend)
+	}
+	if err := AddValue(ctx, prefix, legend+" P(X > mean+10*sigma)", fmt.Sprintf("%.4g", 1.0-dh.CDF(dh.Mean()+10*math.Sqrt(dh.Variance())))); err != nil {
+		return errors.Annotate(err, "failed to add value for '%s P(X > mean+10*sigma)'", legend)
+	}
+
 	var xs0 []float64
 	var ys []float64
 
@@ -150,40 +158,34 @@ func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c
 	ys = h.PDFs()
 	xs, ys := filterXY(xs0, ys, c)
 	min, max := minMax(ys)
-	if err := plotDist(ctx, h, xs, ys, c, prefix, legend); err != nil {
+	prefixedLegend := Prefix(prefix, legend)
+	if err := plotDist(ctx, h, xs, ys, c, prefixedLegend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s'", legend)
 	}
-	if err := plotCounts(ctx, h, xs0, c, prefix, legend); err != nil {
+	if err := plotCounts(ctx, h, xs0, c, prefixedLegend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s counts'", legend)
 	}
-	if err := plotErrors(ctx, h, xs0, c, legend); err != nil {
+	if err := plotErrors(ctx, h, xs0, c, prefixedLegend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s errors'", legend)
 	}
 	if c.PlotMean {
-		if err := plotMean(ctx, dh, c.Graph, min, max, legend); err != nil {
+		if err := plotMean(ctx, dh, c.Graph, min, max, prefixedLegend); err != nil {
 			return errors.Annotate(err, "failed to plot '%s mean'", legend)
 		}
 	}
-	if err := plotPercentiles(ctx, dh, c, min, max, legend); err != nil {
+	if err := plotPercentiles(ctx, dh, c, min, max, prefixedLegend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s percentiles'", legend)
 	}
 	if err := plotAnalytical(ctx, dh, c, prefix, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s ref dist'", legend)
 	}
-	if err := AddValue(ctx, prefix, legend+" P(X < mean-10*sigma)", fmt.Sprintf("%.4g", dh.CDF(dh.Mean()-10*math.Sqrt(dh.Variance())))); err != nil {
-		return errors.Annotate(err, "failed to add value for '%s P(X < mean-10*sigma)'", legend)
-	}
-	if err := AddValue(ctx, prefix, legend+" P(X > mean+10*sigma)", fmt.Sprintf("%.4g", 1.0-dh.CDF(dh.Mean()+10*math.Sqrt(dh.Variance())))); err != nil {
-		return errors.Annotate(err, "failed to add value for '%s P(X > mean+10*sigma)'", legend)
-	}
 	return nil
 }
 
-func plotDist(ctx context.Context, h *stats.Histogram, xs, ys []float64, c *config.DistributionPlot, prefix, legend string) error {
+func plotDist(ctx context.Context, h *stats.Histogram, xs, ys []float64, c *config.DistributionPlot, legend string) error {
 	if c.Graph == "" {
 		return nil
 	}
-	legend = Prefix(prefix, legend)
 	plt, err := plot.NewXYPlot(xs, ys)
 	if err != nil {
 		return errors.Annotate(err, "failed to create plot '%s'", legend)
@@ -204,11 +206,10 @@ func plotDist(ctx context.Context, h *stats.Histogram, xs, ys []float64, c *conf
 	return nil
 }
 
-func plotCounts(ctx context.Context, h *stats.Histogram, xs []float64, c *config.DistributionPlot, prefix, legend string) error {
+func plotCounts(ctx context.Context, h *stats.Histogram, xs []float64, c *config.DistributionPlot, legend string) error {
 	if c.CountsGraph == "" {
 		return nil
 	}
-	legend = Prefix(prefix, legend)
 	cs := make([]float64, len(h.Counts()))
 	for i, y := range h.Counts() {
 		cs[i] = float64(y)
