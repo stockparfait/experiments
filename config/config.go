@@ -484,7 +484,8 @@ type Beta struct {
 	Tickers int     `json:"tickers" default:"1"`    // #synthetic tickers
 	Samples int     `json:"samples" default:"5000"` // #synthetic prices per ticker
 	// Generate synthetic tickers with the number of log-profits given by the
-	// list.  Overrides Tickers and Samples.
+	// list.  Overrides Tickers and Samples. However, Samples is still used to
+	// generate the synthetic reference sequence; set it to max(SamplesLengths).
 	SamplesLengths []int `json:"samples lengths"`
 	// All synthetic sequences start on this day; default:"1998-01-02".
 	StartDate db.Date `json:"start date"`
