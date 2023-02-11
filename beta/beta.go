@@ -21,6 +21,7 @@ package beta
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -104,11 +105,11 @@ type logProfits struct {
 
 // generateTS generates a synthetic log-profit Timeseries based on config and
 // log-profit Distribution.
-func (e *Beta) generateTS(d stats.Distribution) logProfits {
+func (e *Beta) generateTS(d stats.Distribution, samples int) logProfits {
 	date := e.config.StartDate
-	dates := make([]db.Date, e.config.Samples)
-	data := make([]float64, e.config.Samples)
-	for i := 0; i < e.config.Samples; i++ {
+	dates := make([]db.Date, samples)
+	data := make([]float64, samples)
+	for i := 0; i < samples; i++ {
 		t := date.ToTime()
 		if t.Weekday() == time.Saturday {
 			t = t.Add(2 * 24 * time.Hour)
@@ -135,24 +136,48 @@ func (e *Beta) processRefAnalytical() error {
 	if err != nil {
 		return errors.Annotate(err, "failed to create synthetic ref. distribution")
 	}
-	e.refTS = e.generateTS(d).ts
+	e.refTS = e.generateTS(d, e.config.Samples).ts
 	return nil
 }
 
-// distIter generates N copies of a Distribution.
-type distIter struct {
+// tsConfig configures generateTS to generate a synthetic Timeseries of length n
+// using the given distribution copy.
+type tsConfig struct {
 	d stats.Distribution
 	n int
 }
 
-var _ iterator.Iterator[stats.Distribution] = &distIter{}
+// repeatIter repeats n times the value v.
+type repeatIter struct {
+	v int
+	n int
+}
 
-func (it *distIter) Next() (stats.Distribution, bool) {
+var _ iterator.Iterator[int] = &repeatIter{}
+
+func (it *repeatIter) Next() (int, bool) {
 	if it.n <= 0 {
-		return nil, false
+		return 0, false
 	}
 	it.n--
-	return it.d.Copy(), true
+	return it.v, true
+}
+
+// distIter generates tsConfig sequence based on the iterator for the sequence
+// lengths.
+type distIter struct {
+	d           stats.Distribution
+	lengthsIter iterator.Iterator[int]
+}
+
+var _ iterator.Iterator[tsConfig] = &distIter{}
+
+func (it *distIter) Next() (tsConfig, bool) {
+	n, ok := it.lengthsIter.Next()
+	if !ok {
+		return tsConfig{}, false
+	}
+	return tsConfig{d: it.d.Copy(), n: n}, true
 }
 
 func (e *Beta) processData() error {
@@ -280,12 +305,18 @@ func (e *Beta) processAnalyticalR() error {
 	if err != nil {
 		return errors.Annotate(err, "failed to create synthetic R distribution")
 	}
-	distIt := &distIter{d: d, n: e.config.Tickers}
-	it := iterator.Batch[stats.Distribution](distIt, e.config.BatchSize)
-	f := func(ds []stats.Distribution) *lpStats {
-		res := make([]logProfits, len(ds))
-		for i, d := range ds {
-			lp := e.generateTS(d)
+	var lengthsIter iterator.Iterator[int]
+	if len(e.config.SamplesLengths) > 0 {
+		lengthsIter = iterator.FromSlice(e.config.SamplesLengths)
+	} else {
+		lengthsIter = &repeatIter{v: e.config.Samples, n: e.config.Tickers}
+	}
+	distIt := &distIter{d: d, lengthsIter: lengthsIter}
+	it := iterator.Batch[tsConfig](distIt, e.config.BatchSize)
+	f := func(cs []tsConfig) *lpStats {
+		res := make([]logProfits, len(cs))
+		for i, c := range cs {
+			lp := e.generateTS(c.d, c.n)
 			tss := stats.TimeseriesIntersect(e.refTS, lp.ts)
 			lp.ts = tss[0].MultC(e.config.Beta).Add(tss[1])
 			res[i] = lp
@@ -508,6 +539,24 @@ func (e *Beta) crossCorrelations(tss []*stats.Timeseries, buckets *stats.Buckets
 	return stats.NewHistogramDistribution(h)
 }
 
+func (e *Beta) saveLengths(lengths []float64) error {
+	if e.config.Data == nil || e.config.LengthsFile == "" {
+		return nil
+	}
+	f, err := os.OpenFile(e.config.LengthsFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return errors.Annotate(err, "failed to open lengths file '%s'",
+			e.config.LengthsFile)
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	if err := enc.Encode(lengths); err != nil {
+		return errors.Annotate(err, "failed to write JSON to '%s'",
+			e.config.LengthsFile)
+	}
+	return nil
+}
+
 // processLpStats accumulates partially reduced statistics from the iterator and
 // generates the necessary plots.
 func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
@@ -519,6 +568,10 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 		if err := res.Merge(s); err != nil {
 			logging.Warningf(e.context, "failed to merge some tickers", err.Error())
 		}
+	}
+	if err := e.saveLengths(res.lengths); err != nil {
+		return errors.Annotate(err, "failed to save lengths in '%s'",
+			e.config.LengthsFile)
 	}
 	if err := e.AddValue(e.context, "tickers", fmt.Sprintf("%d", res.tickers)); err != nil {
 		return errors.Annotate(err, "failed to add %s value", e.Prefix("tickers"))

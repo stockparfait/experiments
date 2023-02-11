@@ -122,6 +122,7 @@ func TestBeta(t *testing.T) {
 			Convey("all graphs", func() {
 				var cfg config.Beta
 				csvFile := filepath.Join(tmpdir, "betas.csv")
+				lengthsFile := filepath.Join(tmpdir, "lengths.json")
 				confJSON := fmt.Sprintf(`
 {
   "id": "testID",
@@ -136,18 +137,20 @@ func TestBeta(t *testing.T) {
     "tickers": ["A", "B"]
   },
   "file": "%s",
+  "lengths file": "%s",
   "beta plot": {"graph": "beta"},
   "R plot": {"graph": "R"},
   "R means": {"graph": "means"},
   "R MADs": {"graph": "mads"},
   "R Sigmas": {"graph": "sigmas"},
   "lengths plot": {"graph": "lengths"}
-}`, tmpdir, dbName, tmpdir, dbName, csvFile)
+}`, tmpdir, dbName, tmpdir, dbName, csvFile, lengthsFile)
 				So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
 				var betaExp Beta
 				So(betaExp.Run(ctx, &cfg), ShouldBeNil)
 
 				So(testutil.FileExists(csvFile), ShouldBeTrue)
+				So(testutil.FileExists(lengthsFile), ShouldBeTrue)
 				So(len(betaGraph.Plots), ShouldEqual, 1)
 				So(len(RGraph.Plots), ShouldEqual, 1)
 				So(len(MeansGraph.Plots), ShouldEqual, 1)
@@ -194,6 +197,11 @@ func TestBeta(t *testing.T) {
 
 func TestIterators(t *testing.T) {
 	t.Parallel()
+
+	Convey("repeatIter works", t, func() {
+		So(iterator.ToSlice[int](&repeatIter{42, 5}), ShouldResemble, []int{
+			42, 42, 42, 42, 42})
+	})
 
 	Convey("nxnPairs works", t, func() {
 		So(iterator.ToSlice[intPair](&nxnPairs{n: 4}), ShouldResemble, []intPair{

@@ -474,12 +474,19 @@ type Beta struct {
 	// Exactly one of Data or AnalyticalR must be non-nil. Each ticker in Data is
 	// analysed separately, contributing to statistics about beta and R.
 	// AnalyticalR is the distribution of R for synthetic tickers.
-	Data        *db.Reader              `json:"data"`
+	Data *db.Reader `json:"data"`
+	// Save correlated sequence lengths to file as a JSON list. The intent is to
+	// use it later in SamplesLengths.
+	LengthsFile string                  `json:"lengths file"`
 	AnalyticalR *AnalyticalDistribution `json:"analytical R"`
 	// Model P = beta * Ref + R for synthetic price series.
 	Beta    float64 `json:"beta" default:"1.0"`
 	Tickers int     `json:"tickers" default:"1"`    // #synthetic tickers
 	Samples int     `json:"samples" default:"5000"` // #synthetic prices per ticker
+	// Generate synthetic tickers with the number of log-profits given by the
+	// list.  Overrides Tickers and Samples. However, Samples is still used to
+	// generate the synthetic reference sequence; set it to max(SamplesLengths).
+	SamplesLengths []int `json:"samples lengths"`
 	// All synthetic sequences start on this day; default:"1998-01-02".
 	StartDate db.Date `json:"start date"`
 	BatchSize int     `json:"batch size" default:"100"` // #tickers in a single job
