@@ -4,24 +4,25 @@
 
 When we compute any statistic or estimate a parameter from sample data, there is
 always a sampling error. A generally accepted way to estimate such an error is
-to compute a [confidence interval] for a given _confidence level_ `P`, usually
+to compute a [confidence interval] for a given _confidence level_ `P`, sometimes
 expressed as `p=1-P`, or a _p-value_.
 
-More precisely, given the data samples `x = (x_1, ..., x_n)` of a known
-distribution with a parameter `theta` and an interval `[u(x)..v(x)]`, if the
-probability that the true value of `theta` is in this interval is `P`, then this
-interval is called a _confidence interval_ with the confidence level `P`, or
-equivalently, a p-value of `1-P`.
+More precisely, given a vector of random variables `X = (X_1, ..., X_n)` with a
+distribution `f(X|theta)`, a estimator `s(X)` to estimate the parameter `theta`,
+and an interval `CI(X)=[u(X)..v(X)]` for some statistics `u` and `v` such that
+`u(X)<=s(X)<=v(X)`, if the probability that `CI(X)` includes the true value of
+`theta` is `P`, then this interval is called a _confidence interval_ with the
+confidence level `P`.
 
-It may be infeasible to obtain a generic confidence interval computationally
-using this definition, but we can specialize it to [hypothesis testing].
+Intuitively, a confidence interval is useful for giving an idea about the
+accuracy of an estimator.
 
-Specifically, we'll be interested in the case when our null hypothesis states
-that the samples are generated using a particular distribution `f(X|theta)` for
-a specific `theta`.  An example of such a null hypothesis suggested in the
-previous section is that log-profits (normalized to `mean=0` and `MAD=1`) are
-distributed as a t-distribution with `a=3`, the alternative hypothesis being
-`a!=3`.
+Specifically, we'll be interested in the case of [hypothesis testing] when our
+null hypothesis states that the samples are generated using a particular
+distribution `f(X|theta)` for a specific `theta`.  An example of such a null
+hypothesis suggested in the previous section is that log-profits (normalized to
+`mean=0` and `MAD=1`) are distributed as a t-distribution with `a=3`, the
+alternative hypothesis being `a!=3`.
 
 In this case, we can construct the following experiment. Under the null
 hypothesis, we know the true value of `theta` for the distribution `f(X|theta)`.
