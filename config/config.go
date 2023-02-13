@@ -465,6 +465,49 @@ func (e *AutoCorrelation) InitMessage(js any) error {
 
 func (e *AutoCorrelation) Name() string { return "auto-correlation" }
 
+// ScatterPlot configures a generic scatter plot.
+type ScatterPlot struct {
+	Graph string `json:"graph" required:"true"`
+	// Expected line Y = incline * X + intercept.
+	Incline      float64 `json:"incline" default:"1.0"`
+	Intercept    float64 `json:"intercept"`
+	PlotExpected bool    `json:"plot expected"` // plot Y = incline*X+intercept
+	DeriveLine   bool    `json:"plot derived"`  // plot line from data
+}
+
+var _ message.Message = &ScatterPlot{}
+
+func (p *ScatterPlot) InitMessage(js any) error {
+	if err := message.Init(p, js); err != nil {
+		return errors.Annotate(err, "failed to init ScatterPlot")
+	}
+	return nil
+}
+
+// ShiftScatterPlot specifies a scatter plot of s[t-n] vs. s[t] for some
+// statistic s[t] over a Timeseries computed over k values [t-k+1..t].  Such a
+// plot shows if the statistic predicts its own value in the future.
+type ShiftScatterPlot struct {
+	Shift  int          `json:"shift" default:"1"`
+	Window int          `json:"window" default:"1"`
+	Plot   *ScatterPlot `json:"plot" required:"true"`
+}
+
+var _ message.Message = &ShiftScatterPlot{}
+
+func (p *ShiftScatterPlot) InitMessage(js any) error {
+	if err := message.Init(p, js); err != nil {
+		return errors.Annotate(err, "failed to init ShiftScatterPlot")
+	}
+	if p.Shift < 1 {
+		return errors.Reason(`"shift"=%d must be >= 1`, p.Shift)
+	}
+	if p.Window < 1 {
+		return errors.Reason(`"window"=%d must be >= 1`, p.Window)
+	}
+	return nil
+}
+
 // Beta experiment studies cross-correlation between stocks and/or an index.
 type Beta struct {
 	ID string `json:"id"` // experiment ID, for multiple instances
@@ -505,6 +548,8 @@ type Beta struct {
 	RCorrSamples int `json:"R correlations samples"`
 	// Distribution of lengths of correlation log-profit sequences.
 	LengthsPlot *DistributionPlot `json:"lengths plot"`
+	// Scatterplot of beta[t-shift] vs. beta[t].
+	BetaScatterPlot *ShiftScatterPlot `json:"beta scatter plot"`
 }
 
 var _ ExperimentConfig = &Beta{}

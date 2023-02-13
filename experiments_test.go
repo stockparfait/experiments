@@ -283,6 +283,33 @@ func TestExperiments(t *testing.T) {
 			So(len(g.Plots), ShouldEqual, 4) // avg + 2 percentiles + expected
 		})
 
+		Convey("PlotScatter works", func() {
+			var cfg config.ScatterPlot
+			js := testutil.JSON(`
+{
+  "graph": "main",
+  "incline": 2,
+  "intercept": 1,
+  "plot expected": true,
+  "plot derived": true
+}`)
+			So(cfg.InitMessage(js), ShouldBeNil)
+			f := func(x float64) float64 { return 2*x + 1 }
+			xs := []float64{2, 4, 1}
+			ys := make([]float64, len(xs))
+			for i, x := range xs {
+				ys[i] = f(x)
+			}
+			So(PlotScatter(ctx, xs, ys, &cfg, "", "scatter", "values"), ShouldBeNil)
+			So(len(g.Plots), ShouldEqual, 3)
+			So(g.Plots[0].X, ShouldResemble, xs)
+			So(g.Plots[0].Y, ShouldResemble, ys)
+			So(g.Plots[1].X, ShouldResemble, []float64{1, 4})
+			So(g.Plots[1].Y, ShouldResemble, []float64{3, 9})
+			So(g.Plots[2].X, ShouldResemble, []float64{1, 4})
+			So(g.Plots[2].Y, ShouldResemble, []float64{3, 9})
+		})
+
 		Convey("for TestExperiment", func() {
 			conf := config.TestExperimentConfig{
 				Grade:  3.5,

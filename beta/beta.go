@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"runtime"
@@ -335,26 +336,17 @@ func (e *Beta) processAnalyticalR() error {
 // computeBeta for p = beta*ref+R which minimizes Var[R]. Assumes that p and ref
 // have the same length.
 func computeBeta(p, ref []float64) float64 {
-	if len(p) != len(ref) {
-		panic(errors.Reason("len(p)=%d != len(ref)=%d", len(p), len(ref)))
-	}
 	if len(p) < 2 {
 		return 0
 	}
-	sampleP := stats.NewSample().Init(p)
-	sampleRef := stats.NewSample().Init(ref)
-	varRef := sampleRef.Variance()
-	if varRef == 0 {
+	beta, _, err := experiments.LeastSquares(ref, p)
+	if err != nil {
+		panic(errors.Annotate(err, "failed to compute beta"))
+	}
+	if math.IsInf(beta, 0) {
 		return 0
 	}
-	meanP := sampleP.Mean()
-	meanRef := sampleRef.Mean()
-
-	var cov float64
-	for i := range p {
-		cov += (p[i] - meanP) * (ref[i] - meanRef)
-	}
-	return cov / float64(len(p)) / varRef
+	return beta
 }
 
 func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
