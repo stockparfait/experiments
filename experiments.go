@@ -21,6 +21,7 @@ import (
 
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments/config"
+	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/plot"
 	"github.com/stockparfait/stockparfait/stats"
 )
@@ -628,6 +629,87 @@ func (c *CumulativeStatistic) Plot(ctx context.Context, yLabel, legend string) e
 		plt.SetChartType(plot.ChartDashed)
 		if err := plot.Add(ctx, plt, c.config.Graph); err != nil {
 			return errors.Annotate(err, "failed to add plot '%s expected'", legend)
+		}
+	}
+	return nil
+}
+
+func LeastSquares(xs, ys []float64) (incline float64, intercept float64, err error) {
+	if len(xs) != len(ys) {
+		err = errors.Reason("len(xs)=%d != len(ys)=%d", len(xs), len(ys))
+		return
+	}
+	if len(xs) < 2 {
+		err = errors.Reason("len(xs)=%d < 2: not enough points", len(xs))
+		return
+	}
+	sampleX := stats.NewSample().Init(xs)
+	sampleY := stats.NewSample().Init(ys)
+	varX := sampleX.Variance()
+	if varX == 0 {
+		incline = math.Inf(1)
+		return
+	}
+	meanX := sampleX.Mean()
+	meanY := sampleY.Mean()
+
+	var cov float64
+	for i, x := range xs {
+		cov += (x - meanX) * (ys[i] - meanY)
+	}
+	cov /= float64(len(xs))
+	incline = cov / varX
+	intercept = meanY - incline*meanX
+	return
+}
+
+func PlotScatter(ctx context.Context, xs, ys []float64, c *config.ScatterPlot, prefix, legend, yLabel string) error {
+	if c.Graph == "" {
+		return nil
+	}
+	if len(xs) != len(ys) {
+		return errors.Reason("len(xs)=%d != len(ys)=%d", len(xs), len(ys))
+	}
+	prefixedLegend := Prefix(prefix, legend)
+
+	plt, err := plot.NewXYPlot(xs, ys)
+	if err != nil {
+		return errors.Annotate(err, "failed to create plot '%s'", legend)
+	}
+	plt.SetChartType(plot.ChartScatter).SetYLabel(yLabel).SetLegend(prefixedLegend)
+	if err := plot.Add(ctx, plt, c.Graph); err != nil {
+		return errors.Annotate(err, "failed to add plot '%s'", legend)
+	}
+	minX, maxX := minMax(xs)
+	if c.PlotExpected {
+		lgd := prefixedLegend + " expected"
+		line := []float64{minX*c.Incline + c.Intercept, maxX*c.Incline + c.Intercept}
+		plt, err := plot.NewXYPlot([]float64{minX, maxX}, line)
+		if err != nil {
+			return errors.Annotate(err, "failed to create plot '%s'", lgd)
+		}
+		plt.SetChartType(plot.ChartDashed).SetYLabel(yLabel).SetLegend(lgd)
+		if err := plot.Add(ctx, plt, c.Graph); err != nil {
+			return errors.Annotate(err, "failed to add plot '%s'", lgd)
+		}
+	}
+	if c.DeriveLine {
+		a, b, err := LeastSquares(xs, ys)
+		lgd := prefixedLegend + " derived"
+		if err != nil {
+			logging.Warningf(ctx, "skipping %s: %s", lgd, err.Error())
+		}
+		if math.IsInf(a, 0) {
+			logging.Warningf(ctx, "skipping %s: incline is infinite", lgd)
+		}
+		line := []float64{minX*a + b, maxX*a + b}
+		plt, err := plot.NewXYPlot([]float64{minX, maxX}, line)
+		if err != nil {
+			return errors.Annotate(err, "failed to create plot '%s'", lgd)
+		}
+		plt.SetYLabel(yLabel).SetLegend(lgd)
+		if err := plot.Add(ctx, plt, c.Graph); err != nil {
+			return errors.Annotate(err, "failed to add plot '%s'", lgd)
 		}
 	}
 	return nil
