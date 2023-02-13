@@ -242,16 +242,17 @@ func (r csvRow) CSV() []string {
 }
 
 type lpStats struct {
-	betas   []float64
-	means   []float64
-	mads    []float64
-	sigmas  []float64
-	lengths []float64
-	histR   *stats.Histogram
-	rs      []*stats.Timeseries // for computing cross-correlations
-	tickers int
-	samples int
-	rows    []table.Row
+	betas      []float64 // average beta
+	betaRatios []float64 // beta[t-n]/beta[t]
+	means      []float64
+	mads       []float64
+	sigmas     []float64
+	lengths    []float64
+	histR      *stats.Histogram
+	rs         []*stats.Timeseries // for computing cross-correlations
+	tickers    int
+	samples    int
+	rows       []table.Row
 }
 
 // Merge s2 into s. If error is returned, s remains unmodified.
@@ -262,6 +263,7 @@ func (s *lpStats) Merge(s2 *lpStats) error {
 		}
 	}
 	s.betas = append(s.betas, s2.betas...)
+	s.betaRatios = append(s.betaRatios, s2.betaRatios...)
 	s.means = append(s.means, s2.means...)
 	s.mads = append(s.mads, s2.mads...)
 	s.sigmas = append(s.sigmas, s2.sigmas...)
@@ -359,6 +361,17 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		p := tss[0]
 		ref := tss[1]
 		beta := computeBeta(p.Data(), ref.Data())
+		if c := e.config.BetaRatios; c != nil && len(p.Data()) >= c.Shift+c.Window {
+			n := len(p.Data())
+			l := n - c.Window
+			betaBefore := computeBeta(p.Data()[l:n], ref.Data()[l:n])
+			n -= c.Shift
+			l = n - c.Window
+			betaAfter := computeBeta(p.Data()[l:n], ref.Data()[l:n])
+			if betaAfter != 0 {
+				res.betaRatios = append(res.betaRatios, betaBefore/betaAfter)
+			}
+		}
 		r := p.Sub(ref.MultC(beta))
 		if e.config.RCorrPlot != nil {
 			res.rs = append(res.rs, r)
@@ -641,6 +654,14 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 			e.config.ID, "lengths")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot lengths")
+		}
+	}
+	if e.config.BetaRatios != nil && len(res.betaRatios) > 1 {
+		c := e.config.BetaRatios.Plot
+		dist := stats.NewSampleDistribution(res.betaRatios, &c.Buckets)
+		err := experiments.PlotDistribution(e.context, dist, c, e.config.ID, "beta ratios")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot beta ratios")
 		}
 	}
 	return nil

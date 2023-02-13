@@ -74,6 +74,8 @@ func TestBeta(t *testing.T) {
 		So(err, ShouldBeNil)
 		LengthsGraph, err := canvas.EnsureGraph(plot.KindXY, "lengths", "group")
 		So(err, ShouldBeNil)
+		BetaRatios, err := canvas.EnsureGraph(plot.KindXY, "beta ratios", "group")
+		So(err, ShouldBeNil)
 
 		Convey("with price data", func() {
 			dbName := "db"
@@ -143,7 +145,11 @@ func TestBeta(t *testing.T) {
   "R means": {"graph": "means"},
   "R MADs": {"graph": "mads"},
   "R Sigmas": {"graph": "sigmas"},
-  "lengths plot": {"graph": "lengths"}
+  "lengths plot": {"graph": "lengths"},
+  "beta ratios": {
+    "window": 3,
+    "plot": {"graph": "beta ratios"}
+  }
 }`, tmpdir, dbName, tmpdir, dbName, csvFile, lengthsFile)
 				So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
 				var betaExp Beta
@@ -157,6 +163,7 @@ func TestBeta(t *testing.T) {
 				So(len(MADsGraph.Plots), ShouldEqual, 1)
 				So(len(SigmasGraph.Plots), ShouldEqual, 1)
 				So(len(LengthsGraph.Plots), ShouldEqual, 1)
+				So(len(BetaRatios.Plots), ShouldEqual, 1)
 			})
 		})
 
@@ -177,7 +184,11 @@ func TestBeta(t *testing.T) {
   "R MADs": {"graph": "mads"},
   "R Sigmas": {"graph": "sigmas"},
   "R correlations": {"graph": "corr"},
-  "lengths plot": {"graph": "lengths"}
+  "lengths plot": {"graph": "lengths"},
+  "beta ratios": {
+    "window": 3,
+    "plot": {"graph": "beta ratios"}
+  }
 }`, csvFile)
 			So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
 			var betaExp Beta
@@ -191,6 +202,7 @@ func TestBeta(t *testing.T) {
 			So(len(SigmasGraph.Plots), ShouldEqual, 1)
 			So(len(CorrGraph.Plots), ShouldEqual, 1)
 			So(len(LengthsGraph.Plots), ShouldEqual, 1)
+			So(len(BetaRatios.Plots), ShouldEqual, 1)
 		})
 	})
 }

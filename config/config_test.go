@@ -96,8 +96,8 @@ func TestConfig(t *testing.T) {
     {"beta": {
       "reference data" : {"DB": "test"},
       "data" : {"DB": "test"},
-      "beta scatter plot": {
-        "plot": {"graph": "scatter"}
+      "beta ratios": {
+        "plot": {"graph": "ratios"}
       }
     }}
   ]
@@ -251,12 +251,13 @@ func TestConfig(t *testing.T) {
 						Samples:   5000,
 						StartDate: db.NewDate(1998, 1, 2),
 						BatchSize: 100,
-						BetaScatterPlot: &ShiftScatterPlot{
+						BetaRatios: &TimeShiftPlot{
 							Shift:  1,
 							Window: 1,
-							Plot: &ScatterPlot{
-								Graph:   "scatter",
-								Incline: 1,
+							Plot: &DistributionPlot{
+								Graph:     "ratios",
+								Buckets:   defaultBuckets,
+								ChartType: "line",
 							},
 						},
 					}},

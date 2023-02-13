@@ -484,20 +484,20 @@ func (p *ScatterPlot) InitMessage(js any) error {
 	return nil
 }
 
-// ShiftScatterPlot specifies a scatter plot of s[t-n] vs. s[t] for some
-// statistic s[t] over a Timeseries computed over k values [t-k+1..t].  Such a
-// plot shows if the statistic predicts its own value in the future.
-type ShiftScatterPlot struct {
-	Shift  int          `json:"shift" default:"1"`
-	Window int          `json:"window" default:"1"`
-	Plot   *ScatterPlot `json:"plot" required:"true"`
+// TimeShiftPlot specifies a histogram plot of s[t-n]/s[t] for some statistic
+// s[t] over a Timeseries computed over k values [t-k+1..t].  Such a plot shows
+// how well the statistic preserves its value over time.
+type TimeShiftPlot struct {
+	Shift  int               `json:"shift" default:"1"`
+	Window int               `json:"window" default:"1"`
+	Plot   *DistributionPlot `json:"plot" required:"true"`
 }
 
-var _ message.Message = &ShiftScatterPlot{}
+var _ message.Message = &TimeShiftPlot{}
 
-func (p *ShiftScatterPlot) InitMessage(js any) error {
+func (p *TimeShiftPlot) InitMessage(js any) error {
 	if err := message.Init(p, js); err != nil {
-		return errors.Annotate(err, "failed to init ShiftScatterPlot")
+		return errors.Annotate(err, "failed to init TimeShiftPlot")
 	}
 	if p.Shift < 1 {
 		return errors.Reason(`"shift"=%d must be >= 1`, p.Shift)
@@ -548,8 +548,8 @@ type Beta struct {
 	RCorrSamples int `json:"R correlations samples"`
 	// Distribution of lengths of correlation log-profit sequences.
 	LengthsPlot *DistributionPlot `json:"lengths plot"`
-	// Scatterplot of beta[t-shift] vs. beta[t].
-	BetaScatterPlot *ShiftScatterPlot `json:"beta scatter plot"`
+	// Histogram of beta[t-shift]/beta[t].
+	BetaRatios *TimeShiftPlot `json:"beta ratios"`
 }
 
 var _ ExperimentConfig = &Beta{}
