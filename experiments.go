@@ -634,6 +634,10 @@ func (c *CumulativeStatistic) Plot(ctx context.Context, yLabel, legend string) e
 	return nil
 }
 
+// LeastSquares computes 1-D linear regression for Y = incline*X + intercept
+// based on the given data. The number of elements in xs and ys must be the
+// same. It is possible for the incline to be +Inf (when all xs are the
+// same), which is not an error.
 func LeastSquares(xs, ys []float64) (incline float64, intercept float64, err error) {
 	if len(xs) != len(ys) {
 		err = errors.Reason("len(xs)=%d != len(ys)=%d", len(xs), len(ys))
@@ -663,6 +667,8 @@ func LeastSquares(xs, ys []float64) (incline float64, intercept float64, err err
 	return
 }
 
+// PlotScatter plots the unordered points given as xs and ys as a scatter plot,
+// according to the config.
 func PlotScatter(ctx context.Context, xs, ys []float64, c *config.ScatterPlot, prefix, legend, yLabel string) error {
 	if c.Graph == "" {
 		return nil

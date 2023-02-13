@@ -486,7 +486,7 @@ func (p *ScatterPlot) InitMessage(js any) error {
 
 // ShiftScatterPlot specifies a scatter plot of s[t-n] vs. s[t] for some
 // statistic s[t] over a Timeseries computed over k values [t-k+1..t].  Such a
-// plot shows if the statistics predicts its own value in the future.
+// plot shows if the statistic predicts its own value in the future.
 type ShiftScatterPlot struct {
 	Shift  int          `json:"shift" default:"1"`
 	Window int          `json:"window" default:"1"`
