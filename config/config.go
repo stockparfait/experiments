@@ -488,9 +488,11 @@ func (p *ScatterPlot) InitMessage(js any) error {
 // s[t] over a Timeseries computed over k values [t-k+1..t].  Such a plot shows
 // how well the statistic preserves its value over time.
 type TimeShiftPlot struct {
-	Shift  int               `json:"shift" default:"1"`
-	Window int               `json:"window" default:"1"`
-	Plot   *DistributionPlot `json:"plot" required:"true"`
+	Shift  int `json:"shift" default:"1"`
+	Window int `json:"window" default:"1"`
+	// Ignore values below the threshold when it makes sense.
+	Threshold float64           `json:"threshold"`
+	Plot      *DistributionPlot `json:"plot" required:"true"`
 }
 
 var _ message.Message = &TimeShiftPlot{}

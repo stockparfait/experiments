@@ -362,14 +362,18 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		ref := tss[1]
 		beta := computeBeta(p.Data(), ref.Data())
 		if c := e.config.BetaRatios; c != nil && len(p.Data()) >= c.Shift+c.Window {
-			n := len(p.Data())
-			l := n - c.Window
-			betaBefore := computeBeta(p.Data()[l:n], ref.Data()[l:n])
-			n -= c.Shift
-			l = n - c.Window
-			betaAfter := computeBeta(p.Data()[l:n], ref.Data()[l:n])
-			if betaAfter != 0 {
-				res.betaRatios = append(res.betaRatios, betaBefore/betaAfter)
+			threshold := c.Threshold
+			if threshold < 0 {
+				threshold = 0
+			}
+			if math.Abs(beta) > threshold {
+				n := len(p.Data())
+				l := n - c.Window
+				betaBefore := computeBeta(p.Data()[l:n], ref.Data()[l:n])
+				n -= c.Shift
+				l = n - c.Window
+				betaAfter := computeBeta(p.Data()[l:n], ref.Data()[l:n])
+				res.betaRatios = append(res.betaRatios, (betaBefore-betaAfter)/beta)
 			}
 		}
 		r := p.Sub(ref.MultC(beta))
