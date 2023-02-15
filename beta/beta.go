@@ -360,12 +360,12 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		tss := stats.TimeseriesIntersect(lp.ts, e.refTS)
 		p := tss[0]
 		ref := tss[1]
-		stat := func(low, high int) float64 {
-			return computeBeta(p.Data()[low:high], ref.Data()[low:high])
-		}
 		if c := e.config.BetaRatios; c != nil {
+			f := func(low, high int) float64 {
+				return computeBeta(p.Data()[low:high], ref.Data()[low:high])
+			}
 			res.betaRatios = append(res.betaRatios,
-				experiments.Stability(len(p.Data()), stat, c)...)
+				experiments.Stability(len(p.Data()), f, c)...)
 		}
 		beta := computeBeta(p.Data(), ref.Data())
 		r := p.Sub(ref.MultC(beta))

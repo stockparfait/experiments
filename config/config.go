@@ -96,6 +96,9 @@ func (p *StabilityPlot) InitMessage(js any) error {
 	if p.Window < 1 {
 		return errors.Reason(`"window"=%d must be >= 1`, p.Window)
 	}
+	if p.Threshold < 0 {
+		return errors.Reason(`"threshold"=%f must be >= 0`, p.Threshold)
+	}
 	return nil
 }
 
