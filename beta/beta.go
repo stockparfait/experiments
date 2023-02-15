@@ -360,20 +360,14 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		tss := stats.TimeseriesIntersect(lp.ts, e.refTS)
 		p := tss[0]
 		ref := tss[1]
-		beta := computeBeta(p.Data(), ref.Data())
-		if c := e.config.BetaRatios; c != nil && len(p.Data()) >= c.Shift+c.Window {
-			threshold := c.Threshold
-			if threshold < 0 {
-				threshold = 0
-			}
-			if math.Abs(beta) > threshold {
-				for u := len(p.Data()); u >= c.Window; u -= c.Shift {
-					l := u - c.Window
-					b := computeBeta(p.Data()[l:u], ref.Data()[l:u])
-					res.betaRatios = append(res.betaRatios, b/beta-1)
-				}
-			}
+		stat := func(low, high int) float64 {
+			return computeBeta(p.Data()[low:high], ref.Data()[low:high])
 		}
+		if c := e.config.BetaRatios; c != nil {
+			res.betaRatios = append(res.betaRatios,
+				experiments.Stability(len(p.Data()), stat, c)...)
+		}
+		beta := computeBeta(p.Data(), ref.Data())
 		r := p.Sub(ref.MultC(beta))
 		if e.config.RCorrPlot != nil {
 			res.rs = append(res.rs, r)

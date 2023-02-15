@@ -721,6 +721,36 @@ func PlotScatter(ctx context.Context, xs, ys []float64, c *config.ScatterPlot, p
 	return nil
 }
 
+// Stability returns a series of deviations of the statistic f over a Timeseries
+// of size `length`, as specified by the config.
+//
+// Here f computes the statistic for the given range [low..high) (includes low,
+// excludes high).
+func Stability(length int, f func(low, high int) float64, c *config.StabilityPlot) []float64 {
+	if c == nil {
+		return nil
+	}
+	if length < c.Step+c.Window {
+		return nil
+	}
+	var norm float64 = 1
+	if c.Normalize {
+		norm = f(0, length)
+		threshold := c.Threshold
+		if threshold < 0 {
+			threshold = 0
+		}
+		if math.Abs(norm) <= threshold {
+			return nil
+		}
+	}
+	var res []float64
+	for h := length; h >= c.Window; h -= c.Step {
+		res = append(res, f(h-c.Window, h)/norm)
+	}
+	return res
+}
+
 // TestExperiment is a fake experiment used in tests. Define actual experiments
 // in their own subpackages.
 type TestExperiment struct {

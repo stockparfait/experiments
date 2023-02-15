@@ -49,6 +49,56 @@ func (t *TestExperimentConfig) InitMessage(js any) error {
 	return errors.Annotate(message.Init(t, js), "failed to parse test config")
 }
 
+// ScatterPlot configures a generic scatter plot.
+type ScatterPlot struct {
+	Graph string `json:"graph" required:"true"`
+	// Expected line Y = incline * X + intercept.
+	Incline      float64 `json:"incline" default:"1.0"`
+	Intercept    float64 `json:"intercept"`
+	PlotExpected bool    `json:"plot expected"` // plot Y = incline*X+intercept
+	DeriveLine   bool    `json:"plot derived"`  // plot line from data
+}
+
+var _ message.Message = &ScatterPlot{}
+
+func (p *ScatterPlot) InitMessage(js any) error {
+	if err := message.Init(p, js); err != nil {
+		return errors.Annotate(err, "failed to init ScatterPlot")
+	}
+	return nil
+}
+
+// StabilityPlot specifies a histogram plot representing a measure of stability
+// of a statistic s over a Timeseries.
+//
+// It computes (s[subrange] - s[total]), possibly normalized by s[total].  The
+// subrange is of size Window, and the values are sampled every Step points
+// along the Timeseries.
+type StabilityPlot struct {
+	Step      int  `json:"step" default:"1"`
+	Window    int  `json:"window" default:"1"`
+	Normalize bool `json:"normalize" default:"true"`
+	// When Normalize is true, skip a ticker when the absolute value of its
+	// normalization coefficient is below the threshold.
+	Threshold float64           `json:"threshold"`
+	Plot      *DistributionPlot `json:"plot" required:"true"`
+}
+
+var _ message.Message = &StabilityPlot{}
+
+func (p *StabilityPlot) InitMessage(js any) error {
+	if err := message.Init(p, js); err != nil {
+		return errors.Annotate(err, "failed to init StabilityPlot")
+	}
+	if p.Step < 1 {
+		return errors.Reason(`"step"=%d must be >= 1`, p.Step)
+	}
+	if p.Window < 1 {
+		return errors.Reason(`"window"=%d must be >= 1`, p.Window)
+	}
+	return nil
+}
+
 // HoldPosition configures a single position within the Hold portfolio. Exactly
 // one of "shares" (possibly fractional) or "start value" (the initial market
 // value at Hold.Data.Start date) must be non-zero.
@@ -465,52 +515,6 @@ func (e *AutoCorrelation) InitMessage(js any) error {
 
 func (e *AutoCorrelation) Name() string { return "auto-correlation" }
 
-// ScatterPlot configures a generic scatter plot.
-type ScatterPlot struct {
-	Graph string `json:"graph" required:"true"`
-	// Expected line Y = incline * X + intercept.
-	Incline      float64 `json:"incline" default:"1.0"`
-	Intercept    float64 `json:"intercept"`
-	PlotExpected bool    `json:"plot expected"` // plot Y = incline*X+intercept
-	DeriveLine   bool    `json:"plot derived"`  // plot line from data
-}
-
-var _ message.Message = &ScatterPlot{}
-
-func (p *ScatterPlot) InitMessage(js any) error {
-	if err := message.Init(p, js); err != nil {
-		return errors.Annotate(err, "failed to init ScatterPlot")
-	}
-	return nil
-}
-
-// TimeShiftPlot specifies a histogram plot of s[t-k..t]/s - 1 for some
-// statistic s over a Timeseries and all t=t0-i*Shift for all possible i>=0 and
-// t0 being the latest timestamp.  Such a plot shows how well the statistic
-// preserves its value over time.
-type TimeShiftPlot struct {
-	Shift  int `json:"shift" default:"1"`
-	Window int `json:"window" default:"1"`
-	// Ignore values below the threshold when it makes sense.
-	Threshold float64           `json:"threshold"`
-	Plot      *DistributionPlot `json:"plot" required:"true"`
-}
-
-var _ message.Message = &TimeShiftPlot{}
-
-func (p *TimeShiftPlot) InitMessage(js any) error {
-	if err := message.Init(p, js); err != nil {
-		return errors.Annotate(err, "failed to init TimeShiftPlot")
-	}
-	if p.Shift < 1 {
-		return errors.Reason(`"shift"=%d must be >= 1`, p.Shift)
-	}
-	if p.Window < 1 {
-		return errors.Reason(`"window"=%d must be >= 1`, p.Window)
-	}
-	return nil
-}
-
 // Beta experiment studies cross-correlation between stocks and/or an index.
 type Beta struct {
 	ID string `json:"id"` // experiment ID, for multiple instances
@@ -552,7 +556,7 @@ type Beta struct {
 	// Distribution of lengths of correlation log-profit sequences.
 	LengthsPlot *DistributionPlot `json:"lengths plot"`
 	// Histogram of beta[t-shift]/beta[t].
-	BetaRatios *TimeShiftPlot `json:"beta ratios"`
+	BetaRatios *StabilityPlot `json:"beta ratios"`
 }
 
 var _ ExperimentConfig = &Beta{}
