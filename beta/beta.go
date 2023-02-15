@@ -367,9 +367,9 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 				threshold = 0
 			}
 			if math.Abs(beta) > threshold {
-				for n := len(p.Data()); n >= c.Window; n -= c.Shift {
-					l := n - c.Window
-					b := computeBeta(p.Data()[l:n], ref.Data()[l:n])
+				for u := len(p.Data()); u >= c.Window; u -= c.Shift {
+					l := u - c.Window
+					b := computeBeta(p.Data()[l:u], ref.Data()[l:u])
 					res.betaRatios = append(res.betaRatios, b/beta-1)
 				}
 			}
