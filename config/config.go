@@ -484,9 +484,10 @@ func (p *ScatterPlot) InitMessage(js any) error {
 	return nil
 }
 
-// TimeShiftPlot specifies a histogram plot of s[t-n]/s[t] for some statistic
-// s[t] over a Timeseries computed over k values [t-k+1..t].  Such a plot shows
-// how well the statistic preserves its value over time.
+// TimeShiftPlot specifies a histogram plot of s[t-k..t]/s - 1 for some
+// statistic s over a Timeseries and all t=t0-i*Shift for all possible i>=0 and
+// t0 being the latest timestamp.  Such a plot shows how well the statistic
+// preserves its value over time.
 type TimeShiftPlot struct {
 	Shift  int `json:"shift" default:"1"`
 	Window int `json:"window" default:"1"`

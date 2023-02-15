@@ -243,7 +243,7 @@ func (r csvRow) CSV() []string {
 
 type lpStats struct {
 	betas      []float64 // average beta
-	betaRatios []float64 // beta[t-n]/beta[t]
+	betaRatios []float64 // beta[subrange]/beta - 1
 	means      []float64
 	mads       []float64
 	sigmas     []float64
@@ -367,13 +367,11 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 				threshold = 0
 			}
 			if math.Abs(beta) > threshold {
-				n := len(p.Data())
-				l := n - c.Window
-				betaBefore := computeBeta(p.Data()[l:n], ref.Data()[l:n])
-				n -= c.Shift
-				l = n - c.Window
-				betaAfter := computeBeta(p.Data()[l:n], ref.Data()[l:n])
-				res.betaRatios = append(res.betaRatios, (betaBefore-betaAfter)/beta)
+				for n := len(p.Data()); n >= c.Window; n -= c.Shift {
+					l := n - c.Window
+					b := computeBeta(p.Data()[l:n], ref.Data()[l:n])
+					res.betaRatios = append(res.betaRatios, b/beta-1)
+				}
 			}
 		}
 		r := p.Sub(ref.MultC(beta))
