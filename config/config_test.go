@@ -251,9 +251,10 @@ func TestConfig(t *testing.T) {
 						Samples:   5000,
 						StartDate: db.NewDate(1998, 1, 2),
 						BatchSize: 100,
-						BetaRatios: &TimeShiftPlot{
-							Shift:  1,
-							Window: 1,
+						BetaRatios: &StabilityPlot{
+							Step:      1,
+							Window:    1,
+							Normalize: true,
 							Plot: &DistributionPlot{
 								Graph:     "ratios",
 								Buckets:   defaultBuckets,

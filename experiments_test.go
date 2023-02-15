@@ -310,6 +310,22 @@ func TestExperiments(t *testing.T) {
 			So(g.Plots[2].Y, ShouldResemble, []float64{3, 9})
 		})
 
+		Convey("Stability works", func() {
+			var cfg config.StabilityPlot
+			js := testutil.JSON(`
+{
+  "step": 2,
+  "window": 3,
+  "plot": {"graph": "g"}
+}`)
+			So(cfg.InitMessage(js), ShouldBeNil)
+			// assume ts = {0, 1, 2, 3, 4} and f = sum(ts[l]:ts[h-1]).
+			f := func(l, h int) float64 {
+				return float64(h*(h-1)/2 - l*(l-1)/2)
+			}
+			So(Stability(5, f, &cfg), ShouldResemble, []float64{0.9, 0.3})
+		})
+
 		Convey("for TestExperiment", func() {
 			conf := config.TestExperimentConfig{
 				Grade:  3.5,
