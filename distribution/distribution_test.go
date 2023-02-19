@@ -110,25 +110,31 @@ func TestDistribution(t *testing.T) {
     "reference distribution": {"analytical source": {"name": "t"}}
   },
   "means": {"graph": "g"},
-  "MADs": {"graph": "g"}
+  "MADs": {"graph": "g"},
+  "mean stability": {"plot": {"graph": "g"}},
+  "MAD stability": {"plot": {"graph": "g"}}
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
 			So(values, ShouldResemble, experiments.Values{
-				"test samples":                         "4",
-				"test tickers":                         "2",
-				"test average MAD":                     "0.1347",
-				"test MADs P(X < mean-10*sigma)":       "0.636",
-				"test MADs P(X > mean+10*sigma)":       "0.364",
-				"test average mean":                    "0.04766",
-				"test means P(X < mean-10*sigma)":      "0.5481",
-				"test means P(X > mean+10*sigma)":      "0.4519",
-				"test log-profit mean":                 "0.04766",
-				"test log-profit MAD":                  "0.1347",
-				"test log-profit alpha":                "3",
-				"test log-profit P(X < mean-10*sigma)": "0",
-				"test log-profit P(X > mean+10*sigma)": "0"})
-			So(len(g.Plots), ShouldEqual, 8)
+				"test samples":                             "4",
+				"test tickers":                             "2",
+				"test average MAD":                         "0.1347",
+				"test MADs P(X < mean-10*sigma)":           "0.636",
+				"test MADs P(X > mean+10*sigma)":           "0.364",
+				"test MAD stability P(X < mean-10*sigma)":  "1",
+				"test MAD stability P(X > mean+10*sigma)":  "0",
+				"test average mean":                        "0.04766",
+				"test means P(X < mean-10*sigma)":          "0.5481",
+				"test means P(X > mean+10*sigma)":          "0.4519",
+				"test mean stability P(X < mean-10*sigma)": "0",
+				"test mean stability P(X > mean+10*sigma)": "0",
+				"test log-profit mean":                     "0.04766",
+				"test log-profit MAD":                      "0.1347",
+				"test log-profit alpha":                    "3",
+				"test log-profit P(X < mean-10*sigma)":     "0",
+				"test log-profit P(X > mean+10*sigma)":     "0"})
+			So(len(g.Plots), ShouldEqual, 10)
 			So(g.Plots[1].Legend, ShouldEqual, "test log-profit counts")
 			// The first value is skipped due to 0 count.
 			So(g.Plots[1].Y, ShouldResemble, []float64{2, 2})
