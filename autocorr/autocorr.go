@@ -182,7 +182,7 @@ func (e *AutoCorrelation) newJobResult(ticker string) jobResult {
 }
 
 func (j *jobResult) Add(samples []float64, maxShift int) {
-	sample := stats.NewSample().Init(samples)
+	sample := stats.NewSample(samples)
 	mean := sample.Mean()
 	variance := sample.Variance()
 	if variance == 0 {
@@ -219,7 +219,7 @@ func (e *AutoCorrelation) processTicker(ticker string) jobResult {
 		res.err = errors.Annotate(err, "failed to read ticker %s", ticker)
 		return res
 	}
-	ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
+	ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
 	lp := ts.LogProfits(1)
 	if len(lp.Data()) < e.config.MaxShift+2 {
 		res.err = errors.Reason("too few samples: %d", len(lp.Data()))

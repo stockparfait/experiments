@@ -93,7 +93,7 @@ func (e *Beta) processRefData() error {
 		return errors.Annotate(err, "failed to read reference prices for %s",
 			tickers[0])
 	}
-	ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
+	ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
 	e.refTS = ts.LogProfits(1)
 	return nil
 }
@@ -124,7 +124,7 @@ func (e *Beta) generateTS(d stats.Distribution, samples int) logProfits {
 	}
 	return logProfits{
 		ticker: "synthetic",
-		ts:     stats.NewTimeseries().Init(dates, data),
+		ts:     stats.NewTimeseries(dates, data),
 	}
 }
 
@@ -199,7 +199,7 @@ func (e *Beta) processData() error {
 				logging.Warningf(e.context, "skipping %s: %s", ticker, err.Error())
 				continue
 			}
-			ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
+			ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
 			lp.ts = ts.LogProfits(1)
 			lp.ticker = ticker
 			res = append(res, lp)
@@ -372,8 +372,8 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		if e.config.RCorrPlot != nil {
 			res.rs = append(res.rs, r)
 		}
-		sampleP := stats.NewSample().Init(p.Data())
-		sampleR := stats.NewSample().Init(r.Data())
+		sampleP := stats.NewSample(p.Data())
+		sampleR := stats.NewSample(r.Data())
 		if sampleR.MAD() == 0 {
 			logging.Warningf(e.context, "skipping %s: MAD = 0", lp.ticker)
 			continue
@@ -485,8 +485,8 @@ func (e *Beta) correlation(t1, t2 *stats.Timeseries) (float64, bool) {
 	if len(t1.Data()) < 3 {
 		return 0, false
 	}
-	sample1 := stats.NewSample().Init(t1.Data())
-	sample2 := stats.NewSample().Init(t2.Data())
+	sample1 := stats.NewSample(t1.Data())
+	sample2 := stats.NewSample(t2.Data())
 	mean1 := sample1.Mean()
 	sigma1 := sample1.Sigma()
 	if sigma1 == 0 {

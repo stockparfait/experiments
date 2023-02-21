@@ -647,8 +647,8 @@ func LeastSquares(xs, ys []float64) (incline float64, intercept float64, err err
 		err = errors.Reason("len(xs)=%d < 2: not enough points", len(xs))
 		return
 	}
-	sampleX := stats.NewSample().Init(xs)
-	sampleY := stats.NewSample().Init(ys)
+	sampleX := stats.NewSample(xs)
+	sampleY := stats.NewSample(ys)
 	varX := sampleX.Variance()
 	if varX == 0 {
 		incline = math.Inf(1)
