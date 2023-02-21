@@ -155,13 +155,13 @@ func (d *Distribution) processTicker(ticker string, res *jobResult) error {
 	if len(rows) <= 1 {
 		return nil
 	}
-	ts := stats.NewTimeseries().FromPrices(rows, stats.PriceFullyAdjusted)
+	ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
 	data := ts.LogProfits(d.config.Compound).Data()
-	sample := stats.NewSample().Init(data)
+	sample := stats.NewSample(data)
 	res.Means = append(res.Means, sample.Mean())
 	res.MADs = append(res.MADs, sample.MAD())
-	meanF := func(l, h int) float64 { return stats.NewSample().Init(data[l:h]).Mean() }
-	MADF := func(l, h int) float64 { return stats.NewSample().Init(data[l:h]).MAD() }
+	meanF := func(l, h int) float64 { return stats.NewSample(data[l:h]).Mean() }
+	MADF := func(l, h int) float64 { return stats.NewSample(data[l:h]).MAD() }
 	res.MeanStability = append(res.MeanStability, experiments.Stability(
 		len(data), meanF, d.config.MeanStability)...)
 	res.MADStability = append(res.MADStability, experiments.Stability(
@@ -214,7 +214,7 @@ func (d *Distribution) processTickers(tickers []string) error {
 	if d.config.Means != nil {
 		c := d.config.Means
 		d.meansHistogram = stats.NewHistogram(&c.Buckets)
-		sample := stats.NewSample().Init(d.stats.Means)
+		sample := stats.NewSample(d.stats.Means)
 		if c.Normalize && sample.MAD() != 0.0 {
 			var err error
 			sample, err = sample.Normalize()
@@ -228,7 +228,7 @@ func (d *Distribution) processTickers(tickers []string) error {
 	if d.config.MADs != nil {
 		c := d.config.MADs
 		d.madsHistogram = stats.NewHistogram(&c.Buckets)
-		sample := stats.NewSample().Init(d.stats.MADs)
+		sample := stats.NewSample(d.stats.MADs)
 		if c.Normalize && sample.MAD() != 0.0 {
 			var err error
 			sample, err = sample.Normalize()

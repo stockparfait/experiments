@@ -88,7 +88,7 @@ func (h *Hold) AddPosition(ctx context.Context, p config.HoldPosition) error {
 		dates[i] = r.Date
 		data[i] = factor * float64(r.CloseFullyAdjusted)
 	}
-	ts := stats.NewTimeseries().Init(dates, data)
+	ts := stats.NewTimeseries(dates, data)
 	h.positions = append(h.positions, ts)
 
 	legend := fmt.Sprintf("%.6g*%s", factor, p.Ticker)
@@ -129,7 +129,7 @@ func (h *Hold) AddTotal(ctx context.Context) error {
 		dates[i] = k
 		data[i] = totalMap[k]
 	}
-	h.total = stats.NewTimeseries().Init(dates, data)
+	h.total = stats.NewTimeseries(dates, data)
 	p, err := plot.NewSeriesPlot(h.total)
 	if err != nil {
 		return errors.Annotate(err, "failed to create plot 'Porftolio'")
