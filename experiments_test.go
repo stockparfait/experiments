@@ -333,8 +333,8 @@ func TestExperiments(t *testing.T) {
 				So(err, ShouldBeNil)
 				lps2 := iterator.ToSlice[LogProfits](it2)
 				it2.Close()
-				sort.Slice(lps, func(i, j int) bool {
-					return len(lps[i].Timeseries.Data()) < len(lps[j].Timeseries.Data())
+				sort.Slice(lps2, func(i, j int) bool {
+					return len(lps2[i].Timeseries.Data()) < len(lps2[j].Timeseries.Data())
 				})
 				So(len(lps2), ShouldEqual, 2)
 				So(len(lps2[0].Timeseries.Data()), ShouldEqual, 2)
