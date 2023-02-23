@@ -21,7 +21,6 @@ package beta
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -34,15 +33,13 @@ import (
 	"github.com/stockparfait/experiments/config"
 	"github.com/stockparfait/iterator"
 	"github.com/stockparfait/logging"
-	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/stats"
 	"github.com/stockparfait/stockparfait/table"
 )
 
 type Beta struct {
-	config  *config.Beta
-	context context.Context
-	refTS   *stats.Timeseries // reference log-profit timeseries
+	config *config.Beta
+	refTS  *stats.Timeseries // reference log-profit timeseries
 }
 
 var _ experiments.Experiment = &Beta{}
@@ -60,156 +57,59 @@ func (e *Beta) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 	if e.config, ok = cfg.(*config.Beta); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
-	e.context = ctx
-	// process* methods do nothing and return no error when their configs are nil.
-	if err := e.processRefData(); err != nil {
+	if err := e.processReference(ctx); err != nil {
 		return errors.Annotate(err, "failed to process reference data")
 	}
-	if err := e.processRefAnalytical(); err != nil {
-		return errors.Annotate(err, "failed to process synthetic reference")
-	}
-	if err := e.processData(); err != nil {
+	if err := e.processData(ctx); err != nil {
 		return errors.Annotate(err, "failed to process price data")
 	}
-	if err := e.processAnalyticalR(); err != nil {
-		return errors.Annotate(err, "failed to process synthetic R")
-	}
 	return nil
 }
 
-func (e *Beta) processRefData() error {
-	if e.config.RefData == nil {
-		return nil
-	}
-	tickers, err := e.config.RefData.Tickers(e.context)
+func (e *Beta) processReference(ctx context.Context) error {
+	it, err := experiments.Source(ctx, e.config.Reference)
 	if err != nil {
-		return errors.Annotate(err, "failed to list reference tickers")
+		return errors.Annotate(err, "failed to get reference price series")
 	}
-	if len(tickers) != 1 {
-		return errors.Reason("num. reference tickers=%d, must be 1", len(tickers))
+	lps := iterator.ToSlice[experiments.LogProfits](it)
+	it.Close()
+	if len(lps) != 1 {
+		return errors.Reason(
+			"reference should yield exactly one series, got %d", len(lps))
 	}
-	rows, err := e.config.RefData.Prices(tickers[0])
-	if err != nil {
-		return errors.Annotate(err, "failed to read reference prices for %s",
-			tickers[0])
+	lp := lps[0]
+	if lp.Error != nil {
+		return errors.Annotate(err, "failed to get reference price series")
 	}
-	ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
-	e.refTS = ts.LogProfits(1)
+	e.refTS = lp.Timeseries
 	return nil
 }
 
-// logProfits is a value returned by the data iterator.
-type logProfits struct {
-	ticker string
-	ts     *stats.Timeseries
-}
-
-// generateTS generates a synthetic log-profit Timeseries based on config and
-// log-profit Distribution.
-func (e *Beta) generateTS(d stats.Distribution, samples int) logProfits {
-	date := e.config.StartDate
-	dates := make([]db.Date, samples)
-	data := make([]float64, samples)
-	for i := 0; i < samples; i++ {
-		t := date.ToTime()
-		if t.Weekday() == time.Saturday {
-			t = t.Add(2 * 24 * time.Hour)
-		} else if t.Weekday() == time.Sunday {
-			t = t.Add(24 * time.Hour)
-		}
-		dates[i] = db.NewDateFromTime(t)
-		data[i] = d.Rand()
-		t = t.Add(24 * time.Hour)
-		date = db.NewDateFromTime(t)
-	}
-	return logProfits{
-		ticker: "synthetic",
-		ts:     stats.NewTimeseries(dates, data),
-	}
-}
-
-func (e *Beta) processRefAnalytical() error {
-	if e.config.RefAnalytical == nil {
-		return nil
-	}
-	d, _, err := experiments.AnalyticalDistribution(
-		e.context, e.config.RefAnalytical)
+func (e *Beta) processData(ctx context.Context) error {
+	lpIt, err := experiments.Source(ctx, e.config.Data)
 	if err != nil {
-		return errors.Annotate(err, "failed to create synthetic ref. distribution")
+		return errors.Annotate(err, "failed to get data price series")
 	}
-	e.refTS = e.generateTS(d, e.config.Samples).ts
-	return nil
-}
+	defer lpIt.Close()
 
-// tsConfig configures generateTS to generate a synthetic Timeseries of length n
-// using the given distribution copy.
-type tsConfig struct {
-	d stats.Distribution
-	n int
-}
-
-// repeatIter repeats n times the value v.
-type repeatIter struct {
-	v int
-	n int
-}
-
-var _ iterator.Iterator[int] = &repeatIter{}
-
-func (it *repeatIter) Next() (int, bool) {
-	if it.n <= 0 {
-		return 0, false
-	}
-	it.n--
-	return it.v, true
-}
-
-// distIter generates tsConfig sequence based on the iterator for the sequence
-// lengths.
-type distIter struct {
-	d           stats.Distribution
-	lengthsIter iterator.Iterator[int]
-}
-
-var _ iterator.Iterator[tsConfig] = &distIter{}
-
-func (it *distIter) Next() (tsConfig, bool) {
-	n, ok := it.lengthsIter.Next()
-	if !ok {
-		return tsConfig{}, false
-	}
-	return tsConfig{d: it.d.Copy(), n: n}, true
-}
-
-func (e *Beta) processData() error {
-	if e.config.Data == nil {
-		return nil
-	}
-	tickers, err := e.config.Data.Tickers(e.context)
-	if err != nil {
-		return errors.Annotate(err, "failed to list data tickers")
-	}
-	it := iterator.Batch(iterator.FromSlice(tickers), e.config.BatchSize)
-	f := func(tickers []string) *lpStats {
-		var res []logProfits
-		for _, ticker := range tickers {
-			var lp logProfits
-			rows, err := e.config.Data.Prices(ticker)
-			if err != nil {
-				logging.Warningf(e.context, "skipping %s: %s", ticker, err.Error())
-				continue
+	it := iterator.Batch[experiments.LogProfits](lpIt, e.config.BatchSize)
+	f := func(lps []experiments.LogProfits) *lpStats {
+		if e.config.Data.Synthetic != nil { // treat lps as R
+			for i, lp := range lps {
+				if lp.Error != nil {
+					continue // skip it, the error will be handled later
+				}
+				tss := stats.TimeseriesIntersect(e.refTS, lp.Timeseries)
+				lp.Timeseries = tss[0].MultC(e.config.Beta).Add(tss[1])
+				lps[i] = lp
 			}
-			ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
-			lp.ts = ts.LogProfits(1)
-			lp.ticker = ticker
-			res = append(res, lp)
 		}
-		return e.processLogProfits(res)
+		return e.processLogProfits(ctx, lps)
 	}
-	pm := iterator.ParallelMap(e.context, 2*runtime.NumCPU(), it, f)
+	pm := iterator.ParallelMap(ctx, 2*runtime.NumCPU(), it, f)
 	defer pm.Close()
 
-	if err := e.processLpStats(pm); err != nil {
+	if err := e.processLpStats(ctx, pm); err != nil {
 		return errors.Annotate(err, "failed to process log-profit stats")
 	}
 	return nil
@@ -299,42 +199,6 @@ func (e *Beta) writeTable(rows []table.Row) error {
 	return nil
 }
 
-func (e *Beta) processAnalyticalR() error {
-	if e.config.AnalyticalR == nil {
-		return nil
-	}
-	d, _, err := experiments.AnalyticalDistribution(
-		e.context, e.config.AnalyticalR)
-	if err != nil {
-		return errors.Annotate(err, "failed to create synthetic R distribution")
-	}
-	var lengthsIter iterator.Iterator[int]
-	if len(e.config.SamplesLengths) > 0 {
-		lengthsIter = iterator.FromSlice(e.config.SamplesLengths)
-	} else {
-		lengthsIter = &repeatIter{v: e.config.Samples, n: e.config.Tickers}
-	}
-	distIt := &distIter{d: d, lengthsIter: lengthsIter}
-	it := iterator.Batch[tsConfig](distIt, e.config.BatchSize)
-	f := func(cs []tsConfig) *lpStats {
-		res := make([]logProfits, len(cs))
-		for i, c := range cs {
-			lp := e.generateTS(c.d, c.n)
-			tss := stats.TimeseriesIntersect(e.refTS, lp.ts)
-			lp.ts = tss[0].MultC(e.config.Beta).Add(tss[1])
-			res[i] = lp
-		}
-		return e.processLogProfits(res)
-	}
-	pm := iterator.ParallelMap(e.context, 2*runtime.NumCPU(), it, f)
-	defer pm.Close()
-
-	if err := e.processLpStats(pm); err != nil {
-		return errors.Annotate(err, "failed to process synthetic log-profit stats")
-	}
-	return nil
-}
-
 // computeBeta for p = beta*ref+R which minimizes Var[R]. Assumes that p and ref
 // have the same length.
 func computeBeta(p, ref []float64) float64 {
@@ -351,13 +215,17 @@ func computeBeta(p, ref []float64) float64 {
 	return beta
 }
 
-func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
+func (e *Beta) processLogProfits(ctx context.Context, lps []experiments.LogProfits) *lpStats {
 	var res lpStats
 	if e.config.RPlot != nil {
 		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
 	}
 	for _, lp := range lps {
-		tss := stats.TimeseriesIntersect(lp.ts, e.refTS)
+		if lp.Error != nil {
+			logging.Warningf(ctx, "skipping %s: %s", lp.Ticker, lp.Error.Error())
+			continue
+		}
+		tss := stats.TimeseriesIntersect(lp.Timeseries, e.refTS)
 		p := tss[0]
 		ref := tss[1]
 		if c := e.config.BetaRatios; c != nil {
@@ -375,12 +243,12 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		sampleP := stats.NewSample(p.Data())
 		sampleR := stats.NewSample(r.Data())
 		if sampleR.MAD() == 0 {
-			logging.Warningf(e.context, "skipping %s: MAD = 0", lp.ticker)
+			logging.Warningf(ctx, "skipping %s: MAD = 0", lp.Ticker)
 			continue
 		}
 		sampleNorm, err := sampleR.Normalize()
 		if err != nil {
-			logging.Warningf(e.context, "skipping %s: failed to normalize R", lp.ticker)
+			logging.Warningf(ctx, "skipping %s: failed to normalize R", lp.Ticker)
 			continue
 		}
 		if res.histR != nil {
@@ -398,7 +266,7 @@ func (e *Beta) processLogProfits(lps []logProfits) *lpStats {
 		res.tickers++
 		res.samples += len(p.Data())
 		res.rows = append(res.rows, csvRow{
-			Ticker:  lp.ticker,
+			Ticker:  lp.Ticker,
 			Samples: len(p.Data()),
 			Beta:    beta,
 			Pmean:   sampleP.Mean(),
@@ -512,7 +380,7 @@ func (e *Beta) correlation(t1, t2 *stats.Timeseries) (float64, bool) {
 // crossCorrelations computes pairwise correlations between the Timeseries and
 // populates a histogram with the results. The number of pairs is capped by
 // e.config.RCorrSamples.
-func (e *Beta) crossCorrelations(tss []*stats.Timeseries, buckets *stats.Buckets) stats.DistributionWithHistogram {
+func (e *Beta) crossCorrelations(ctx context.Context, tss []*stats.Timeseries, buckets *stats.Buckets) stats.DistributionWithHistogram {
 	f := func(pairs []intPair) *stats.Histogram {
 		h := stats.NewHistogram(buckets)
 		for _, p := range pairs {
@@ -531,7 +399,7 @@ func (e *Beta) crossCorrelations(tss []*stats.Timeseries, buckets *stats.Buckets
 		pairsIter = newRandPairs(len(tss), e.config.RCorrSamples, 0)
 	}
 	it := iterator.Batch(pairsIter, e.config.BatchSize)
-	pm := iterator.ParallelMap(e.context, 2*runtime.NumCPU(), it, f)
+	pm := iterator.ParallelMap(ctx, 2*runtime.NumCPU(), it, f)
 	defer pm.Close()
 	h := stats.NewHistogram(buckets)
 	for v, ok := pm.Next(); ok; v, ok = pm.Next() {
@@ -540,49 +408,27 @@ func (e *Beta) crossCorrelations(tss []*stats.Timeseries, buckets *stats.Buckets
 	return stats.NewHistogramDistribution(h)
 }
 
-func (e *Beta) saveLengths(lengths []float64) error {
-	if e.config.Data == nil || e.config.LengthsFile == "" {
-		return nil
-	}
-	f, err := os.OpenFile(e.config.LengthsFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return errors.Annotate(err, "failed to open lengths file '%s'",
-			e.config.LengthsFile)
-	}
-	defer f.Close()
-	enc := json.NewEncoder(f)
-	if err := enc.Encode(lengths); err != nil {
-		return errors.Annotate(err, "failed to write JSON to '%s'",
-			e.config.LengthsFile)
-	}
-	return nil
-}
-
 // processLpStats accumulates partially reduced statistics from the iterator and
 // generates the necessary plots.
-func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
+func (e *Beta) processLpStats(ctx context.Context, it iterator.Iterator[*lpStats]) error {
 	var res lpStats
 	if e.config.RPlot != nil {
 		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
 	}
 	for s, ok := it.Next(); ok; s, ok = it.Next() {
 		if err := res.Merge(s); err != nil {
-			logging.Warningf(e.context, "failed to merge some tickers", err.Error())
+			logging.Warningf(ctx, "failed to merge some tickers", err.Error())
 		}
 	}
-	if err := e.saveLengths(res.lengths); err != nil {
-		return errors.Annotate(err, "failed to save lengths in '%s'",
-			e.config.LengthsFile)
-	}
-	if err := e.AddValue(e.context, "tickers", fmt.Sprintf("%d", res.tickers)); err != nil {
+	if err := e.AddValue(ctx, "tickers", fmt.Sprintf("%d", res.tickers)); err != nil {
 		return errors.Annotate(err, "failed to add %s value", e.Prefix("tickers"))
 	}
-	if err := e.AddValue(e.context, "samples", fmt.Sprintf("%d", res.samples)); err != nil {
+	if err := e.AddValue(ctx, "samples", fmt.Sprintf("%d", res.samples)); err != nil {
 		return errors.Annotate(err, "failed to add %s value", e.Prefix("samples"))
 	}
 	if e.config.BetaPlot != nil {
 		betasDist := stats.NewSampleDistribution(res.betas, &e.config.BetaPlot.Buckets)
-		err := experiments.PlotDistribution(e.context, betasDist, e.config.BetaPlot,
+		err := experiments.PlotDistribution(ctx, betasDist, e.config.BetaPlot,
 			e.config.ID, "betas")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot betas")
@@ -593,7 +439,7 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 	}
 	if e.config.RPlot != nil {
 		RDist := stats.NewHistogramDistribution(res.histR)
-		err := experiments.PlotDistribution(e.context, RDist, e.config.RPlot,
+		err := experiments.PlotDistribution(ctx, RDist, e.config.RPlot,
 			e.config.ID, "normalized R")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot normalized R")
@@ -602,7 +448,7 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 	if e.config.RMeansPlot != nil {
 		meansDist := stats.NewSampleDistribution(
 			res.means, &e.config.RMeansPlot.Buckets)
-		err := experiments.PlotDistribution(e.context, meansDist, e.config.RMeansPlot,
+		err := experiments.PlotDistribution(ctx, meansDist, e.config.RMeansPlot,
 			e.config.ID, "R means")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot R means")
@@ -610,7 +456,7 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 	}
 	if e.config.RMADsPlot != nil {
 		MADsDist := stats.NewSampleDistribution(res.mads, &e.config.RMADsPlot.Buckets)
-		err := experiments.PlotDistribution(e.context, MADsDist, e.config.RMADsPlot,
+		err := experiments.PlotDistribution(ctx, MADsDist, e.config.RMADsPlot,
 			e.config.ID, "R MADs")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot R MADs")
@@ -618,25 +464,24 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 	}
 	if e.config.RSigmasPlot != nil {
 		SigmasDist := stats.NewSampleDistribution(res.sigmas, &e.config.RSigmasPlot.Buckets)
-		err := experiments.PlotDistribution(e.context, SigmasDist, e.config.RSigmasPlot,
+		err := experiments.PlotDistribution(ctx, SigmasDist, e.config.RSigmasPlot,
 			e.config.ID, "R Sigmas")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot R Sigmas")
 		}
 	}
 	if e.config.RCorrPlot != nil {
-		corrDist := e.crossCorrelations(res.rs, &e.config.RCorrPlot.Buckets)
+		corrDist := e.crossCorrelations(ctx, res.rs, &e.config.RCorrPlot.Buckets)
 		counts := corrDist.Histogram().CountsTotal()
 		if counts < 2 { // too few for a plot
-			logging.Warningf(e.context,
-				"skipping R correlations plot: only %d points", counts)
+			logging.Warningf(ctx, "skipping R correlations plot: only %d points", counts)
 		} else {
-			err := experiments.PlotDistribution(e.context, corrDist, e.config.RCorrPlot,
+			err := experiments.PlotDistribution(ctx, corrDist, e.config.RCorrPlot,
 				e.config.ID, "R cross-correlations")
 			if err != nil {
 				return errors.Annotate(err, "failed to plot R cross-correlations")
 			}
-			err = e.AddValue(e.context, "R cross-correlations",
+			err = e.AddValue(ctx, "R cross-correlations",
 				fmt.Sprintf("%d", counts))
 			if err != nil {
 				return errors.Annotate(err, "failed to add %s value",
@@ -646,7 +491,7 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 	}
 	if e.config.LengthsPlot != nil {
 		dist := stats.NewSampleDistribution(res.lengths, &e.config.LengthsPlot.Buckets)
-		err := experiments.PlotDistribution(e.context, dist, e.config.LengthsPlot,
+		err := experiments.PlotDistribution(ctx, dist, e.config.LengthsPlot,
 			e.config.ID, "lengths")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot lengths")
@@ -655,7 +500,7 @@ func (e *Beta) processLpStats(it iterator.Iterator[*lpStats]) error {
 	if e.config.BetaRatios != nil && len(res.betaRatios) > 1 {
 		c := e.config.BetaRatios.Plot
 		dist := stats.NewSampleDistribution(res.betaRatios, &c.Buckets)
-		err := experiments.PlotDistribution(e.context, dist, c, e.config.ID, "beta ratios")
+		err := experiments.PlotDistribution(ctx, dist, c, e.config.ID, "beta ratios")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot beta ratios")
 		}
