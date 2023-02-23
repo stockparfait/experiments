@@ -94,8 +94,8 @@ func TestConfig(t *testing.T) {
       "graph": "r1"
     }},
     {"beta": {
-      "reference data" : {"DB": "test"},
-      "data" : {"DB": "test"},
+      "reference" : {"DB": {"DB": "test"}, "workers": 1},
+      "data" : {"DB": {"DB": "test"}, "workers": 1},
       "beta ratios": {
         "plot": {"graph": "ratios"}
       }
@@ -244,12 +244,21 @@ func TestConfig(t *testing.T) {
 						BatchSize: 5000,
 					}},
 					{Config: &Beta{
-						RefData:   &defaultReader,
-						Data:      &defaultReader,
+						Reference: &Source{
+							DB:        &defaultReader,
+							Tickers:   1,
+							Samples:   5000,
+							StartDate: db.NewDate(1998, 1, 2),
+							Workers:   1,
+						},
+						Data: &Source{
+							DB:        &defaultReader,
+							Tickers:   1,
+							Samples:   5000,
+							StartDate: db.NewDate(1998, 1, 2),
+							Workers:   1,
+						},
 						Beta:      1,
-						Tickers:   1,
-						Samples:   5000,
-						StartDate: db.NewDate(1998, 1, 2),
 						BatchSize: 100,
 						BetaRatios: &StabilityPlot{
 							Step:      1,

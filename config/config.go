@@ -558,28 +558,14 @@ func (e *AutoCorrelation) Name() string { return "auto-correlation" }
 // Beta experiment studies cross-correlation between stocks and/or an index.
 type Beta struct {
 	ID string `json:"id"` // experiment ID, for multiple instances
-	// Exactly one of RefData or RefAnalytical must be non-nil.
-	RefData       *db.Reader              `json:"reference data"`
-	RefAnalytical *AnalyticalDistribution `json:"reference analytical"`
-	// Exactly one of Data or AnalyticalR must be non-nil. Each ticker in Data is
-	// analysed separately, contributing to statistics about beta and R.
-	// AnalyticalR is the distribution of R for synthetic tickers.
-	Data *db.Reader `json:"data"`
-	// Save correlated sequence lengths to file as a JSON list. The intent is to
-	// use it later in SamplesLengths.
-	LengthsFile string                  `json:"lengths file"`
-	AnalyticalR *AnalyticalDistribution `json:"analytical R"`
+	// Reference is expected to produce exactly one price series.
+	Reference *Source `json:"reference" required:"true"`
+	// Data reads real prices from DB, or generates R sequences.
+	Data *Source `json:"data" required:"true"`
 	// Model P = beta * Ref + R for synthetic price series.
-	Beta    float64 `json:"beta" default:"1.0"`
-	Tickers int     `json:"tickers" default:"1"`    // #synthetic tickers
-	Samples int     `json:"samples" default:"5000"` // #synthetic prices per ticker
-	// Generate synthetic tickers with the number of log-profits given by the
-	// list.  Overrides Tickers and Samples. However, Samples is still used to
-	// generate the synthetic reference sequence; set it to max(SamplesLengths).
-	SamplesLengths []int `json:"samples lengths"`
-	// All synthetic sequences start on this day; default:"1998-01-02".
-	StartDate db.Date `json:"start date"`
+	Beta      float64 `json:"beta" default:"1.0"`
 	BatchSize int     `json:"batch size" default:"100"` // #tickers in a single job
+
 	// CSV dump with info about each stock's beta and R parameters. When set to
 	// "-", print the table to stdout.
 	File        string            `json:"file"`
@@ -604,23 +590,6 @@ var _ ExperimentConfig = &Beta{}
 func (e *Beta) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init Beta")
-	}
-	if (e.RefData == nil) == (e.RefAnalytical == nil) {
-		return errors.Reason(
-			`exactly one of "reference data" or "reference analytical" must be specified`)
-	}
-	if (e.Data == nil) == (e.AnalyticalR == nil) {
-		return errors.Reason(
-			`exactly one of "data" or "analytical R" must be specified`)
-	}
-	if e.Tickers < 1 {
-		return errors.Reason(`"tickers"=%d must be >= 1`, e.Tickers)
-	}
-	if e.Samples < 5 {
-		return errors.Reason(`"samples"=%d must be >= 5`, e.Samples)
-	}
-	if e.StartDate.IsZero() {
-		e.StartDate = db.NewDate(1998, 1, 2)
 	}
 	if e.RCorrSamples < 0 {
 		return errors.Reason(`"R correlations samples"=%d must be >= 0`,

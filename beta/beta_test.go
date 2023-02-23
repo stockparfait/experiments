@@ -128,18 +128,17 @@ func TestBeta(t *testing.T) {
 				confJSON := fmt.Sprintf(`
 {
   "id": "testID",
-  "reference data": {
+  "reference": {"DB": {
     "DB path": "%s",
     "DB": "%s",
     "tickers": ["I"]
-  },
-  "data": {
+  }},
+  "data": {"lengths file": "%s", "DB": {
     "DB path": "%s",
     "DB": "%s",
     "tickers": ["A", "B"]
-  },
+  }},
   "file": "%s",
-  "lengths file": "%s",
   "beta plot": {"graph": "beta"},
   "R plot": {"graph": "R"},
   "R means": {"graph": "means"},
@@ -150,7 +149,7 @@ func TestBeta(t *testing.T) {
     "window": 3,
     "plot": {"graph": "beta ratios"}
   }
-}`, tmpdir, dbName, tmpdir, dbName, csvFile, lengthsFile)
+}`, tmpdir, dbName, lengthsFile, tmpdir, dbName, csvFile)
 				So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
 				var betaExp Beta
 				So(betaExp.Run(ctx, &cfg), ShouldBeNil)
@@ -173,10 +172,12 @@ func TestBeta(t *testing.T) {
 			confJSON := fmt.Sprintf(`
 {
   "id": "testID",
-  "reference analytical": {"name": "t"},
-  "analytical R": {"name": "t"},
-  "tickers": 3,
-  "samples": 10,
+  "reference": {"synthetic": {"name": "t"}},
+  "data": {
+    "synthetic": {"name": "t"},
+    "tickers": 3,
+    "samples": 10
+  },
   "file": "%s",
   "beta plot": {"graph": "beta"},
   "R plot": {"graph": "R"},
@@ -209,11 +210,6 @@ func TestBeta(t *testing.T) {
 
 func TestIterators(t *testing.T) {
 	t.Parallel()
-
-	Convey("repeatIter works", t, func() {
-		So(iterator.ToSlice[int](&repeatIter{42, 5}), ShouldResemble, []int{
-			42, 42, 42, 42, 42})
-	})
 
 	Convey("nxnPairs works", t, func() {
 		So(iterator.ToSlice[intPair](&nxnPairs{n: 4}), ShouldResemble, []intPair{
