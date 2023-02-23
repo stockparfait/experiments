@@ -16,9 +16,15 @@ package experiments
 
 import (
 	"context"
+	"fmt"
+	"math"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stockparfait/experiments/config"
+	"github.com/stockparfait/iterator"
+	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/plot"
 	"github.com/stockparfait/stockparfait/stats"
 	"github.com/stockparfait/testutil"
@@ -220,6 +226,108 @@ func TestExperiments(t *testing.T) {
 				d.Seed(seed)
 				So(testutil.Round(d.Mean(), 1), ShouldEqual, 10.0)
 				So(name, ShouldEqual, "Gauss x 2 x 5")
+			})
+		})
+
+		Convey("Source works", func() {
+			Convey("using synthetic", func() {
+				var cfg config.Source
+				js := testutil.JSON(`
+{
+  "synthetic": {"name": "t"},
+  "tickers": 2,
+  "samples": 10,
+  "start date": "2020-01-02"
+}`)
+				So(cfg.InitMessage(js), ShouldBeNil)
+				it, err := Source(ctx, &cfg)
+				So(err, ShouldBeNil)
+				lps := iterator.ToSlice[LogProfits](it)
+				it.Close()
+				So(len(lps), ShouldEqual, 2)
+				So(len(lps[0].Timeseries.Data()), ShouldEqual, 10)
+				So(len(lps[1].Timeseries.Data()), ShouldEqual, 10)
+				So(lps[0].Timeseries.Dates()[0], ShouldResemble, db.NewDate(2020, 1, 2))
+				So(lps[1].Timeseries.Dates()[0], ShouldResemble, db.NewDate(2020, 1, 2))
+			})
+
+			Convey("using DB, then using synthetic with saved lengths", func() {
+				tmpdir, tmpdirErr := os.MkdirTemp("", "test_autocorr")
+				defer os.RemoveAll(tmpdir)
+
+				So(tmpdirErr, ShouldBeNil)
+
+				d := func(date string) db.Date {
+					res, err := db.NewDateFromString(date)
+					if err != nil {
+						panic(err)
+					}
+					return res
+				}
+				price := func(date string, p float32) db.PriceRow {
+					return db.TestPrice(d(date), p, p, p, 1000.0, true)
+				}
+				dbName := "db"
+				tickers := map[string]db.TickerRow{
+					"A": {},
+					"B": {},
+				}
+				p0 := float32(100.0)
+				p1 := p0 * float32(math.Exp(0.01))
+				p2 := p1 * float32(math.Exp(-0.02))
+				prices := map[string][]db.PriceRow{
+					"A": {
+						price("2020-01-01", p0), // Wednesday
+						price("2020-01-02", p1),
+						price("2020-01-03", p2),
+					},
+					"B": {
+						price("2020-02-03", p0), // Monday
+						price("2020-02-04", p1),
+						price("2020-02-05", p2),
+						price("2020-02-06", p1),
+					},
+				}
+				w := db.NewWriter(tmpdir, dbName)
+				So(w.WriteTickers(tickers), ShouldBeNil)
+				for t, p := range prices {
+					So(w.WritePrices(t, p), ShouldBeNil)
+				}
+				lengthsFile := filepath.Join(tmpdir, "lengths.json")
+				var cfg config.Source
+				js := testutil.JSON(fmt.Sprintf(`
+{
+  "DB": {"DB path": "%s", "DB": "%s"},
+  "lengths file": "%s"
+}
+`, tmpdir, dbName, lengthsFile))
+				So(cfg.InitMessage(js), ShouldBeNil)
+				// Make ParallelMap deterministic.
+				ctx := iterator.TestSerialize(context.Background())
+				it, err := Source(ctx, &cfg)
+				So(err, ShouldBeNil)
+				So(len(iterator.ToSlice[LogProfits](it)), ShouldEqual, 2)
+				it.Close() // this saves lengthsFile
+				So(testutil.FileExists(lengthsFile), ShouldBeTrue)
+				// TODO: call Source for synthetic data and the same lengths file
+
+				var cfg2 config.Source
+				js2 := testutil.JSON(fmt.Sprintf(`
+{
+  "synthetic": {"name": "t"},
+  "lengths file": "%s"
+}
+`, lengthsFile))
+				So(cfg2.InitMessage(js2), ShouldBeNil)
+				it2, err := Source(ctx, &cfg2)
+				So(err, ShouldBeNil)
+				lps := iterator.ToSlice[LogProfits](it2)
+				it2.Close()
+				So(len(lps), ShouldEqual, 2)
+				So(len(lps[0].Timeseries.Data()), ShouldEqual, 2)
+				So(len(lps[1].Timeseries.Data()), ShouldEqual, 3)
+				So(lps[0].Timeseries.Dates()[0], ShouldResemble, db.NewDate(2020, 1, 2))
+				So(lps[1].Timeseries.Dates()[0], ShouldResemble, db.NewDate(2020, 2, 4))
 			})
 		})
 

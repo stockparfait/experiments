@@ -16,12 +16,17 @@ package experiments
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
+	"os"
+	"time"
 
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments/config"
+	"github.com/stockparfait/iterator"
 	"github.com/stockparfait/logging"
+	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/plot"
 	"github.com/stockparfait/stockparfait/stats"
 )
@@ -412,6 +417,172 @@ func CompoundDistribution(ctx context.Context, c *config.CompoundDistribution) (
 	}
 	distName += fmt.Sprintf(" x %d", c.N)
 	return
+}
+
+// synthConfig stores parameters for a single synthetic ticker sequence.
+type synthConfig struct {
+	Start  db.Date
+	Length int
+}
+
+func saveLengths(lengths []synthConfig, fileName string) error {
+	if fileName == "" {
+		return nil
+	}
+	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return errors.Annotate(err, "failed to open lengths file '%s'", fileName)
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	if err := enc.Encode(lengths); err != nil {
+		return errors.Annotate(err, "failed to write JSON to '%s'", fileName)
+	}
+	return nil
+}
+
+func readLengths(fileName string) ([]synthConfig, error) {
+	if fileName == "" {
+		return nil, nil
+	}
+	f, err := os.Open(fileName)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to open lengths file '%s'", fileName)
+	}
+	defer f.Close()
+	dec := json.NewDecoder(f)
+	var lengths []synthConfig
+	if err := dec.Decode(&lengths); err != nil {
+		return nil, errors.Annotate(err, "failed to decode lengths file '%s'", fileName)
+	}
+	return lengths, nil
+}
+
+type LogProfits struct {
+	Ticker     string
+	Timeseries *stats.Timeseries
+	Error      error
+}
+
+func sourceDB(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogProfits], error) {
+	if c.DB == nil {
+		return nil, errors.Reason("DB must not be nil")
+	}
+	f := func(ticker string) LogProfits {
+		rows, err := c.DB.Prices(ticker)
+		if err != nil {
+			return LogProfits{
+				Error: errors.Annotate(err, "failed to read prices for %s", ticker),
+			}
+		}
+		ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
+		return LogProfits{
+			Ticker:     ticker,
+			Timeseries: ts.LogProfits(1),
+		}
+	}
+	tickers, err := c.DB.Tickers(ctx)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to list tickers")
+	}
+	pm := iterator.ParallelMap(ctx, c.Workers, iterator.FromSlice(tickers), f)
+	var lengths []synthConfig
+	addLength := func(lp LogProfits) LogProfits {
+		if len(lp.Timeseries.Data()) > 0 {
+			lengths = append(lengths, synthConfig{
+				Start:  lp.Timeseries.Dates()[0],
+				Length: len(lp.Timeseries.Data()),
+			})
+		}
+		return lp
+	}
+	it := iterator.WithClose(iterator.Map[LogProfits, LogProfits](pm, addLength), func() {
+		pm.Close()
+		if err := saveLengths(lengths, c.LengthsFile); err != nil {
+			logging.Warningf(ctx, "failed to save lengths file: %s", err.Error())
+		}
+	})
+	return it, nil
+}
+
+// tsConfig configures generateTS to generate a synthetic Timeseries of length n
+// starting from the start date and using the given distribution copy.
+type tsConfig struct {
+	d     stats.Distribution
+	start db.Date
+	n     int
+}
+
+// generateTS generates a synthetic log-profit Timeseries.
+func generateTS(cfg tsConfig) LogProfits {
+	date := cfg.start
+	dates := make([]db.Date, cfg.n)
+	data := make([]float64, cfg.n)
+	for i := 0; i < cfg.n; i++ {
+		t := date.ToTime()
+		if t.Weekday() == time.Saturday {
+			t = t.Add(2 * 24 * time.Hour)
+		} else if t.Weekday() == time.Sunday {
+			t = t.Add(24 * time.Hour)
+		}
+		dates[i] = db.NewDateFromTime(t)
+		data[i] = cfg.d.Rand()
+		t = t.Add(24 * time.Hour)
+		date = db.NewDateFromTime(t)
+	}
+	return LogProfits{
+		Ticker:     "synthetic",
+		Timeseries: stats.NewTimeseries(dates, data),
+	}
+}
+
+// distIter generates tsConfig sequence based on the iterator for the sequence
+// lengths.
+type distIter struct {
+	d           stats.Distribution
+	lengthsIter iterator.Iterator[synthConfig]
+}
+
+var _ iterator.Iterator[tsConfig] = &distIter{}
+
+func (it *distIter) Next() (tsConfig, bool) {
+	c, ok := it.lengthsIter.Next()
+	if !ok {
+		return tsConfig{}, false
+	}
+	return tsConfig{d: it.d.Copy(), start: c.Start, n: c.Length}, true
+}
+
+func sourceSynthetic(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogProfits], error) {
+	d, _, err := AnalyticalDistribution(ctx, c.Synthetic)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to create synthetic distribution")
+	}
+	var lengthsIter iterator.Iterator[synthConfig]
+	if c.LengthsFile != "" {
+		lengths, err := readLengths(c.LengthsFile)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to read lengths")
+		}
+		lengthsIter = iterator.FromSlice(lengths)
+	} else {
+		lengthsIter = iterator.Repeat(
+			synthConfig{Start: c.StartDate, Length: c.Samples}, c.Tickers)
+	}
+	distIt := &distIter{d: d, lengthsIter: lengthsIter}
+	pm := iterator.ParallelMap[tsConfig, LogProfits](ctx, c.Workers, distIt, generateTS)
+	return pm, nil
+}
+
+// Source generates an iterator of log-profits
+func Source(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogProfits], error) {
+	switch {
+	case c.DB != nil:
+		return sourceDB(ctx, c)
+	case c.Synthetic != nil:
+		return sourceSynthetic(ctx, c)
+	}
+	return nil, errors.Reason(`one of "DB" or "synthetic" must be configured`)
 }
 
 // DeriveAlpha estimates the degrees of freedom parameter for a Student's T
