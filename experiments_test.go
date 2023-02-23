@@ -20,6 +20,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/stockparfait/experiments/config"
@@ -307,8 +308,16 @@ func TestExperiments(t *testing.T) {
 				ctx := iterator.TestSerialize(context.Background())
 				it, err := Source(ctx, &cfg)
 				So(err, ShouldBeNil)
-				So(len(iterator.ToSlice[LogProfits](it)), ShouldEqual, 2)
+				lps := iterator.ToSlice[LogProfits](it)
 				it.Close() // this saves lengthsFile
+				sort.Slice(lps, func(i, j int) bool {
+					return len(lps[i].Timeseries.Data()) < len(lps[j].Timeseries.Data())
+				})
+				So(len(lps), ShouldEqual, 2)
+				So(len(lps[0].Timeseries.Data()), ShouldEqual, 2)
+				So(len(lps[1].Timeseries.Data()), ShouldEqual, 3)
+				So(lps[0].Timeseries.Dates()[0], ShouldResemble, d("2020-01-02"))
+				So(lps[1].Timeseries.Dates()[0], ShouldResemble, d("2020-02-04"))
 				So(testutil.FileExists(lengthsFile), ShouldBeTrue)
 
 				// Use lengths file in synthetic data.
@@ -322,13 +331,16 @@ func TestExperiments(t *testing.T) {
 				So(cfg2.InitMessage(js2), ShouldBeNil)
 				it2, err := Source(ctx, &cfg2)
 				So(err, ShouldBeNil)
-				lps := iterator.ToSlice[LogProfits](it2)
+				lps2 := iterator.ToSlice[LogProfits](it2)
 				it2.Close()
-				So(len(lps), ShouldEqual, 2)
-				So(len(lps[0].Timeseries.Data()), ShouldEqual, 2)
-				So(len(lps[1].Timeseries.Data()), ShouldEqual, 3)
-				So(lps[0].Timeseries.Dates()[0], ShouldResemble, d("2020-01-02"))
-				So(lps[1].Timeseries.Dates()[0], ShouldResemble, d("2020-02-04"))
+				sort.Slice(lps, func(i, j int) bool {
+					return len(lps[i].Timeseries.Data()) < len(lps[j].Timeseries.Data())
+				})
+				So(len(lps2), ShouldEqual, 2)
+				So(len(lps2[0].Timeseries.Data()), ShouldEqual, 2)
+				So(len(lps2[1].Timeseries.Data()), ShouldEqual, 3)
+				So(lps2[0].Timeseries.Dates()[0], ShouldResemble, d("2020-01-02"))
+				So(lps2[1].Timeseries.Dates()[0], ShouldResemble, d("2020-02-04"))
 			})
 		})
 
