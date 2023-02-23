@@ -515,11 +515,10 @@ type tsConfig struct {
 
 // generateTS generates a synthetic log-profit Timeseries.
 func generateTS(cfg tsConfig) LogProfits {
-	date := cfg.start
+	t := cfg.start.ToTime()
 	dates := make([]db.Date, cfg.n)
 	data := make([]float64, cfg.n)
 	for i := 0; i < cfg.n; i++ {
-		t := date.ToTime()
 		if t.Weekday() == time.Saturday {
 			t = t.Add(2 * 24 * time.Hour)
 		} else if t.Weekday() == time.Sunday {
@@ -528,7 +527,6 @@ func generateTS(cfg tsConfig) LogProfits {
 		dates[i] = db.NewDateFromTime(t)
 		data[i] = cfg.d.Rand()
 		t = t.Add(24 * time.Hour)
-		date = db.NewDateFromTime(t)
 	}
 	return LogProfits{
 		Ticker:     "synthetic",

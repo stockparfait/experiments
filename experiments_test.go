@@ -230,6 +230,17 @@ func TestExperiments(t *testing.T) {
 		})
 
 		Convey("Source works", func() {
+			d := func(date string) db.Date {
+				res, err := db.NewDateFromString(date)
+				if err != nil {
+					panic(err)
+				}
+				return res
+			}
+			price := func(date string, p float32) db.PriceRow {
+				return db.TestPrice(d(date), p, p, p, 1000.0, true)
+			}
+
 			Convey("using synthetic", func() {
 				var cfg config.Source
 				js := testutil.JSON(`
@@ -247,26 +258,16 @@ func TestExperiments(t *testing.T) {
 				So(len(lps), ShouldEqual, 2)
 				So(len(lps[0].Timeseries.Data()), ShouldEqual, 10)
 				So(len(lps[1].Timeseries.Data()), ShouldEqual, 10)
-				So(lps[0].Timeseries.Dates()[0], ShouldResemble, db.NewDate(2020, 1, 2))
-				So(lps[1].Timeseries.Dates()[0], ShouldResemble, db.NewDate(2020, 1, 2))
+				So(lps[0].Timeseries.Dates()[0], ShouldResemble, d("2020-01-02"))
+				So(lps[1].Timeseries.Dates()[0], ShouldResemble, d("2020-01-02"))
 			})
 
 			Convey("using DB, then using synthetic with saved lengths", func() {
-				tmpdir, tmpdirErr := os.MkdirTemp("", "test_autocorr")
+				tmpdir, tmpdirErr := os.MkdirTemp("", "test_source")
 				defer os.RemoveAll(tmpdir)
 
 				So(tmpdirErr, ShouldBeNil)
 
-				d := func(date string) db.Date {
-					res, err := db.NewDateFromString(date)
-					if err != nil {
-						panic(err)
-					}
-					return res
-				}
-				price := func(date string, p float32) db.PriceRow {
-					return db.TestPrice(d(date), p, p, p, 1000.0, true)
-				}
 				dbName := "db"
 				tickers := map[string]db.TickerRow{
 					"A": {},
@@ -309,8 +310,8 @@ func TestExperiments(t *testing.T) {
 				So(len(iterator.ToSlice[LogProfits](it)), ShouldEqual, 2)
 				it.Close() // this saves lengthsFile
 				So(testutil.FileExists(lengthsFile), ShouldBeTrue)
-				// TODO: call Source for synthetic data and the same lengths file
 
+				// Use lengths file in synthetic data.
 				var cfg2 config.Source
 				js2 := testutil.JSON(fmt.Sprintf(`
 {
@@ -326,8 +327,8 @@ func TestExperiments(t *testing.T) {
 				So(len(lps), ShouldEqual, 2)
 				So(len(lps[0].Timeseries.Data()), ShouldEqual, 2)
 				So(len(lps[1].Timeseries.Data()), ShouldEqual, 3)
-				So(lps[0].Timeseries.Dates()[0], ShouldResemble, db.NewDate(2020, 1, 2))
-				So(lps[1].Timeseries.Dates()[0], ShouldResemble, db.NewDate(2020, 2, 4))
+				So(lps[0].Timeseries.Dates()[0], ShouldResemble, d("2020-01-02"))
+				So(lps[1].Timeseries.Dates()[0], ShouldResemble, d("2020-02-04"))
 			})
 		})
 
