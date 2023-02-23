@@ -206,6 +206,40 @@ func (d *CompoundDistribution) InitMessage(js any) error {
 	return nil
 }
 
+// Source is a generic config for a set of Timeseries that come either from the
+// actual price database or synthetically generated.
+type Source struct {
+	// Exactly one of DB or Synthetic must be non-nil.
+	DB        *db.Reader              `json:"DB"`
+	Synthetic *AnalyticalDistribution `json:"synthetic"`
+	// With DB, saves the start date and the number of samples for each ticker as
+	// a JSON file.  With Synthetic, read this file and generate synthetic tickers
+	// accordingly, overwriting the other parameters.
+	LengthsFile string `json:"lengths file"`
+	Tickers     int    `json:"tickers" default:"1"`    // #synthetic tickers
+	Samples     int    `json:"samples" default:"5000"` // #synthetic prices per ticker
+	// All synthetic sequences start on this day; default:"1998-01-02".
+	StartDate db.Date `json:"start date"`
+	// Parallel processing parameters.
+	Workers int `json:"workers"` // default: 2*runtime.NumCPU()
+}
+
+func (s *Source) InitMessage(js any) error {
+	if err := message.Init(s, js); err != nil {
+		return errors.Annotate(err, "failed to init Source")
+	}
+	if (s.DB == nil) == (s.Synthetic == nil) {
+		return errors.Reason(`expected exactly one of "DB" or "synthetic"`)
+	}
+	if s.StartDate.IsZero() {
+		s.StartDate = db.NewDate(1998, 1, 2)
+	}
+	if s.Workers <= 0 {
+		s.Workers = 2 * runtime.NumCPU()
+	}
+	return nil
+}
+
 // DeriveAlpha configures parameters for finding the alpha parameter for a
 // Student's T distribution that fits best the data.
 type DeriveAlpha struct {
