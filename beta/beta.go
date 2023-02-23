@@ -81,7 +81,7 @@ func (e *Beta) processReference(ctx context.Context) error {
 	if lp.Error != nil {
 		return errors.Annotate(err, "failed to get reference price series")
 	}
-	e.refTS = lps[0].Timeseries
+	e.refTS = lp.Timeseries
 	return nil
 }
 
