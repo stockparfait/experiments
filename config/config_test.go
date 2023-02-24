@@ -260,8 +260,7 @@ func TestConfig(t *testing.T) {
 							Workers:   1,
 							BatchSize: 10,
 						},
-						Beta:      1,
-						BatchSize: 100,
+						Beta: 1,
 						BetaRatios: &StabilityPlot{
 							Step:      1,
 							Window:    1,
