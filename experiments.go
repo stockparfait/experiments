@@ -461,7 +461,6 @@ func readLengths(fileName string) ([]synthConfig, error) {
 type LogProfits struct {
 	Ticker     string
 	Timeseries *stats.Timeseries
-	Error      error
 }
 
 type withConf[T any] struct {

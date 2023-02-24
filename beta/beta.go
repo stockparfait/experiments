@@ -78,9 +78,6 @@ func (e *Beta) processReference(ctx context.Context) error {
 			"reference should yield exactly one series, got %d", len(lps))
 	}
 	lp := lps[0]
-	if lp.Error != nil {
-		return errors.Annotate(err, "failed to get reference price series")
-	}
 	e.refTS = lp.Timeseries
 	return nil
 }
@@ -96,9 +93,6 @@ func (e *Beta) processData(ctx context.Context) error {
 	f := func(lps []experiments.LogProfits) *lpStats {
 		if e.config.Data.Synthetic != nil { // treat lps as R
 			for i, lp := range lps {
-				if lp.Error != nil {
-					continue // skip it, the error will be handled later
-				}
 				tss := stats.TimeseriesIntersect(e.refTS, lp.Timeseries)
 				lp.Timeseries = tss[0].MultC(e.config.Beta).Add(tss[1])
 				lps[i] = lp
@@ -221,10 +215,6 @@ func (e *Beta) processLogProfits(ctx context.Context, lps []experiments.LogProfi
 		res.histR = stats.NewHistogram(&e.config.RPlot.Buckets)
 	}
 	for _, lp := range lps {
-		if lp.Error != nil {
-			logging.Warningf(ctx, "skipping %s: %s", lp.Ticker, lp.Error.Error())
-			continue
-		}
 		tss := stats.TimeseriesIntersect(lp.Timeseries, e.refTS)
 		p := tss[0]
 		ref := tss[1]
