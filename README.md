@@ -45,7 +45,7 @@ section for details on how to use such configs with the tool.
 ## Installation
 
 Requirements:
-- [Google Go](https://go.dev/dl/) 1.18 or higher;
+- [Google Go](https://go.dev/dl/) 1.19 or higher;
 - `parfait-sharadar` app to download data; see [stockparfait/stockparfait] for
   installation instructions;
 - Subscription to Sharadar Equities Prices on [Nasdaq Data Link]
