@@ -598,7 +598,7 @@ func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func([]LogP
 // Source generates log-profit sequence according to the config. Please remember
 // to close the resulting iterator.
 func Source(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogProfits], error) {
-	sm, err := SourceMap(ctx, c, func(l []LogProfits) []LogProfits { return l })
+	sm, err := SourceMap[[]LogProfits](ctx, c, func(l []LogProfits) []LogProfits { return l })
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to generate log-profits")
 	}
