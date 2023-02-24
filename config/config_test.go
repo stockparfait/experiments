@@ -250,6 +250,7 @@ func TestConfig(t *testing.T) {
 							Samples:   5000,
 							StartDate: db.NewDate(1998, 1, 2),
 							Workers:   1,
+							BatchSize: 10,
 						},
 						Data: &Source{
 							DB:        &defaultReader,
@@ -257,6 +258,7 @@ func TestConfig(t *testing.T) {
 							Samples:   5000,
 							StartDate: db.NewDate(1998, 1, 2),
 							Workers:   1,
+							BatchSize: 10,
 						},
 						Beta:      1,
 						BatchSize: 100,

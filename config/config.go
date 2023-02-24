@@ -221,7 +221,8 @@ type Source struct {
 	// All synthetic sequences start on this day; default:"1998-01-02".
 	StartDate db.Date `json:"start date"`
 	// Parallel processing parameters.
-	Workers int `json:"workers"` // default: 2*runtime.NumCPU()
+	Workers   int `json:"workers"` // default: 2*runtime.NumCPU()
+	BatchSize int `json:"batch size" default:"10"`
 }
 
 func (s *Source) InitMessage(js any) error {

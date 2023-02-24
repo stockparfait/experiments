@@ -464,41 +464,57 @@ type LogProfits struct {
 	Error      error
 }
 
-func sourceDB(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogProfits], error) {
+type withConf[T any] struct {
+	v T
+	c synthConfig
+}
+
+func sourceDB[T any](ctx context.Context, c *config.Source, f func(LogProfits) T) (iterator.IteratorCloser[T], error) {
 	if c.DB == nil {
 		return nil, errors.Reason("DB must not be nil")
 	}
-	f := func(ticker string) LogProfits {
-		rows, err := c.DB.Prices(ticker)
-		if err != nil {
-			return LogProfits{
-				Error: errors.Annotate(err, "failed to read prices for %s", ticker),
+	mapF := func(tickers []string) []withConf[T] {
+		res := make([]withConf[T], len(tickers))
+		for i, ticker := range tickers {
+			rows, err := c.DB.Prices(ticker)
+			if err != nil {
+				res[i] = withConf[T]{
+					v: f(LogProfits{
+						Error: errors.Annotate(err, "failed to read prices for %s", ticker),
+					}),
+				}
+				continue
+			}
+			ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted).LogProfits(1)
+			v := f(LogProfits{Ticker: ticker, Timeseries: ts})
+			c := synthConfig{Length: len(ts.Data())}
+			if c.Length > 0 {
+				c.Start = ts.Dates()[0]
+			}
+			res[i] = withConf[T]{
+				v: v,
+				c: c,
 			}
 		}
-		ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
-		return LogProfits{
-			Ticker:     ticker,
-			Timeseries: ts.LogProfits(1),
-		}
+		return res
 	}
 	tickers, err := c.DB.Tickers(ctx)
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to list tickers")
 	}
-	pm := iterator.ParallelMap(ctx, c.Workers, iterator.FromSlice(tickers), f)
-	var lengths []synthConfig
-	addLength := func(lp LogProfits) LogProfits {
-		if len(lp.Timeseries.Data()) > 0 {
-			lengths = append(lengths, synthConfig{
-				Start:  lp.Timeseries.Dates()[0],
-				Length: len(lp.Timeseries.Data()),
-			})
+	batchIt := iterator.Batch[string](iterator.FromSlice(tickers), c.BatchSize)
+	pm := iterator.ParallelMap(ctx, c.Workers, batchIt, mapF)
+	unbatchIt := iterator.Unbatch[withConf[T]](pm)
+	var cs []synthConfig
+	addLength := func(vc withConf[T]) T {
+		if vc.c.Length > 0 {
+			cs = append(cs, vc.c)
 		}
-		return lp
+		return vc.v
 	}
-	it := iterator.WithClose(iterator.Map[LogProfits, LogProfits](pm, addLength), func() {
+	it := iterator.WithClose(iterator.Map[withConf[T], T](unbatchIt, addLength), func() {
 		pm.Close()
-		if err := saveLengths(lengths, c.LengthsFile); err != nil {
+		if err := saveLengths(cs, c.LengthsFile); err != nil {
 			logging.Warningf(ctx, "failed to save lengths file: %s", err.Error())
 		}
 	})
@@ -551,7 +567,7 @@ func (it *distIter) Next() (tsConfig, bool) {
 	return tsConfig{d: it.d.Copy(), start: c.Start, n: c.Length}, true
 }
 
-func sourceSynthetic(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogProfits], error) {
+func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func(LogProfits) T) (iterator.IteratorCloser[T], error) {
 	d, _, err := AnalyticalDistribution(ctx, c.Synthetic)
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to create synthetic distribution")
@@ -568,17 +584,38 @@ func sourceSynthetic(ctx context.Context, c *config.Source) (iterator.IteratorCl
 			synthConfig{Start: c.StartDate, Length: c.Samples}, c.Tickers)
 	}
 	distIt := &distIter{d: d, lengthsIter: lengthsIter}
-	pm := iterator.ParallelMap[tsConfig, LogProfits](ctx, c.Workers, distIt, generateTS)
-	return pm, nil
+	batchIt := iterator.Batch[tsConfig](distIt, c.BatchSize)
+	pf := func(cs []tsConfig) []T {
+		res := make([]T, len(cs))
+		for i, c := range cs {
+			res[i] = f(generateTS(c))
+		}
+		return res
+	}
+	pm := iterator.ParallelMap[[]tsConfig, []T](ctx, c.Workers, batchIt, pf)
+	it := iterator.WithClose(iterator.Unbatch[T](pm), func() { pm.Close() })
+	return it, nil
 }
 
-// Source generates an iterator of log-profits
+// Source generates log-profit sequence according to the config. Please remember
+// to close the resulting iterator.
 func Source(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogProfits], error) {
+	return SourceMap[LogProfits](ctx, c, func(l LogProfits) LogProfits { return l })
+}
+
+// SourceMap generates log-profit sequence according to the config, processes
+// them with f and returns an iterator of f(LogProfits). The advantage over
+// Source() followed by Map or ParallelMap is that f() is called in the same
+// parallel worker that processes each ticker, thus reducing inter-process
+// communications.
+//
+// Please remember to close the resulting iterator.
+func SourceMap[T any](ctx context.Context, c *config.Source, f func(LogProfits) T) (iterator.IteratorCloser[T], error) {
 	switch {
 	case c.DB != nil:
-		return sourceDB(ctx, c)
+		return sourceDB[T](ctx, c, f)
 	case c.Synthetic != nil:
-		return sourceSynthetic(ctx, c)
+		return sourceSynthetic[T](ctx, c, f)
 	}
 	return nil, errors.Reason(`one of "DB" or "synthetic" must be configured`)
 }
