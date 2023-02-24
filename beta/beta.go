@@ -83,13 +83,6 @@ func (e *Beta) processReference(ctx context.Context) error {
 }
 
 func (e *Beta) processData(ctx context.Context) error {
-	lpIt, err := experiments.Source(ctx, e.config.Data)
-	if err != nil {
-		return errors.Annotate(err, "failed to get data price series")
-	}
-	defer lpIt.Close()
-
-	it := iterator.Batch[experiments.LogProfits](lpIt, e.config.BatchSize)
 	f := func(lps []experiments.LogProfits) *lpStats {
 		if e.config.Data.Synthetic != nil { // treat lps as R
 			for i, lp := range lps {
@@ -100,10 +93,13 @@ func (e *Beta) processData(ctx context.Context) error {
 		}
 		return e.processLogProfits(ctx, lps)
 	}
-	pm := iterator.ParallelMap(ctx, 2*runtime.NumCPU(), it, f)
-	defer pm.Close()
+	it, err := experiments.SourceMap(ctx, e.config.Data, f)
+	if err != nil {
+		return errors.Annotate(err, "failed to get data price series")
+	}
+	defer it.Close()
 
-	if err := e.processLpStats(ctx, pm); err != nil {
+	if err := e.processLpStats(ctx, it); err != nil {
 		return errors.Annotate(err, "failed to process log-profit stats")
 	}
 	return nil
@@ -388,7 +384,7 @@ func (e *Beta) crossCorrelations(ctx context.Context, tss []*stats.Timeseries, b
 	} else {
 		pairsIter = newRandPairs(len(tss), e.config.RCorrSamples, 0)
 	}
-	it := iterator.Batch(pairsIter, e.config.BatchSize)
+	it := iterator.Batch(pairsIter, e.config.Data.BatchSize)
 	pm := iterator.ParallelMap(ctx, 2*runtime.NumCPU(), it, f)
 	defer pm.Close()
 	h := stats.NewHistogram(buckets)

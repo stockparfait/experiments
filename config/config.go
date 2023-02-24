@@ -567,8 +567,7 @@ type Beta struct {
 	// Data reads real prices from DB, or generates R sequences.
 	Data *Source `json:"data" required:"true"`
 	// Model P = beta * Ref + R for synthetic price series.
-	Beta      float64 `json:"beta" default:"1.0"`
-	BatchSize int     `json:"batch size" default:"100"` // #tickers in a single job
+	Beta float64 `json:"beta" default:"1.0"`
 
 	// CSV dump with info about each stock's beta and R parameters. When set to
 	// "-", print the table to stdout.
