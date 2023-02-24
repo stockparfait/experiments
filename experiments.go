@@ -491,10 +491,7 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func(LogProfits) T
 			if c.Length > 0 {
 				c.Start = ts.Dates()[0]
 			}
-			res[i] = withConf[T]{
-				v: v,
-				c: c,
-			}
+			res[i] = withConf[T]{v: v, c: c}
 		}
 		return res
 	}
