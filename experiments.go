@@ -461,39 +461,44 @@ func readLengths(fileName string) ([]synthConfig, error) {
 type LogProfits struct {
 	Ticker     string
 	Timeseries *stats.Timeseries
-	Error      error
 }
 
 type withConf[T any] struct {
-	v T
-	c synthConfig
+	v  T
+	cs []synthConfig
 }
 
-func sourceDB[T any](ctx context.Context, c *config.Source, f func(LogProfits) T) (iterator.IteratorCloser[T], error) {
+func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
 	if c.DB == nil {
 		return nil, errors.Reason("DB must not be nil")
 	}
-	mapF := func(tickers []string) []withConf[T] {
-		res := make([]withConf[T], len(tickers))
-		for i, ticker := range tickers {
+	mapF := func(tickers []string) withConf[T] {
+		var cs []synthConfig
+		var lps []LogProfits
+		for _, ticker := range tickers {
 			rows, err := c.DB.Prices(ticker)
 			if err != nil {
-				res[i] = withConf[T]{
-					v: f(LogProfits{
-						Error: errors.Annotate(err, "failed to read prices for %s", ticker),
-					}),
-				}
+				logging.Warningf(ctx, "failed to read prices for %s: %s",
+					ticker, err.Error())
 				continue
 			}
-			ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted).LogProfits(1)
-			v := f(LogProfits{Ticker: ticker, Timeseries: ts})
-			c := synthConfig{Length: len(ts.Data())}
-			if c.Length > 0 {
-				c.Start = ts.Dates()[0]
+			lp := LogProfits{
+				Ticker: ticker,
+				Timeseries: stats.NewTimeseriesFromPrices(
+					rows, stats.PriceFullyAdjusted).LogProfits(1),
 			}
-			res[i] = withConf[T]{v: v, c: c}
+			length := len(lp.Timeseries.Data())
+			if length == 0 {
+				logging.Warningf(ctx, "%s has no log-profits, skipping", ticker)
+				continue
+			}
+			lps = append(lps, lp)
+			cs = append(cs, synthConfig{
+				Length: length,
+				Start:  lp.Timeseries.Dates()[0],
+			})
 		}
-		return res
+		return withConf[T]{v: f(lps), cs: cs}
 	}
 	tickers, err := c.DB.Tickers(ctx)
 	if err != nil {
@@ -501,15 +506,12 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func(LogProfits) T
 	}
 	batchIt := iterator.Batch[string](iterator.FromSlice(tickers), c.BatchSize)
 	pm := iterator.ParallelMap(ctx, c.Workers, batchIt, mapF)
-	unbatchIt := iterator.Unbatch[withConf[T]](pm)
 	var cs []synthConfig
 	addLength := func(vc withConf[T]) T {
-		if vc.c.Length > 0 {
-			cs = append(cs, vc.c)
-		}
+		cs = append(cs, vc.cs...)
 		return vc.v
 	}
-	it := iterator.WithClose(iterator.Map[withConf[T], T](unbatchIt, addLength), func() {
+	it := iterator.WithClose(iterator.Map[withConf[T], T](pm, addLength), func() {
 		pm.Close()
 		if err := saveLengths(cs, c.LengthsFile); err != nil {
 			logging.Warningf(ctx, "failed to save lengths file: %s", err.Error())
@@ -564,7 +566,7 @@ func (it *distIter) Next() (tsConfig, bool) {
 	return tsConfig{d: it.d.Copy(), start: c.Start, n: c.Length}, true
 }
 
-func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func(LogProfits) T) (iterator.IteratorCloser[T], error) {
+func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
 	d, _, err := AnalyticalDistribution(ctx, c.Synthetic)
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to create synthetic distribution")
@@ -582,32 +584,36 @@ func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func(LogPro
 	}
 	distIt := &distIter{d: d, lengthsIter: lengthsIter}
 	batchIt := iterator.Batch[tsConfig](distIt, c.BatchSize)
-	pf := func(cs []tsConfig) []T {
-		res := make([]T, len(cs))
+	pf := func(cs []tsConfig) T {
+		lps := make([]LogProfits, len(cs))
 		for i, c := range cs {
-			res[i] = f(generateTS(c))
+			lps[i] = generateTS(c)
 		}
-		return res
+		return f(lps)
 	}
-	pm := iterator.ParallelMap[[]tsConfig, []T](ctx, c.Workers, batchIt, pf)
-	it := iterator.WithClose(iterator.Unbatch[T](pm), func() { pm.Close() })
-	return it, nil
+	pm := iterator.ParallelMap[[]tsConfig, T](ctx, c.Workers, batchIt, pf)
+	return pm, nil
 }
 
 // Source generates log-profit sequence according to the config. Please remember
 // to close the resulting iterator.
 func Source(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogProfits], error) {
-	return SourceMap[LogProfits](ctx, c, func(l LogProfits) LogProfits { return l })
+	sm, err := SourceMap(ctx, c, func(l []LogProfits) []LogProfits { return l })
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to generate log-profits")
+	}
+	it := iterator.Unbatch[LogProfits](sm)
+	return iterator.WithClose(it, func() { sm.Close() }), nil
 }
 
-// SourceMap generates log-profit sequence according to the config, processes
-// them with f and returns an iterator of f(LogProfits). The advantage over
-// Source() followed by Map or ParallelMap is that f() is called in the same
-// parallel worker that processes each ticker, thus reducing inter-process
-// communications.
+// SourceMap generates log-profit sequences according to the config, processes
+// them with f in batches and returns an iterator of f([]LogProfits). The
+// advantage over Source() followed by Map or ParallelMap is that f() is called
+// in the same parallel worker that processes each batch of tickers, thus
+// reducing inter-process communications.
 //
 // Please remember to close the resulting iterator.
-func SourceMap[T any](ctx context.Context, c *config.Source, f func(LogProfits) T) (iterator.IteratorCloser[T], error) {
+func SourceMap[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
 	switch {
 	case c.DB != nil:
 		return sourceDB[T](ctx, c, f)
