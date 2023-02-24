@@ -221,7 +221,8 @@ type Source struct {
 	// All synthetic sequences start on this day; default:"1998-01-02".
 	StartDate db.Date `json:"start date"`
 	// Parallel processing parameters.
-	Workers int `json:"workers"` // default: 2*runtime.NumCPU()
+	Workers   int `json:"workers"`                 // default: 2*runtime.NumCPU()
+	BatchSize int `json:"batch size" default:"10"` // must be >= 1
 }
 
 func (s *Source) InitMessage(js any) error {
@@ -236,6 +237,9 @@ func (s *Source) InitMessage(js any) error {
 	}
 	if s.Workers <= 0 {
 		s.Workers = 2 * runtime.NumCPU()
+	}
+	if s.BatchSize < 1 {
+		return errors.Reason(`"batch size"=%d must be >= 1`, s.BatchSize)
 	}
 	return nil
 }
