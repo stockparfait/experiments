@@ -474,24 +474,30 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits)
 		return nil, errors.Reason("DB must not be nil")
 	}
 	mapF := func(tickers []string) withConf[T] {
-		cs := make([]synthConfig, len(tickers))
-		lps := make([]LogProfits, len(tickers))
-		for i, ticker := range tickers {
+		var cs []synthConfig
+		var lps []LogProfits
+		for _, ticker := range tickers {
 			rows, err := c.DB.Prices(ticker)
 			if err != nil {
-				lps[i] = LogProfits{
-					Error: errors.Annotate(err, "failed to read prices for %s", ticker),
-				}
+				logging.Warningf(ctx, "failed to read prices for %s: %s",
+					ticker, err.Error())
 				continue
 			}
-			lps[i] = LogProfits{
-				Ticker:     ticker,
-				Timeseries: stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted).LogProfits(1),
+			lp := LogProfits{
+				Ticker: ticker,
+				Timeseries: stats.NewTimeseriesFromPrices(
+					rows, stats.PriceFullyAdjusted).LogProfits(1),
 			}
-			cs[i] = synthConfig{Length: len(lps[i].Timeseries.Data())}
-			if cs[i].Length > 0 {
-				cs[i].Start = lps[i].Timeseries.Dates()[0]
+			length := len(lp.Timeseries.Data())
+			if length == 0 {
+				logging.Warningf(ctx, "%s has no log-profits, skipping", ticker)
+				continue
 			}
+			lps = append(lps, lp)
+			cs = append(cs, synthConfig{
+				Length: length,
+				Start:  lp.Timeseries.Dates()[0],
+			})
 		}
 		return withConf[T]{v: f(lps), cs: cs}
 	}
@@ -503,11 +509,7 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits)
 	pm := iterator.ParallelMap(ctx, c.Workers, batchIt, mapF)
 	var cs []synthConfig
 	addLength := func(vc withConf[T]) T {
-		for _, c := range vc.cs {
-			if c.Length > 0 {
-				cs = append(cs, c)
-			}
-		}
+		cs = append(cs, vc.cs...)
 		return vc.v
 	}
 	it := iterator.WithClose(iterator.Map[withConf[T], T](pm, addLength), func() {
