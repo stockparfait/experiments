@@ -152,7 +152,6 @@
         },
         "id": "Energy",
         "log-profits": {
-          "adjust reference distribution": true,
           "buckets": {
             "max": 200,
             "min": 0.2,

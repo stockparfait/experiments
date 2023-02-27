@@ -18,7 +18,6 @@
         },
         "id": "[$1.0M..$10.0M]",
         "log-profits": {
-          "adjust reference distribution": true,
           "buckets": {
             "max": 200,
             "min": 0.2,

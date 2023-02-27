@@ -14,7 +14,6 @@
         },
         "id": "all stocks 1998-2022",
         "log-profits": {
-          "adjust reference distribution": true,
           "buckets": {
             "max": 700,
             "min": 0.2,

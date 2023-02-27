@@ -107,7 +107,6 @@
         },
         "id": "2016-2022",
         "log-profits": {
-          "adjust reference distribution": true,
           "buckets": {
             "max": 200,
             "min": 0.2,
