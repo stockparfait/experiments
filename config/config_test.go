@@ -65,7 +65,7 @@ func TestConfig(t *testing.T) {
     {"test": {"passed": true, "graph": "r1"}},
     {"hold": {"data": {"DB": "test"}}},
     {"distribution": {
-      "data": {"DB": "test"},
+      "data": {"DB": {"DB": "test"}},
       "log-profits": {
         "graph": "dist",
         "normalize": true,
@@ -74,8 +74,7 @@ func TestConfig(t *testing.T) {
           "min x": 2,
           "max x": 4
         }
-      },
-      "parallel workers": 1
+      }
     }},
     {"power distribution": {
       "distribution": {"analytical source": {"name": "normal"}},
@@ -94,8 +93,8 @@ func TestConfig(t *testing.T) {
       "graph": "r1"
     }},
     {"beta": {
-      "reference" : {"DB": {"DB": "test"}, "workers": 1},
-      "data" : {"DB": {"DB": "test"}, "workers": 1},
+      "reference" : {"DB": {"DB": "test"}},
+      "data" : {"DB": {"DB": "test"}},
       "beta ratios": {
         "plot": {"graph": "ratios"}
       }
@@ -111,6 +110,8 @@ func TestConfig(t *testing.T) {
 
 			var defaultReader db.Reader
 			So(defaultReader.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
+			var defaultSource Source
+			So(defaultSource.InitMessage(testutil.JSON(`{"DB": {"DB": "test"}}`)), ShouldBeNil)
 			var defaultBuckets stats.Buckets
 			So(defaultBuckets.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
 			var defaultParallelSampling stats.ParallelSamplingConfig
@@ -171,7 +172,7 @@ func TestConfig(t *testing.T) {
 						TotalAxis:     "right",
 					}},
 					{Config: &Distribution{
-						Reader: &defaultReader,
+						Data: &defaultSource,
 						LogProfits: &DistributionPlot{
 							Graph:     "dist",
 							Buckets:   defaultBuckets,
@@ -196,9 +197,6 @@ func TestConfig(t *testing.T) {
 								IgnoreCounts:  10,
 							},
 						},
-						Compound:  1,
-						BatchSize: 10,
-						Workers:   1,
 					}},
 					{Config: &PowerDist{
 						Dist: CompoundDistribution{
@@ -244,23 +242,9 @@ func TestConfig(t *testing.T) {
 						BatchSize: 5000,
 					}},
 					{Config: &Beta{
-						Reference: &Source{
-							DB:        &defaultReader,
-							Tickers:   1,
-							Samples:   5000,
-							StartDate: db.NewDate(1998, 1, 2),
-							Workers:   1,
-							BatchSize: 10,
-						},
-						Data: &Source{
-							DB:        &defaultReader,
-							Tickers:   1,
-							Samples:   5000,
-							StartDate: db.NewDate(1998, 1, 2),
-							Workers:   1,
-							BatchSize: 10,
-						},
-						Beta: 1,
+						Reference: &defaultSource,
+						Data:      &defaultSource,
+						Beta:      1,
 						BetaRatios: &StabilityPlot{
 							Step:      1,
 							Window:    1,

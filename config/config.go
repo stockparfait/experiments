@@ -212,6 +212,7 @@ type Source struct {
 	// Exactly one of DB or Synthetic must be non-nil.
 	DB        *db.Reader              `json:"DB"`
 	Synthetic *AnalyticalDistribution `json:"synthetic"`
+	Compound  int                     `json:"compound" default:"1"`
 	// With DB, saves the start date and the number of samples for each ticker as
 	// a JSON file.  With Synthetic, read this file and generate synthetic tickers
 	// accordingly, overwriting the other parameters.
@@ -327,16 +328,13 @@ func (dp *DistributionPlot) InitMessage(js any) error {
 // reference to that of the sample.
 type Distribution struct {
 	ID         string            `json:"id"` // experiment ID, for multiple instances
-	Reader     *db.Reader        `json:"data" required:"true"`
+	Data       *Source           `json:"data" required:"true"`
 	LogProfits *DistributionPlot `json:"log-profits"`
 	Means      *DistributionPlot `json:"means"`
 	MADs       *DistributionPlot `json:"MADs"`
 	// mean[subrange] / mean[overall]. Same for MAD.
 	MeanStability *StabilityPlot `json:"mean stability"`
 	MADStability  *StabilityPlot `json:"MAD stability"`
-	Compound      int            `json:"compound" default:"1"`    // log-profit step size; must be >= 1
-	BatchSize     int            `json:"batch size" default:"10"` // must be >0
-	Workers       int            `json:"parallel workers"`        // >0; default = 2*runtime.NumCPU()
 }
 
 var _ ExperimentConfig = &Distribution{}
@@ -344,15 +342,6 @@ var _ ExperimentConfig = &Distribution{}
 func (e *Distribution) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init Distribution")
-	}
-	if e.Compound < 1 {
-		return errors.Reason("compound = %d must be >= 1", e.Compound)
-	}
-	if e.BatchSize <= 0 {
-		return errors.Reason("batch size = %d must be positive", e.BatchSize)
-	}
-	if e.Workers <= 0 {
-		e.Workers = 2 * runtime.NumCPU()
 	}
 	return nil
 }

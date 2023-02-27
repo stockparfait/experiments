@@ -3,17 +3,14 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "sources": ["SEP"],
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "start": "1998-01-01",
-          "tickers": [
-            "GOOG"
-          ]
+          "DB": {
+            "DB": "sharadar",
+            "end": "2022-07-31",
+            "start": "1998-01-01",
+            "tickers": [
+              "GOOG"
+            ]
+          }
         },
         "id": "GOOG",
         "log-profits": {
@@ -25,6 +22,7 @@
           },
           "graph": "dist",
           "log Y": true,
+          "normalize": false,
           "use means": true
         }
       }
@@ -32,17 +30,14 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "sources": ["SEP"],
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "start": "1998-01-01",
-          "tickers": [
-            "TSLA"
-          ]
+          "DB": {
+            "DB": "sharadar",
+            "end": "2022-07-31",
+            "start": "1998-01-01",
+            "tickers": [
+              "TSLA"
+            ]
+          }
         },
         "id": "TSLA",
         "log-profits": {
@@ -54,6 +49,7 @@
           },
           "graph": "dist",
           "log Y": true,
+          "normalize": false,
           "use means": true
         }
       }
@@ -69,7 +65,7 @@
       ],
       "id": "dist group",
       "timeseries": false,
-      "title": "Log-profit distributions"
+      "title": "GOOG vs. TSLA Log-Profits"
     }
   ]
 }

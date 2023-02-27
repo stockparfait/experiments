@@ -75,10 +75,10 @@ func TestDistribution(t *testing.T) {
 		g, err := canvas.EnsureGraph(plot.KindXY, "g", "dist")
 		So(err, ShouldBeNil)
 
-		Convey("defaults", func() {
+		Convey("DB with default parameters", func() {
 			var cfg config.Distribution
 			So(cfg.InitMessage(testutil.JSON(fmt.Sprintf(`{
-  "data": {"DB path": "%s", "DB": "%s"},
+  "data": {"DB": {"DB path": "%s", "DB": "%s"}},
   "log-profits": {"graph": "g"}
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution
@@ -92,11 +92,11 @@ func TestDistribution(t *testing.T) {
 			So(len(g.Plots), ShouldEqual, 1)
 		})
 
-		Convey("non-default parameters", func() {
+		Convey("DB with custom parameters", func() {
 			var cfg config.Distribution
 			So(cfg.InitMessage(testutil.JSON(fmt.Sprintf(`{
   "id": "test",
-  "data": {"DB path": "%s", "DB": "%s"},
+  "data": {"DB": {"DB path": "%s", "DB": "%s"}},
   "log-profits": {
     "graph": "g",
     "counts graph": "g",

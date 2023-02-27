@@ -3,19 +3,17 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2003-12-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2003-12-31",
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "1998-2003",
         "log-profits": {
@@ -35,19 +33,17 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2009-12-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "2004-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2009-12-31",
+            "sources": [
+              "SEP"
+            ],
+            "start": "2004-01-01"
+          }
         },
         "id": "2004-2009",
         "log-profits": {
@@ -67,19 +63,17 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2015-12-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "2010-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2015-12-31",
+            "sources": [
+              "SEP"
+            ],
+            "start": "2010-01-01"
+          }
         },
         "id": "2010-2015",
         "log-profits": {
@@ -99,19 +93,17 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-12-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "2016-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-12-31",
+            "sources": [
+              "SEP"
+            ],
+            "start": "2016-01-01"
+          }
         },
         "id": "2016-2022",
         "log-profits": {
@@ -145,7 +137,7 @@
       ],
       "id": "dist group",
       "timeseries": false,
-      "title": "Log-profit distributions"
+      "title": "Log-Profits by Time"
     }
   ]
 }

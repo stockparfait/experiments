@@ -485,7 +485,7 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits)
 			lp := LogProfits{
 				Ticker: ticker,
 				Timeseries: stats.NewTimeseriesFromPrices(
-					rows, stats.PriceFullyAdjusted).LogProfits(1),
+					rows, stats.PriceFullyAdjusted).LogProfits(c.Compound),
 			}
 			length := len(lp.Timeseries.Data())
 			if length == 0 {
@@ -685,7 +685,8 @@ func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *
 	if err != nil {
 		return errors.Annotate(err, "failed to create '%s' analytical plot", legend)
 	}
-	plt.SetLegend(legend + " ref:" + distName).SetChartType(plot.ChartDashed)
+	plt.SetLegend(Prefix(prefix, legend) + " ref:" + distName)
+	plt.SetChartType(plot.ChartDashed)
 	if c.LogY {
 		plt.SetYLabel("log10(p.d.f.)")
 	} else {
