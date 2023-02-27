@@ -482,10 +482,16 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits)
 					ticker, err.Error())
 				continue
 			}
+			// TODO: KLUDGE: remove when stockparfait#180 is fixed.
+			ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
+			if len(ts.Data()) > c.Compound {
+				ts = ts.LogProfits(c.Compound)
+			} else {
+				ts = stats.NewTimeseries(nil, nil)
+			}
 			lp := LogProfits{
-				Ticker: ticker,
-				Timeseries: stats.NewTimeseriesFromPrices(
-					rows, stats.PriceFullyAdjusted).LogProfits(1),
+				Ticker:     ticker,
+				Timeseries: ts,
 			}
 			length := len(lp.Timeseries.Data())
 			if length == 0 {
@@ -685,7 +691,8 @@ func plotAnalytical(ctx context.Context, dh stats.DistributionWithHistogram, c *
 	if err != nil {
 		return errors.Annotate(err, "failed to create '%s' analytical plot", legend)
 	}
-	plt.SetLegend(legend + " ref:" + distName).SetChartType(plot.ChartDashed)
+	plt.SetLegend(Prefix(prefix, legend) + " ref:" + distName)
+	plt.SetChartType(plot.ChartDashed)
 	if c.LogY {
 		plt.SetYLabel("log10(p.d.f.)")
 	} else {

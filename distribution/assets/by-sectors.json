@@ -3,22 +3,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Basic Materials"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Basic Materials"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Basic Materials",
         "log-profits": {
@@ -38,22 +36,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Communication Services"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Communication Services"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Communication Services",
         "log-profits": {
@@ -73,22 +69,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Consumer Cyclical"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Consumer Cyclical"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Consumer Cyclical",
         "log-profits": {
@@ -108,22 +102,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Consumer Defensive"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Consumer Defensive"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Consumer Defensive",
         "log-profits": {
@@ -143,25 +135,24 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Energy"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Energy"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Energy",
         "log-profits": {
+          "adjust reference distribution": true,
           "buckets": {
             "max": 200,
             "min": 0.2,
@@ -184,22 +175,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Financial Services"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Financial Services"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Financial Services",
         "log-profits": {
@@ -219,22 +208,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Healthcare"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Healthcare"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Healthcare",
         "log-profits": {
@@ -254,22 +241,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Industrials"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Industrials"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Industrials",
         "log-profits": {
@@ -289,22 +274,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Real Estate"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Real Estate"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Real Estate",
         "log-profits": {
@@ -324,22 +307,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Technology"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Technology"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Technology",
         "log-profits": {
@@ -359,22 +340,20 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sectors": [
-            "Utilities"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sectors": [
+              "Utilities"
+            ],
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Utilities",
         "log-profits": {
@@ -402,7 +381,7 @@
       ],
       "id": "dist group",
       "timeseries": false,
-      "title": "Log-profit distributions"
+      "title": "Log-Profits by Sector"
     }
   ]
 }

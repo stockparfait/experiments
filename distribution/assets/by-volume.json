@@ -3,23 +3,22 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "max": 10000000,
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "max": 10000000,
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "[$1.0M..$10.0M]",
         "log-profits": {
+          "adjust reference distribution": true,
           "buckets": {
             "max": 200,
             "min": 0.2,
@@ -42,20 +41,18 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "max": 100000000,
-            "min": 10000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "max": 100000000,
+              "min": 10000000
+            },
+            "end": "2022-07-31",
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "[$10.0M..$100.0M]",
         "log-profits": {
@@ -75,20 +72,18 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "max": 1000000000,
-            "min": 100000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "max": 1000000000,
+              "min": 100000000
+            },
+            "end": "2022-07-31",
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "[$100.0M..$1000.0M]",
         "log-profits": {
@@ -116,7 +111,7 @@
       ],
       "id": "dist group",
       "timeseries": false,
-      "title": "Log-profit distributions"
+      "title": "Log-Profits by Volume"
     }
   ]
 }

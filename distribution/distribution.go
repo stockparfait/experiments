@@ -23,7 +23,6 @@ import (
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
 	"github.com/stockparfait/iterator"
-	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/stats"
 )
 
@@ -31,15 +30,11 @@ import (
 // distributions of log-profits.
 type Distribution struct {
 	config         *config.Distribution
-	context        context.Context
-	stats          *jobResult
 	meansHistogram *stats.Histogram
 	madsHistogram  *stats.Histogram
-	tickers        []string
 }
 
 var _ experiments.Experiment = &Distribution{}
-var _ iterator.Iterator[[]string] = &Distribution{}
 
 func (d *Distribution) Prefix(s string) string {
 	return experiments.Prefix(d.config.ID, s)
@@ -54,26 +49,30 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	if d.config, ok = cfg.(*config.Distribution); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
-	d.context = ctx
-	tickers, err := d.config.Reader.Tickers(ctx)
+	it, err := experiments.SourceMap(ctx, d.config.Data, d.processLogProfits)
 	if err != nil {
-		return errors.Annotate(err, "failed to list tickers")
+		return errors.Annotate(err, "failed to read data source")
 	}
-	if err := d.processTickers(tickers); err != nil {
-		return errors.Annotate(err, "failed to process tickers")
+	defer it.Close()
+
+	sts := iterator.Reduce[*jobResult, *jobResult](
+		it, d.newJobResult(), reduceJobResult)
+
+	if err := d.processStats(sts); err != nil {
+		return errors.Annotate(err, "failed to process collected statistics")
 	}
-	if err := d.AddValue(ctx, "tickers", fmt.Sprintf("%d", d.stats.NumTickers)); err != nil {
+	if err := d.AddValue(ctx, "tickers", fmt.Sprintf("%d", sts.NumTickers)); err != nil {
 		return errors.Annotate(err, "failed to add '%s' tickers value", d.config.ID)
 	}
-	if d.stats.Histogram != nil {
-		if err := d.AddValue(ctx, "samples", fmt.Sprintf("%d", d.stats.Histogram.CountsTotal())); err != nil {
+	if sts.Histogram != nil {
+		if err := d.AddValue(ctx, "samples", fmt.Sprintf("%d", sts.Histogram.CountsTotal())); err != nil {
 			return errors.Annotate(err, "failed to add '%s' samples value", d.config.ID)
 		}
 	}
-	if d.stats.Histogram.CountsTotal() == 0 {
+	if sts.Histogram.CountsTotal() == 0 {
 		return nil
 	}
-	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.stats.Histogram), d.config.LogProfits, d.config.ID, "log-profit"); err != nil {
+	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(sts.Histogram), d.config.LogProfits, d.config.ID, "log-profit"); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' sample distribution", d.config.ID)
 	}
 	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.meansHistogram), d.config.Means, d.config.ID, "means"); err != nil {
@@ -82,14 +81,14 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(d.madsHistogram), d.config.MADs, d.config.ID, "MADs"); err != nil {
 		return errors.Annotate(err, "failed to plot '%s' MADs distribution", d.config.ID)
 	}
-	if c := d.config.MeanStability; c != nil && len(d.stats.MeanStability) > 1 {
-		dist := stats.NewSampleDistribution(d.stats.MeanStability, &c.Plot.Buckets)
+	if c := d.config.MeanStability; c != nil && len(sts.MeanStability) > 1 {
+		dist := stats.NewSampleDistribution(sts.MeanStability, &c.Plot.Buckets)
 		if err := experiments.PlotDistribution(ctx, dist, c.Plot, d.config.ID, "mean stability"); err != nil {
 			return errors.Annotate(err, "failed to plot '%s' mean stability", d.config.ID)
 		}
 	}
-	if c := d.config.MADStability; c != nil && len(d.stats.MADStability) > 1 {
-		dist := stats.NewSampleDistribution(d.stats.MADStability, &c.Plot.Buckets)
+	if c := d.config.MADStability; c != nil && len(sts.MADStability) > 1 {
+		dist := stats.NewSampleDistribution(sts.MADStability, &c.Plot.Buckets)
 		if err := experiments.PlotDistribution(ctx, dist, c.Plot, d.config.ID, "MAD stability"); err != nil {
 			return errors.Annotate(err, "failed to plot '%s' MAD stability", d.config.ID)
 		}
@@ -146,75 +145,40 @@ func (d *Distribution) newJobResult() *jobResult {
 	return res
 }
 
-func (d *Distribution) processTicker(ticker string, res *jobResult) error {
-	rows, err := d.config.Reader.Prices(ticker)
-	if err != nil {
-		logging.Warningf(d.context, err.Error())
-		return nil
-	}
-	if len(rows) <= 1 {
-		return nil
-	}
-	ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
-	data := ts.LogProfits(d.config.Compound).Data()
-	sample := stats.NewSample(data)
-	res.Means = append(res.Means, sample.Mean())
-	res.MADs = append(res.MADs, sample.MAD())
-	meanF := func(l, h int) float64 { return stats.NewSample(data[l:h]).Mean() }
-	MADF := func(l, h int) float64 { return stats.NewSample(data[l:h]).MAD() }
-	res.MeanStability = append(res.MeanStability, experiments.Stability(
-		len(data), meanF, d.config.MeanStability)...)
-	res.MADStability = append(res.MADStability, experiments.Stability(
-		len(data), MADF, d.config.MADStability)...)
-	if res.Histogram != nil {
-		if d.config.LogProfits.Normalize && sample.MAD() != 0.0 {
-			sample, err = sample.Normalize()
-			if err != nil {
-				return errors.Annotate(err,
-					"'%s': failed to normalize %s's log-profits", d.config.ID, ticker)
-			}
-		}
-		res.Histogram.Add(sample.Data()...)
-	}
-	res.NumTickers++
-	return nil
-}
-
-func (d *Distribution) processBatch(tickers []string) *jobResult {
+func (d *Distribution) processLogProfits(lps []experiments.LogProfits) *jobResult {
 	res := d.newJobResult()
-	for _, t := range tickers {
-		if err := d.processTicker(t, res); err != nil {
-			res.Err = errors.Annotate(err, "failed to process ticker %s", t)
-			return res
+	for _, lp := range lps {
+		data := lp.Timeseries.Data()
+		sample := stats.NewSample(data)
+		res.Means = append(res.Means, sample.Mean())
+		res.MADs = append(res.MADs, sample.MAD())
+		meanF := func(l, h int) float64 { return stats.NewSample(data[l:h]).Mean() }
+		MADF := func(l, h int) float64 { return stats.NewSample(data[l:h]).MAD() }
+		res.MeanStability = append(res.MeanStability, experiments.Stability(
+			len(data), meanF, d.config.MeanStability)...)
+		res.MADStability = append(res.MADStability, experiments.Stability(
+			len(data), MADF, d.config.MADStability)...)
+		if res.Histogram != nil {
+			if d.config.LogProfits.Normalize && sample.MAD() != 0.0 {
+				var err error
+				sample, err = sample.Normalize()
+				if err != nil {
+					return &jobResult{Err: errors.Annotate(err,
+						"'%s': failed to normalize %s's log-profits", d.config.ID, lp.Ticker)}
+				}
+			}
+			res.Histogram.Add(sample.Data()...)
 		}
+		res.NumTickers++
 	}
 	return res
 }
 
-func (d *Distribution) Next() ([]string, bool) {
-	if len(d.tickers) == 0 {
-		return nil, false
-	}
-	batch := d.config.BatchSize
-	if batch > len(d.tickers) {
-		batch = len(d.tickers)
-	}
-	ts := d.tickers[:batch]
-	d.tickers = d.tickers[batch:]
-	return ts, true
-}
-
-func (d *Distribution) processTickers(tickers []string) error {
-	d.tickers = tickers
-	pm := iterator.ParallelMap[[]string, *jobResult](d.context, d.config.Workers, d, d.processBatch)
-	defer pm.Close()
-
-	d.stats = iterator.Reduce[*jobResult, *jobResult](pm, d.newJobResult(), reduceJobResult)
-
+func (d *Distribution) processStats(sts *jobResult) error {
 	if d.config.Means != nil {
 		c := d.config.Means
 		d.meansHistogram = stats.NewHistogram(&c.Buckets)
-		sample := stats.NewSample(d.stats.Means)
+		sample := stats.NewSample(sts.Means)
 		if c.Normalize && sample.MAD() != 0.0 {
 			var err error
 			sample, err = sample.Normalize()
@@ -228,7 +192,7 @@ func (d *Distribution) processTickers(tickers []string) error {
 	if d.config.MADs != nil {
 		c := d.config.MADs
 		d.madsHistogram = stats.NewHistogram(&c.Buckets)
-		sample := stats.NewSample(d.stats.MADs)
+		sample := stats.NewSample(sts.MADs)
 		if c.Normalize && sample.MAD() != 0.0 {
 			var err error
 			sample, err = sample.Normalize()

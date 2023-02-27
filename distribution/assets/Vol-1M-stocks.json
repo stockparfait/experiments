@@ -3,22 +3,21 @@
     {
       "distribution": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2022-07-31",
-          "exclude tickers": [
-            "JWACU",
-            "BOALY"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2022-07-31",
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "id": "Vol > $1M, 1998-2022",
         "log-profits": {
+          "adjust reference distribution": true,
           "buckets": {
             "max": 200,
             "min": 0.2,
@@ -55,7 +54,7 @@
       ],
       "id": "dist group",
       "timeseries": false,
-      "title": "Log-profit distributions"
+      "title": "All Liquid Stocks Log-Profits"
     }
   ]
 }
