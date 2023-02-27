@@ -482,16 +482,10 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits)
 					ticker, err.Error())
 				continue
 			}
-			// TODO: KLUDGE: remove when stockparfait#180 is fixed.
-			ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
-			if len(ts.Data()) > c.Compound {
-				ts = ts.LogProfits(c.Compound)
-			} else {
-				ts = stats.NewTimeseries(nil, nil)
-			}
 			lp := LogProfits{
-				Ticker:     ticker,
-				Timeseries: ts,
+				Ticker: ticker,
+				Timeseries: stats.NewTimeseriesFromPrices(
+					rows, stats.PriceFullyAdjusted).LogProfits(c.Compound),
 			}
 			length := len(lp.Timeseries.Data())
 			if length == 0 {
