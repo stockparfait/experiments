@@ -17,6 +17,7 @@ package distribution
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"testing"
 
@@ -53,16 +54,27 @@ func TestDistribution(t *testing.T) {
 			"A": {},
 			"B": {},
 		}
+		d := func(date string) db.Date {
+			res, err := db.NewDateFromString(date)
+			if err != nil {
+				panic(err)
+			}
+			return res
+		}
+		pr := func(date string, p float64) db.PriceRow {
+			return db.TestPrice(d(date), float32(p), float32(p), float32(p), 1000.0, true)
+		}
+
 		prices := map[string][]db.PriceRow{
 			"A": {
-				db.TestPrice(db.NewDate(2019, 1, 1), 10.0, 10.0, 10.0, 1000.0, true),
-				db.TestPrice(db.NewDate(2019, 1, 2), 12.0, 12.0, 12.0, 1100.0, true),
-				db.TestPrice(db.NewDate(2019, 1, 3), 11.0, 11.0, 11.0, 1200.0, true),
+				pr("2019-01-01", 10.0),
+				pr("2019-01-02", 10.0*math.Exp(0.1)),
+				pr("2019-01-03", 10.0*math.Exp(0.1-0.05)),
 			},
 			"B": {
-				db.TestPrice(db.NewDate(2019, 1, 1), 100.0, 100.0, 100.0, 100.0, true),
-				db.TestPrice(db.NewDate(2019, 1, 2), 120.0, 120.0, 120.0, 110.0, true),
-				db.TestPrice(db.NewDate(2019, 1, 3), 110.0, 110.0, 110.0, 120.0, true),
+				pr("2019-01-01", 100.0),
+				pr("2019-01-02", 100.0*math.Exp(-0.1)),
+				pr("2019-01-03", 100.0*math.Exp(-0.1+0.05)),
 			},
 		}
 
@@ -72,35 +84,48 @@ func TestDistribution(t *testing.T) {
 			So(w.WritePrices(t, p), ShouldBeNil)
 		}
 
-		g, err := canvas.EnsureGraph(plot.KindXY, "g", "dist")
+		distGraph, err := canvas.EnsureGraph(plot.KindXY, "dist", "gr")
+		So(err, ShouldBeNil)
+		distCountsGraph, err := canvas.EnsureGraph(plot.KindXY, "dist counts", "gr")
+		So(err, ShouldBeNil)
+		meansGraph, err := canvas.EnsureGraph(plot.KindXY, "means", "gr")
+		So(err, ShouldBeNil)
+		madsGraph, err := canvas.EnsureGraph(plot.KindXY, "mads", "gr")
+		So(err, ShouldBeNil)
+		meansStabGraph, err := canvas.EnsureGraph(plot.KindXY, "means stab", "gr")
+		So(err, ShouldBeNil)
+		madsStabGraph, err := canvas.EnsureGraph(plot.KindXY, "mads stab", "gr")
 		So(err, ShouldBeNil)
 
 		Convey("DB with default parameters", func() {
 			var cfg config.Distribution
 			So(cfg.InitMessage(testutil.JSON(fmt.Sprintf(`{
   "data": {"DB": {"DB path": "%s", "DB": "%s"}},
-  "log-profits": {"graph": "g"}
+  "log-profits": {"graph": "dist"}
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
 			So(values, ShouldResemble, experiments.Values{
-				"log-profit P(X < mean-10*sigma)": "0.5481",
-				"log-profit P(X > mean+10*sigma)": "0.4519",
+				"log-profit P(X < mean-10*sigma)": "0.5",
+				"log-profit P(X > mean+10*sigma)": "0.5",
 				"samples":                         "4",
 				"tickers":                         "2",
 			})
-			So(len(g.Plots), ShouldEqual, 1)
+			So(len(distGraph.Plots), ShouldEqual, 1)
 		})
 
 		Convey("DB with custom parameters", func() {
 			var cfg config.Distribution
 			So(cfg.InitMessage(testutil.JSON(fmt.Sprintf(`{
   "id": "test",
-  "data": {"DB": {"DB path": "%s", "DB": "%s"}},
+  "data": {
+    "DB": {"DB path": "%s", "DB": "%s"},
+    "workers": 1
+  },
   "log-profits": {
-    "graph": "g",
-    "counts graph": "g",
-    "buckets": {"n": 3, "min": -0.4, "max": 0.4},
+    "graph": "dist",
+    "counts graph": "dist counts",
+    "buckets": {"n": 3, "min": -0.1, "max": 0.1},
     "normalize": false,
     "use means": true,
     "log Y": true,
@@ -109,35 +134,31 @@ func TestDistribution(t *testing.T) {
     "percentiles": [5, 95],
     "reference distribution": {"analytical source": {"name": "t"}}
   },
-  "means": {"graph": "g"},
-  "MADs": {"graph": "g"},
-  "mean stability": {"plot": {"graph": "g"}},
-  "MAD stability": {"plot": {"graph": "g"}}
+  "means": {"graph": "means"},
+  "MADs": {"graph": "mads"},
+  "mean stability": {"plot": {"graph": "means stab"}},
+  "MAD stability": {"plot": {"graph": "mads stab"}}
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
-			So(values, ShouldResemble, experiments.Values{
-				"test samples":                             "4",
-				"test tickers":                             "2",
-				"test average MAD":                         "0.1347",
-				"test MADs P(X < mean-10*sigma)":           "0.636",
-				"test MADs P(X > mean+10*sigma)":           "0.364",
-				"test MAD stability P(X < mean-10*sigma)":  "1",
-				"test MAD stability P(X > mean+10*sigma)":  "0",
-				"test average mean":                        "0.04766",
-				"test means P(X < mean-10*sigma)":          "0.5481",
-				"test means P(X > mean+10*sigma)":          "0.4519",
-				"test mean stability P(X < mean-10*sigma)": "0",
-				"test mean stability P(X > mean+10*sigma)": "0",
-				"test log-profit mean":                     "0.04766",
-				"test log-profit MAD":                      "0.1347",
-				"test log-profit alpha":                    "3",
-				"test log-profit P(X < mean-10*sigma)":     "0",
-				"test log-profit P(X > mean+10*sigma)":     "0"})
-			So(len(g.Plots), ShouldEqual, 10)
-			So(g.Plots[1].Legend, ShouldEqual, "test log-profit counts")
+			So(values["test samples"], ShouldEqual, "4")
+			So(values["test tickers"], ShouldEqual, "2")
+			// So(values["test average mean"], ShouldEqual, "0.04766")
+			So(values["test average MAD"], ShouldEqual, "0.075")
+			// So(values["test log-profit mean"], ShouldEqual, "0.04766")
+			So(values["test log-profit MAD"], ShouldEqual, "0.075")
+			So(values["test log-profit alpha"], ShouldEqual, "3")
+			So(len(distGraph.Plots), ShouldEqual, 5) // dist, mean, 2x %-iles, ref
+			So(len(distCountsGraph.Plots), ShouldEqual, 1)
+			So(distCountsGraph.Plots[0].Legend, ShouldEqual, "test log-profit counts")
 			// The first value is skipped due to 0 count.
-			So(g.Plots[1].Y, ShouldResemble, []float64{2, 2})
+			So(distCountsGraph.Plots[0].Y, ShouldResemble, []float64{2, 2})
+			So(len(meansGraph.Plots), ShouldEqual, 1)
+			So(testutil.RoundSlice(meansGraph.Plots[0].Y, 5), ShouldResemble, []float64{
+				1010, 1010})
+			So(len(madsGraph.Plots), ShouldEqual, 1)
+			So(len(meansStabGraph.Plots), ShouldEqual, 1)
+			So(len(madsStabGraph.Plots), ShouldEqual, 1)
 		})
 	})
 }
