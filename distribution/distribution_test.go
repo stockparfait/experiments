@@ -54,15 +54,12 @@ func TestDistribution(t *testing.T) {
 			"A": {},
 			"B": {},
 		}
-		d := func(date string) db.Date {
-			res, err := db.NewDateFromString(date)
+		pr := func(date string, p float64) db.PriceRow {
+			d, err := db.NewDateFromString(date)
 			if err != nil {
 				panic(err)
 			}
-			return res
-		}
-		pr := func(date string, p float64) db.PriceRow {
-			return db.TestPrice(d(date), float32(p), float32(p), float32(p), 1000.0, true)
+			return db.TestPrice(d, float32(p), float32(p), float32(p), 1000.0, true)
 		}
 
 		prices := map[string][]db.PriceRow{

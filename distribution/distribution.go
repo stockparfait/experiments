@@ -50,6 +50,7 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 	if d.config, ok = cfg.(*config.Distribution); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
+	id := d.config.ID
 	it, err := experiments.SourceMap(ctx, d.config.Data, d.processLogProfits)
 	if err != nil {
 		return errors.Annotate(err, "failed to read data source")
@@ -60,51 +61,57 @@ func (d *Distribution) Run(ctx context.Context, cfg config.ExperimentConfig) err
 		it, d.newJobResult(), reduceJobResult)
 
 	if err := d.AddValue(ctx, "tickers", fmt.Sprintf("%d", sts.NumTickers)); err != nil {
-		return errors.Annotate(err, "failed to add '%s' tickers value", d.config.ID)
+		return errors.Annotate(err, "failed to add '%s' tickers value", id)
 	}
 	if sts.Histogram != nil {
 		if err := d.AddValue(ctx, "samples", fmt.Sprintf("%d", sts.Histogram.CountsTotal())); err != nil {
-			return errors.Annotate(err, "failed to add '%s' samples value", d.config.ID)
+			return errors.Annotate(err, "failed to add '%s' samples value", id)
 		}
 	}
 	if sts.Histogram.CountsTotal() == 0 {
 		return nil
 	}
-	if err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(sts.Histogram), d.config.LogProfits, d.config.ID, "log-profit"); err != nil {
-		return errors.Annotate(err,
-			"failed to plot '%s' sample distribution", d.config.ID)
-	}
-	if d.config.Means != nil {
-		meansDist := stats.NewSampleDistribution(sts.Means, &d.config.Means.Buckets)
-		if err := experiments.PlotDistribution(ctx, meansDist, d.config.Means, d.config.ID, "means"); err != nil {
-			return errors.Annotate(err,
-				"failed to plot '%s' means distribution", d.config.ID)
+	if c := d.config.LogProfits; c != nil {
+		lpDist := stats.NewHistogramDistribution(sts.Histogram)
+		err := experiments.PlotDistribution(ctx, lpDist, c, id, "log-profit")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot '%s' sample distribution", id)
 		}
-		if err := d.AddValue(ctx, "average mean", fmt.Sprintf("%.4g", meansDist.Mean())); err != nil {
-			return errors.Annotate(err,
-				"failed to add '%s' average mean value", d.config.ID)
+	}
+	if c := d.config.Means; c != nil {
+		meansDist := stats.NewSampleDistribution(sts.Means, &c.Buckets)
+		err := experiments.PlotDistribution(ctx, meansDist, c, id, "means")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot '%s' means", id)
+		}
+		err = d.AddValue(ctx, "average mean", fmt.Sprintf("%.4g", meansDist.Mean()))
+		if err != nil {
+			return errors.Annotate(err, "failed to add '%s' avg. mean", id)
 		}
 	}
 	if c := d.config.MeanStability; c != nil && len(sts.MeanStability) > 1 {
 		dist := stats.NewSampleDistribution(sts.MeanStability, &c.Plot.Buckets)
-		if err := experiments.PlotDistribution(ctx, dist, c.Plot, d.config.ID, "mean stability"); err != nil {
-			return errors.Annotate(err, "failed to plot '%s' mean stability", d.config.ID)
+		err := experiments.PlotDistribution(ctx, dist, c.Plot, id, "mean stability")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot '%s' mean stability", id)
 		}
 	}
-	if d.config.MADs != nil {
-		dist := stats.NewSampleDistribution(sts.MADs, &d.config.MADs.Buckets)
-		if err := experiments.PlotDistribution(ctx, dist, d.config.MADs, d.config.ID, "MADs"); err != nil {
-			return errors.Annotate(err, "failed to plot '%s' MADs distribution", d.config.ID)
+	if c := d.config.MADs; c != nil {
+		dist := stats.NewSampleDistribution(sts.MADs, &c.Buckets)
+		err := experiments.PlotDistribution(ctx, dist, c, id, "MADs")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot '%s' MADs distribution", id)
 		}
-		if err := d.AddValue(ctx, "average MAD", fmt.Sprintf("%.4g", dist.Mean())); err != nil {
-			return errors.Annotate(err,
-				"failed to add '%s' average MAD value", d.config.ID)
+		err = d.AddValue(ctx, "average MAD", fmt.Sprintf("%.4g", dist.Mean()))
+		if err != nil {
+			return errors.Annotate(err, "failed to add '%s' average MAD value", id)
 		}
 	}
 	if c := d.config.MADStability; c != nil && len(sts.MADStability) > 1 {
 		dist := stats.NewSampleDistribution(sts.MADStability, &c.Plot.Buckets)
-		if err := experiments.PlotDistribution(ctx, dist, c.Plot, d.config.ID, "MAD stability"); err != nil {
-			return errors.Annotate(err, "failed to plot '%s' MAD stability", d.config.ID)
+		err := experiments.PlotDistribution(ctx, dist, c.Plot, id, "MAD stability")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot '%s' MAD stability", id)
 		}
 	}
 	return nil
@@ -146,6 +153,12 @@ func (d *Distribution) processLogProfits(lps []experiments.LogProfits) *jobResul
 		sample := stats.NewSample(data)
 		res.Means = append(res.Means, sample.Mean())
 		res.MADs = append(res.MADs, sample.MAD())
+		meanF := func(l, h int) float64 { return stats.NewSample(data[l:h]).Mean() }
+		MADF := func(l, h int) float64 { return stats.NewSample(data[l:h]).MAD() }
+		res.MeanStability = append(res.MeanStability, experiments.Stability(
+			len(data), meanF, d.config.MeanStability)...)
+		res.MADStability = append(res.MADStability, experiments.Stability(
+			len(data), MADF, d.config.MADStability)...)
 		if res.Histogram != nil {
 			if d.config.LogProfits.Normalize && sample.MAD() != 0.0 {
 				var err error
@@ -159,12 +172,6 @@ func (d *Distribution) processLogProfits(lps []experiments.LogProfits) *jobResul
 			}
 			res.Histogram.Add(sample.Data()...)
 		}
-		meanF := func(l, h int) float64 { return stats.NewSample(data[l:h]).Mean() }
-		MADF := func(l, h int) float64 { return stats.NewSample(data[l:h]).MAD() }
-		res.MeanStability = append(res.MeanStability, experiments.Stability(
-			len(data), meanF, d.config.MeanStability)...)
-		res.MADStability = append(res.MADStability, experiments.Stability(
-			len(data), MADF, d.config.MADStability)...)
 		res.NumTickers++
 	}
 	return res
