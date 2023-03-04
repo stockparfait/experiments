@@ -485,7 +485,7 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits)
 			lp := LogProfits{
 				Ticker: ticker,
 				Timeseries: stats.NewTimeseriesFromPrices(
-					rows, stats.PriceFullyAdjusted).LogProfits(c.Compound),
+					rows, stats.PriceCloseFullyAdjusted).LogProfits(c.Compound),
 			}
 			length := len(lp.Timeseries.Data())
 			if length == 0 {

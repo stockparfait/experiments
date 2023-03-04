@@ -102,7 +102,7 @@ func (p *Portfolio) addPosition(ctx context.Context, pos config.PortfolioPositio
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to read prices for '%s'", pos.Ticker)
 	}
-	ts := stats.NewTimeseriesFromPrices(prices, stats.PriceSplitAdjusted)
+	ts := stats.NewTimeseriesFromPrices(prices, stats.PriceCloseSplitAdjusted)
 
 	r := make(Row, len(p.config.Columns))
 	for i, c := range p.config.Columns {
