@@ -219,7 +219,7 @@ func (e *AutoCorrelation) processTicker(ticker string) jobResult {
 		res.err = errors.Annotate(err, "failed to read ticker %s", ticker)
 		return res
 	}
-	ts := stats.NewTimeseriesFromPrices(rows, stats.PriceFullyAdjusted)
+	ts := stats.NewTimeseriesFromPrices(rows, stats.PriceCloseFullyAdjusted)
 	lp := ts.LogProfits(1)
 	if len(lp.Data()) < e.config.MaxShift+2 {
 		res.err = errors.Reason("too few samples: %d", len(lp.Data()))
