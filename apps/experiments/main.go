@@ -32,6 +32,7 @@ import (
 	"github.com/stockparfait/experiments/hold"
 	"github.com/stockparfait/experiments/portfolio"
 	"github.com/stockparfait/experiments/powerdist"
+	"github.com/stockparfait/experiments/trading"
 	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/plot"
 )
@@ -86,6 +87,8 @@ func runExperiment(ctx context.Context, ec config.ExperimentConfig) error {
 		e = &autocorr.AutoCorrelation{}
 	case "beta":
 		e = &beta.Beta{}
+	case "trading":
+		e = &trading.Trading{}
 	default:
 		return errors.Reason("unsupported experiment '%s'", ec.Name())
 	}

@@ -35,22 +35,19 @@ import (
 func TestBeta(t *testing.T) {
 	t.Parallel()
 
-	tmpdir, tmpdirErr := os.MkdirTemp("", "test_autocorr")
+	tmpdir, tmpdirErr := os.MkdirTemp("", "test_beta")
 	defer os.RemoveAll(tmpdir)
 
 	Convey("Test setup succeeded", t, func() {
 		So(tmpdirErr, ShouldBeNil)
 	})
 
-	d := func(date string) db.Date {
-		res, err := db.NewDateFromString(date)
+	price := func(date string, p float64) db.PriceRow {
+		d, err := db.NewDateFromString(date)
 		if err != nil {
 			panic(err)
 		}
-		return res
-	}
-	price := func(date string, p float32) db.PriceRow {
-		return db.TestPrice(d(date), p, p, p, 1000.0, true)
+		return db.TestPrice(d, float32(p), float32(p), float32(p), 1000.0, true)
 	}
 
 	Convey("Beta works", t, func() {
@@ -172,9 +169,9 @@ func TestBeta(t *testing.T) {
 			confJSON := fmt.Sprintf(`
 {
   "id": "testID",
-  "reference": {"synthetic": {"name": "t"}, "samples": 10},
+  "reference": {"close": {"name": "t"}, "samples": 10},
   "data": {
-    "synthetic": {"name": "t"},
+    "close": {"name": "t"},
     "tickers": 3,
     "samples": 10
   },
