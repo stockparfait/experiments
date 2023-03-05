@@ -247,20 +247,45 @@ func TestExperiments(t *testing.T) {
 				js := testutil.JSON(`
 {
   "synthetic": {"name": "t"},
+  "open": {"name": "t"},
+  "high": {"name": "t"},
+  "low": {"name": "t"},
   "tickers": 2,
-  "samples": 10,
+  "samples": 11,
+  "batch size": 1,
   "start date": "2020-01-02"
 }`)
 				So(cfg.InitMessage(js), ShouldBeNil)
-				it, err := Source(ctx, &cfg)
-				So(err, ShouldBeNil)
-				lps := iterator.ToSlice[LogProfits](it)
-				it.Close()
-				So(len(lps), ShouldEqual, 2)
-				So(len(lps[0].Timeseries.Data()), ShouldEqual, 10)
-				So(len(lps[1].Timeseries.Data()), ShouldEqual, 10)
-				So(lps[0].Timeseries.Dates()[0], ShouldResemble, d("2020-01-02"))
-				So(lps[1].Timeseries.Dates()[0], ShouldResemble, d("2020-01-02"))
+
+				Convey("LogProfits only", func() {
+					it, err := Source(ctx, &cfg)
+					So(err, ShouldBeNil)
+					lps := iterator.ToSlice[LogProfits](it)
+					it.Close()
+					So(len(lps), ShouldEqual, 2)
+					// Log-profits start one day after the first price.
+					So(len(lps[0].Timeseries.Data()), ShouldEqual, 10)
+					So(len(lps[1].Timeseries.Data()), ShouldEqual, 10)
+					So(lps[0].Timeseries.Dates()[0], ShouldResemble, d("2020-01-03"))
+					So(lps[1].Timeseries.Dates()[0], ShouldResemble, d("2020-01-03"))
+				})
+
+				Convey("OHLC prices", func() {
+					it, err := SourceMapPrices(ctx, &cfg, func(ps []Prices) Prices {
+						if len(ps) != 1 {
+							panic(fmt.Sprintf("len(ps)=%d != 1", len(ps)))
+						}
+						return ps[0]
+					})
+					So(err, ShouldBeNil)
+					ps := iterator.ToSlice[Prices](it)
+					it.Close()
+					So(len(ps), ShouldEqual, 2)
+					So(len(ps[0].Rows), ShouldEqual, 11)
+					So(len(ps[1].Rows), ShouldEqual, 11)
+					So(ps[0].Rows[0].Date, ShouldResemble, d("2020-01-02"))
+					So(ps[1].Rows[0].Date, ShouldResemble, d("2020-01-02"))
+				})
 			})
 
 			Convey("using DB, then using synthetic with saved lengths", func() {

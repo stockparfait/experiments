@@ -206,13 +206,19 @@ func (d *CompoundDistribution) InitMessage(js any) error {
 	return nil
 }
 
-// Source is a generic config for a set of Timeseries that come either from the
-// actual price database or synthetically generated.
+// Source is a generic config for a set of price series that come either from
+// the actual price database or synthetically generated.
 type Source struct {
 	// Exactly one of DB or Synthetic must be non-nil.
 	DB        *db.Reader              `json:"DB"`
-	Synthetic *AnalyticalDistribution `json:"synthetic"`
+	Synthetic *AnalyticalDistribution `json:"synthetic"` // close-close log-profit
 	Compound  int                     `json:"compound" default:"1"`
+	// Log-profit distributions for OHL prices relative to the previous close. By
+	// default they reuse the same closing price value, with high and low prices
+	// adjusted to include open and close in [low..high] range.
+	Open *AnalyticalDistribution `json:"open"`
+	High *AnalyticalDistribution `json:"high"`
+	Low  *AnalyticalDistribution `json:"low"`
 	// With DB, saves the start date and the number of samples for each ticker as
 	// a JSON file.  With Synthetic, read this file and generate synthetic tickers
 	// accordingly, overwriting the other parameters.
@@ -592,6 +598,32 @@ func (e *Beta) InitMessage(js any) error {
 
 func (e *Beta) Name() string { return "beta" }
 
+// Trading experiment studies possibilities of exploiting volatility without the
+// need to predict the future.
+type Trading struct {
+	ID   string  `json:"id"` // experiment ID
+	Data *Source `json:"data" required:"true"`
+	// Log-profits of high and close relative to the same day open.
+	HighOpenPlot  *DistributionPlot `json:"high/open plot"`
+	CloseOpenPlot *DistributionPlot `json:"close/open plot"`
+	// Log-profits of OHLC relative to the previous Close.
+	OpenPlot  *DistributionPlot `json:"open plot"`
+	HighPlot  *DistributionPlot `json:"high plot"`
+	LowPlot   *DistributionPlot `json:"low plot"`
+	ClosePlot *DistributionPlot `json:"close plot"` // classical daily log-profits
+}
+
+var _ ExperimentConfig = &Trading{}
+
+func (e *Trading) InitMessage(js any) error {
+	if err := message.Init(e, js); err != nil {
+		return errors.Annotate(err, "failed to init Trading")
+	}
+	return nil
+}
+
+func (e *Trading) Name() string { return "trading" }
+
 // ExpMap represents a Message which reads a single-element map {name:
 // Experiment} and knows how to populate specific implementations of the
 // Experiment interface.
@@ -622,6 +654,8 @@ func (e *ExpMap) InitMessage(js any) error {
 			e.Config = &AutoCorrelation{}
 		case "beta":
 			e.Config = &Beta{}
+		case "trading":
+			e.Config = &Trading{}
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}

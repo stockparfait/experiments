@@ -98,6 +98,9 @@ func TestConfig(t *testing.T) {
       "beta ratios": {
         "plot": {"graph": "ratios"}
       }
+    }},
+    {"trading": {
+      "data": {"DB": {"DB": "test"}}
     }}
   ]
 }`
@@ -255,6 +258,9 @@ func TestConfig(t *testing.T) {
 								ChartType: "line",
 							},
 						},
+					}},
+					{Config: &Trading{
+						Data: &defaultSource,
 					}},
 				},
 			})

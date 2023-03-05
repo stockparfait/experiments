@@ -458,6 +458,11 @@ func readLengths(fileName string) ([]synthConfig, error) {
 	return lengths, nil
 }
 
+type Prices struct {
+	Ticker string
+	Rows   []db.PriceRow
+}
+
 type LogProfits struct {
 	Ticker     string
 	Timeseries *stats.Timeseries
@@ -468,13 +473,13 @@ type withConf[T any] struct {
 	cs []synthConfig
 }
 
-func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
+func sourceDBPrices[T any](ctx context.Context, c *config.Source, f func([]Prices) T) (iterator.IteratorCloser[T], error) {
 	if c.DB == nil {
 		return nil, errors.Reason("DB must not be nil")
 	}
 	mapF := func(tickers []string) withConf[T] {
 		var cs []synthConfig
-		var lps []LogProfits
+		var prices []Prices
 		for _, ticker := range tickers {
 			rows, err := c.DB.Prices(ticker)
 			if err != nil {
@@ -482,23 +487,22 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits)
 					ticker, err.Error())
 				continue
 			}
-			lp := LogProfits{
-				Ticker: ticker,
-				Timeseries: stats.NewTimeseriesFromPrices(
-					rows, stats.PriceCloseFullyAdjusted).LogProfits(c.Compound),
-			}
-			length := len(lp.Timeseries.Data())
+			length := len(rows)
 			if length == 0 {
-				logging.Warningf(ctx, "%s has no log-profits, skipping", ticker)
+				logging.Warningf(ctx, "%s has no prices, skipping", ticker)
 				continue
 			}
-			lps = append(lps, lp)
+			p := Prices{
+				Ticker: ticker,
+				Rows:   rows,
+			}
+			prices = append(prices, p)
 			cs = append(cs, synthConfig{
 				Length: length,
-				Start:  lp.Timeseries.Dates()[0],
+				Start:  rows[0].Date,
 			})
 		}
-		return withConf[T]{v: f(lps), cs: cs}
+		return withConf[T]{v: f(prices), cs: cs}
 	}
 	tickers, err := c.DB.Tickers(ctx)
 	if err != nil {
@@ -520,28 +524,38 @@ func sourceDB[T any](ctx context.Context, c *config.Source, f func([]LogProfits)
 	return it, nil
 }
 
-// tsConfig configures generateTS to generate a synthetic Timeseries of length n
-// starting from the start date and using the given distribution copy.
+// tsConfig configures synthetic OHLC Timeseries of length n starting from the
+// start date and using the corresponding distributions.
 type tsConfig struct {
-	d     stats.Distribution
+	open  stats.Distribution
+	high  stats.Distribution
+	low   stats.Distribution
+	close stats.Distribution
 	start db.Date
 	n     int
 }
 
-// generateTS generates a synthetic log-profit Timeseries.
-func generateTS(cfg tsConfig) LogProfits {
-	t := cfg.start.ToTime()
-	dates := make([]db.Date, cfg.n)
-	data := make([]float64, cfg.n)
-	for i := 0; i < cfg.n; i++ {
+func generateDates(start db.Date, n int) []db.Date {
+	t := start.ToTime()
+	dates := make([]db.Date, n)
+	for i := 0; i < n; i++ {
 		if t.Weekday() == time.Saturday {
 			t = t.Add(2 * 24 * time.Hour)
 		} else if t.Weekday() == time.Sunday {
 			t = t.Add(24 * time.Hour)
 		}
 		dates[i] = db.NewDateFromTime(t)
-		data[i] = cfg.d.Rand()
 		t = t.Add(24 * time.Hour)
+	}
+	return dates
+}
+
+// generateLogProfits generates a synthetic log-profit Timeseries.
+func generateLogProfits(d stats.Distribution, start db.Date, n int) LogProfits {
+	dates := generateDates(start, n)
+	data := make([]float64, n)
+	for i := 0; i < n; i++ {
+		data[i] = d.Rand()
 	}
 	return LogProfits{
 		Ticker:     "synthetic",
@@ -549,10 +563,67 @@ func generateTS(cfg tsConfig) LogProfits {
 	}
 }
 
+func priceRow(date db.Date, open, high, low, close float32) db.PriceRow {
+	p := db.PriceRow{
+		Date:               date,
+		Close:              close,
+		CloseSplitAdjusted: close,
+		CloseFullyAdjusted: close,
+		OpenFullyAdjusted:  open,
+		HighFullyAdjusted:  high,
+		LowFullyAdjusted:   low,
+		CashVolume:         1000,
+	}
+	p.SetActive(true)
+	return p
+}
+
+func generatePrices(cfg tsConfig) Prices {
+	dates := generateDates(cfg.start, cfg.n)
+	rows := make([]db.PriceRow, cfg.n)
+	// Set the initial price row before the first date at an arbitrary price of
+	// 100. All the analysis uses relative price moves, so the initial value is
+	// not important.
+	curr := priceRow(cfg.start, 100.0, 100.0, 100.0, 100.0)
+	rnd := func(d stats.Distribution, x float64) float64 {
+		if d == nil {
+			return cfg.close.Rand()
+		}
+		return x
+	}
+	for i := 0; i < cfg.n; i++ {
+		close := float64(curr.Close) * math.Exp(rnd(cfg.close, 100.0))
+		open := float64(curr.OpenFullyAdjusted) * math.Exp(rnd(cfg.open, close))
+		high := float64(curr.HighFullyAdjusted) * math.Exp(rnd(cfg.high, close))
+		low := float64(curr.LowFullyAdjusted) * math.Exp(rnd(cfg.low, close))
+		if high < open {
+			high = open
+		}
+		if high < close {
+			high = close
+		}
+		if low > open {
+			low = open
+		}
+		if low > close {
+			low = close
+		}
+		rows[i] = priceRow(dates[i], float32(open), float32(high),
+			float32(low), float32(close))
+	}
+	return Prices{
+		Ticker: "synthetic",
+		Rows:   rows,
+	}
+}
+
 // distIter generates tsConfig sequence based on the iterator for the sequence
 // lengths.
 type distIter struct {
-	d           stats.Distribution
+	open        stats.Distribution
+	high        stats.Distribution
+	low         stats.Distribution
+	close       stats.Distribution
 	lengthsIter iterator.Iterator[synthConfig]
 }
 
@@ -563,9 +634,25 @@ func (it *distIter) Next() (tsConfig, bool) {
 	if !ok {
 		return tsConfig{}, false
 	}
-	return tsConfig{d: it.d.Copy(), start: c.Start, n: c.Length}, true
+	cp := func(d stats.Distribution) stats.Distribution {
+		if d == nil {
+			return nil
+		}
+		return d.Copy()
+	}
+	tsc := tsConfig{
+		open:  cp(it.open),
+		high:  cp(it.high),
+		low:   cp(it.low),
+		close: cp(it.close),
+		start: c.Start,
+		n:     c.Length,
+	}
+	return tsc, true
 }
 
+// sourceSynthehtic directly generates LogProfits rather than using
+// sourceSyntheticPrices, for efficiency.
 func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
 	d, _, err := AnalyticalDistribution(ctx, c.Synthetic)
 	if err != nil {
@@ -582,14 +669,81 @@ func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func([]LogP
 		lengthsIter = iterator.Repeat(
 			synthConfig{Start: c.StartDate, Length: c.Samples}, c.Tickers)
 	}
-	distIt := &distIter{d: d, lengthsIter: lengthsIter}
+	distIt := &distIter{close: d, lengthsIter: lengthsIter}
 	batchIt := iterator.Batch[tsConfig](distIt, c.BatchSize)
 	pf := func(cs []tsConfig) T {
-		lps := make([]LogProfits, len(cs))
-		for i, c := range cs {
-			lps[i] = generateTS(c)
+		var lps []LogProfits
+		for _, c := range cs {
+			if c.n < 2 { // n = number of raw prices, need at least 2
+				continue
+			}
+			lp := generateLogProfits(c.close, c.start, c.n)
+			// Skip the first spurious log-profit.
+			ts := lp.Timeseries
+			lp.Timeseries = stats.NewTimeseries(ts.Dates()[1:], ts.Data()[1:])
+			lps = append(lps, lp)
 		}
 		return f(lps)
+	}
+	pm := iterator.ParallelMap[[]tsConfig, T](ctx, c.Workers, batchIt, pf)
+	return pm, nil
+}
+
+func sourceSyntheticPrices[T any](ctx context.Context, c *config.Source, f func([]Prices) T) (iterator.IteratorCloser[T], error) {
+	if c.Synthetic == nil {
+		return nil, errors.Reason("synthetic close distribution is nil")
+	}
+	close, _, err := AnalyticalDistribution(ctx, c.Synthetic)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to create close distribution")
+	}
+	var open, high, low stats.Distribution
+	if c.Open != nil {
+		open, _, err = AnalyticalDistribution(ctx, c.Open)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to create open distribution")
+		}
+	}
+	if c.High != nil {
+		high, _, err = AnalyticalDistribution(ctx, c.High)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to create high distribution")
+		}
+	}
+	if c.Low != nil {
+		low, _, err = AnalyticalDistribution(ctx, c.Low)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to create low distribution")
+		}
+	}
+	var lengthsIter iterator.Iterator[synthConfig]
+	if c.LengthsFile != "" {
+		lengths, err := readLengths(c.LengthsFile)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to read lengths")
+		}
+		lengthsIter = iterator.FromSlice(lengths)
+	} else {
+		lengthsIter = iterator.Repeat(
+			synthConfig{Start: c.StartDate, Length: c.Samples}, c.Tickers)
+	}
+	distIt := &distIter{
+		open:        open,
+		high:        high,
+		low:         low,
+		close:       close,
+		lengthsIter: lengthsIter,
+	}
+	batchIt := iterator.Batch[tsConfig](distIt, c.BatchSize)
+	pf := func(cs []tsConfig) T {
+		var prices []Prices
+		for _, c := range cs {
+			if c.n < 1 { // n = number of raw prices, need at least 1
+				continue
+			}
+			prices = append(prices, generatePrices(c))
+		}
+		return f(prices)
 	}
 	pm := iterator.ParallelMap[[]tsConfig, T](ctx, c.Workers, batchIt, pf)
 	return pm, nil
@@ -616,9 +770,35 @@ func Source(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogP
 func SourceMap[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
 	switch {
 	case c.DB != nil:
-		return sourceDB[T](ctx, c, f)
+		rowF := func(prices []Prices) T {
+			var lps []LogProfits
+			for _, p := range prices {
+				lp := LogProfits{
+					Ticker: p.Ticker,
+					Timeseries: stats.NewTimeseriesFromPrices(
+						p.Rows, stats.PriceCloseFullyAdjusted).LogProfits(c.Compound),
+				}
+				if len(lp.Timeseries.Data()) == 0 {
+					logging.Warningf(ctx, "%s has no log-profits, skipping", p.Ticker)
+					continue
+				}
+				lps = append(lps, lp)
+			}
+			return f(lps)
+		}
+		return SourceMapPrices[T](ctx, c, rowF)
 	case c.Synthetic != nil:
 		return sourceSynthetic[T](ctx, c, f)
+	}
+	return nil, errors.Reason(`one of "DB" or "synthetic" must be configured`)
+}
+
+func SourceMapPrices[T any](ctx context.Context, c *config.Source, f func([]Prices) T) (iterator.IteratorCloser[T], error) {
+	switch {
+	case c.DB != nil:
+		return sourceDBPrices[T](ctx, c, f)
+	case c.Synthetic != nil:
+		return sourceSyntheticPrices[T](ctx, c, f)
 	}
 	return nil, errors.Reason(`one of "DB" or "synthetic" must be configured`)
 }
