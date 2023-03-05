@@ -209,16 +209,16 @@ func (d *CompoundDistribution) InitMessage(js any) error {
 // Source is a generic config for a set of price series that come either from
 // the actual price database or synthetically generated.
 type Source struct {
-	// Exactly one of DB or Synthetic must be non-nil.
-	DB        *db.Reader              `json:"DB"`
-	Synthetic *AnalyticalDistribution `json:"synthetic"` // close-close log-profit
-	Compound  int                     `json:"compound" default:"1"`
+	// Exactly one of DB or Close must be non-nil.
+	DB       *db.Reader `json:"DB"`
+	Compound int        `json:"compound" default:"1"`
 	// Log-profit distributions for OHL prices relative to the previous close. By
 	// default they reuse the same closing price value, with high and low prices
 	// adjusted to include open and close in [low..high] range.
-	Open *AnalyticalDistribution `json:"open"`
-	High *AnalyticalDistribution `json:"high"`
-	Low  *AnalyticalDistribution `json:"low"`
+	Open  *AnalyticalDistribution `json:"open"`
+	High  *AnalyticalDistribution `json:"high"`
+	Low   *AnalyticalDistribution `json:"low"`
+	Close *AnalyticalDistribution `json:"close"`
 	// With DB, saves the start date and the number of samples for each ticker as
 	// a JSON file.  With Synthetic, read this file and generate synthetic tickers
 	// accordingly, overwriting the other parameters.
@@ -236,7 +236,7 @@ func (s *Source) InitMessage(js any) error {
 	if err := message.Init(s, js); err != nil {
 		return errors.Annotate(err, "failed to init Source")
 	}
-	if (s.DB == nil) == (s.Synthetic == nil) {
+	if (s.DB == nil) == (s.Close == nil) {
 		return errors.Reason(`expected exactly one of "DB" or "synthetic"`)
 	}
 	if s.StartDate.IsZero() {

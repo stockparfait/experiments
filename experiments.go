@@ -365,6 +365,10 @@ func Compound(ctx context.Context, d stats.Distribution, n int, compType string,
 
 // AnalyticalDistribution instantiates a distribution from config.
 func AnalyticalDistribution(ctx context.Context, c *config.AnalyticalDistribution) (dist stats.Distribution, distName string, err error) {
+	if c == nil {
+		err = errors.Reason("config is nil")
+		return
+	}
 	switch c.Name {
 	case "t":
 		dist = stats.NewStudentsTDistribution(c.Alpha, c.Mean, c.MAD)
@@ -610,6 +614,7 @@ func generatePrices(cfg tsConfig) Prices {
 		}
 		rows[i] = priceRow(dates[i], float32(open), float32(high),
 			float32(low), float32(close))
+		curr = rows[i]
 	}
 	return Prices{
 		Ticker: "synthetic",
@@ -654,7 +659,7 @@ func (it *distIter) Next() (tsConfig, bool) {
 // sourceSynthehtic directly generates LogProfits rather than using
 // sourceSyntheticPrices, for efficiency.
 func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
-	d, _, err := AnalyticalDistribution(ctx, c.Synthetic)
+	d, _, err := AnalyticalDistribution(ctx, c.Close)
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to create synthetic distribution")
 	}
@@ -690,10 +695,10 @@ func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func([]LogP
 }
 
 func sourceSyntheticPrices[T any](ctx context.Context, c *config.Source, f func([]Prices) T) (iterator.IteratorCloser[T], error) {
-	if c.Synthetic == nil {
-		return nil, errors.Reason("synthetic close distribution is nil")
+	if c.Close == nil {
+		return nil, errors.Reason("close distribution is nil")
 	}
-	close, _, err := AnalyticalDistribution(ctx, c.Synthetic)
+	close, _, err := AnalyticalDistribution(ctx, c.Close)
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to create close distribution")
 	}
@@ -787,20 +792,20 @@ func SourceMap[T any](ctx context.Context, c *config.Source, f func([]LogProfits
 			return f(lps)
 		}
 		return SourceMapPrices[T](ctx, c, rowF)
-	case c.Synthetic != nil:
+	case c.Close != nil:
 		return sourceSynthetic[T](ctx, c, f)
 	}
-	return nil, errors.Reason(`one of "DB" or "synthetic" must be configured`)
+	return nil, errors.Reason(`one of "DB" or "close" must be configured`)
 }
 
 func SourceMapPrices[T any](ctx context.Context, c *config.Source, f func([]Prices) T) (iterator.IteratorCloser[T], error) {
 	switch {
 	case c.DB != nil:
 		return sourceDBPrices[T](ctx, c, f)
-	case c.Synthetic != nil:
+	case c.Close != nil:
 		return sourceSyntheticPrices[T](ctx, c, f)
 	}
-	return nil, errors.Reason(`one of "DB" or "synthetic" must be configured`)
+	return nil, errors.Reason(`one of "DB" or "close" must be configured`)
 }
 
 // DeriveAlpha estimates the degrees of freedom parameter for a Student's T

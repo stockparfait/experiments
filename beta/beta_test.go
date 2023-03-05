@@ -169,9 +169,9 @@ func TestBeta(t *testing.T) {
 			confJSON := fmt.Sprintf(`
 {
   "id": "testID",
-  "reference": {"synthetic": {"name": "t"}, "samples": 10},
+  "reference": {"close": {"name": "t"}, "samples": 10},
   "data": {
-    "synthetic": {"name": "t"},
+    "close": {"name": "t"},
     "tickers": 3,
     "samples": 10
   },

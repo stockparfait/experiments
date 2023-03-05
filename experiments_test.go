@@ -246,10 +246,10 @@ func TestExperiments(t *testing.T) {
 				var cfg config.Source
 				js := testutil.JSON(`
 {
-  "synthetic": {"name": "t"},
   "open": {"name": "t"},
   "high": {"name": "t"},
   "low": {"name": "t"},
+  "close": {"name": "t"},
   "tickers": 2,
   "samples": 11,
   "batch size": 1,
@@ -349,7 +349,7 @@ func TestExperiments(t *testing.T) {
 				var cfg2 config.Source
 				js2 := testutil.JSON(fmt.Sprintf(`
 {
-  "synthetic": {"name": "t"},
+  "close": {"name": "t"},
   "lengths file": "%s"
 }
 `, lengthsFile))

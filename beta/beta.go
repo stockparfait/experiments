@@ -84,7 +84,7 @@ func (e *Beta) processReference(ctx context.Context) error {
 
 func (e *Beta) processData(ctx context.Context) error {
 	f := func(lps []experiments.LogProfits) *lpStats {
-		if e.config.Data.Synthetic != nil { // treat lps as R
+		if e.config.Data.Close != nil { // treat lps as R
 			for i, lp := range lps {
 				tss := stats.TimeseriesIntersect(e.refTS, lp.Timeseries)
 				lp.Timeseries = tss[0].MultC(e.config.Beta).Add(tss[1])
