@@ -606,6 +606,8 @@ type Trading struct {
 	// Log-profits of high and close relative to the same day open.
 	HighOpenPlot  *DistributionPlot `json:"high/open plot"`
 	CloseOpenPlot *DistributionPlot `json:"close/open plot"`
+	// Optional threshold T to condition close/open distribution by high/open < T.
+	Threshold *float64 `json:"threshold"`
 	// Log-profits of OHLC relative to the previous Close.
 	OpenPlot  *DistributionPlot `json:"open plot"`
 	HighPlot  *DistributionPlot `json:"high plot"`
