@@ -147,22 +147,16 @@ func (e *Trading) newJobRes() *jobRes {
 	return &r
 }
 
-func addLogProfits(t1, t2 *stats.Timeseries, normCoeff float64, c *config.DistributionPlot, h *stats.Histogram, ticker string) (*stats.Timeseries, error) {
-	if c == nil {
-		return nil, nil
-	}
+// logProfits computes log(t1) - log(t2) normalized by normCoeff (if !=0).
+func logProfits(t1, t2 *stats.Timeseries, normCoeff float64) *stats.Timeseries {
 	tss := stats.TimeseriesIntersect(t1, t2)
 	t1 = tss[0]
 	t2 = tss[1]
 	ts := t1.Log().Sub(t2.Log())
-	if c.Normalize {
-		if normCoeff == 0 {
-			return nil, errors.Reason("cannot normalize %s", ticker)
-		}
+	if normCoeff != 0 && normCoeff != 1 {
 		ts = ts.DivC(normCoeff)
 	}
-	h.Add(ts.Data()...)
-	return ts, nil
+	return ts
 }
 
 // Filter Timeseries points using the filter function f.
@@ -187,25 +181,28 @@ func (e *Trading) processPrices(prices []experiments.Prices) *jobRes {
 		// closePrev := close.Shift(1)
 		lp := close.LogProfits(1)
 		mad := stats.NewSample(lp.Data()).MAD()
+		if mad == 0 {
+			logging.Warningf(e.context, "skipping %s: MAD = 0", p.Ticker)
+			continue
+		}
 		var ho *stats.Timeseries
-		var err error
-		if e.config.HighOpenPlot != nil {
-			ho, err = addLogProfits(high, open, mad, e.config.HighOpenPlot, res.ho, p.Ticker)
-			if err != nil {
-				logging.Warningf(e.context, "skipping %s:\n %s", p.Ticker, err.Error())
-				continue
+		norm := func(c *config.DistributionPlot, n float64) float64 {
+			if c.Normalize {
+				return n
 			}
+			return 1
+		}
+		if e.config.HighOpenPlot != nil {
+			ho = logProfits(high, open, norm(e.config.HighOpenPlot, mad))
+			res.ho.Add(ho.Data()...)
 		}
 		if e.config.CloseOpenPlot != nil {
 			if e.config.Threshold != nil && ho != nil {
 				f := func(i int) bool { return ho.Data()[i] < *e.config.Threshold }
 				close = filterTS(close, f)
 			}
-			_, err := addLogProfits(close, open, mad, e.config.CloseOpenPlot, res.co, p.Ticker)
-			if err != nil {
-				logging.Warningf(e.context, "skipping %s:\n %s", p.Ticker, err.Error())
-				continue
-			}
+			co := logProfits(close, open, norm(e.config.CloseOpenPlot, mad))
+			res.co.Add(co.Data()...)
 		}
 		// TODO: add the other plots.
 	}
