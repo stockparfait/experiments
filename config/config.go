@@ -211,6 +211,7 @@ func (d *CompoundDistribution) InitMessage(js any) error {
 type Source struct {
 	// Exactly one of DB or Close must be non-nil.
 	DB       *db.Reader `json:"DB"`
+	Intraday bool       `json:"intraday"` // skip log-profits that span two days.
 	Compound int        `json:"compound" default:"1"`
 	// Log-profit distributions for OHL prices relative to the previous close. By
 	// default they reuse the same closing price value, with high and low prices

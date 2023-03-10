@@ -12,8 +12,8 @@ github.com/stockparfait/iterator v0.1.8 h1:CMlTVwMOfvexMjKF4WfrW6boOXmqgoupjdNA0
 github.com/stockparfait/iterator v0.1.8/go.mod h1:8EdJTJXxLDOOCYKAWi3c28Ajl7jJgzYxUAmwkuREVuc=
 github.com/stockparfait/logging v0.2.0 h1:KTRNyL2bK5Edopj51uDY9eth0K7VfqrFjz0948OtdH8=
 github.com/stockparfait/logging v0.2.0/go.mod h1:nvvnmIwvQ4Vktsnxjvvw5v72S4OYwyUD81KYPuXZH1o=
-github.com/stockparfait/stockparfait v0.3.5 h1:nGpbqWqJGoHpP+bFvKyzV7XLRHUYsOmcrNdo3rekBW8=
-github.com/stockparfait/stockparfait v0.3.5/go.mod h1:N+VRWAjGu8clpA6TaZbB8I3OfqCS+/tLWcr902cBq8s=
+github.com/stockparfait/stockparfait v0.3.6 h1:SvQVvNZ47cIF4Ce3l6WE5qVxLnaXYsuoF9BEChxu8QE=
+github.com/stockparfait/stockparfait v0.3.6/go.mod h1:N+VRWAjGu8clpA6TaZbB8I3OfqCS+/tLWcr902cBq8s=
 github.com/stockparfait/testutil v0.2.0 h1:kxs5zVNM6N4tEO0jAA99LHxK1a0ueK6/bCJAjv59Z3I=
 github.com/stockparfait/testutil v0.2.0/go.mod h1:tDwaH6tBI0cATzjaNpGI37TXhqLpIYtuM8aWJyz1ktM=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=

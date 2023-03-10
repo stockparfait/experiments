@@ -220,7 +220,7 @@ func (e *AutoCorrelation) processTicker(ticker string) jobResult {
 		return res
 	}
 	ts := stats.NewTimeseriesFromPrices(rows, stats.PriceCloseFullyAdjusted)
-	lp := ts.LogProfits(1)
+	lp := ts.LogProfits(1, false)
 	if len(lp.Data()) < e.config.MaxShift+2 {
 		res.err = errors.Reason("too few samples: %d", len(lp.Data()))
 		return res

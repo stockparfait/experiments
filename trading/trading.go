@@ -23,7 +23,6 @@ import (
 	"github.com/stockparfait/experiments/config"
 	"github.com/stockparfait/iterator"
 	"github.com/stockparfait/logging"
-	"github.com/stockparfait/stockparfait/db"
 	"github.com/stockparfait/stockparfait/stats"
 )
 
@@ -159,19 +158,6 @@ func logProfits(t1, t2 *stats.Timeseries, normCoeff float64) *stats.Timeseries {
 	return ts
 }
 
-// Filter Timeseries points using the filter function f.
-func filterTS(ts *stats.Timeseries, f func(i int) bool) *stats.Timeseries {
-	var dates []db.Date
-	var data []float64
-	for i, d := range ts.Data() {
-		if f(i) {
-			dates = append(dates, ts.Dates()[i])
-			data = append(data, d)
-		}
-	}
-	return stats.NewTimeseries(dates, data)
-}
-
 func (e *Trading) processPrices(prices []experiments.Prices) *jobRes {
 	res := e.newJobRes()
 	for _, p := range prices {
@@ -179,7 +165,7 @@ func (e *Trading) processPrices(prices []experiments.Prices) *jobRes {
 		high := stats.NewTimeseriesFromPrices(p.Rows, stats.PriceHighFullyAdjusted)
 		close := stats.NewTimeseriesFromPrices(p.Rows, stats.PriceCloseFullyAdjusted)
 		// closePrev := close.Shift(1)
-		lp := close.LogProfits(1)
+		lp := close.LogProfits(1, false)
 		mad := stats.NewSample(lp.Data()).MAD()
 		if mad == 0 {
 			logging.Warningf(e.context, "skipping %s: MAD = 0", p.Ticker)
@@ -199,7 +185,7 @@ func (e *Trading) processPrices(prices []experiments.Prices) *jobRes {
 		if e.config.CloseOpenPlot != nil {
 			if e.config.Threshold != nil && ho != nil {
 				f := func(i int) bool { return ho.Data()[i] < *e.config.Threshold }
-				close = filterTS(close, f)
+				close = close.Filter(f)
 			}
 			co := logProfits(close, open, norm(e.config.CloseOpenPlot, mad))
 			res.co.Add(co.Data()...)

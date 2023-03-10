@@ -778,10 +778,11 @@ func SourceMap[T any](ctx context.Context, c *config.Source, f func([]LogProfits
 		rowF := func(prices []Prices) T {
 			var lps []LogProfits
 			for _, p := range prices {
+				ts := stats.NewTimeseriesFromPrices(p.Rows, stats.PriceCloseFullyAdjusted)
+				ts = ts.LogProfits(c.Compound, c.Intraday)
 				lp := LogProfits{
-					Ticker: p.Ticker,
-					Timeseries: stats.NewTimeseriesFromPrices(
-						p.Rows, stats.PriceCloseFullyAdjusted).LogProfits(c.Compound),
+					Ticker:     p.Ticker,
+					Timeseries: ts,
 				}
 				if len(lp.Timeseries.Data()) == 0 {
 					logging.Warningf(ctx, "%s has no log-profits, skipping", p.Ticker)
