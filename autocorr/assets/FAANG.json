@@ -3,19 +3,12 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "tickers": [
-            "META"
-          ]
+          "DB": {
+            "DB": "sharadar",
+            "tickers": [
+              "META"
+            ]
+          }
         },
         "graph": "corr",
         "id": "META",
@@ -25,19 +18,12 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "tickers": [
-            "AAPL"
-          ]
+          "DB": {
+            "DB": "sharadar",
+            "tickers": [
+              "AAPL"
+            ]
+          }
         },
         "graph": "corr",
         "id": "AAPL",
@@ -47,19 +33,12 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "tickers": [
-            "AMZN"
-          ]
+          "DB": {
+            "DB": "sharadar",
+            "tickers": [
+              "AMZN"
+            ]
+          }
         },
         "graph": "corr",
         "id": "AMZN",
@@ -69,19 +48,12 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "tickers": [
-            "NFLX"
-          ]
+          "DB": {
+            "DB": "sharadar",
+            "tickers": [
+              "NFLX"
+            ]
+          }
         },
         "graph": "corr",
         "id": "NFLX",
@@ -91,19 +63,12 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "tickers": [
-            "GOOGL"
-          ]
+          "DB": {
+            "DB": "sharadar",
+            "tickers": [
+              "GOOGL"
+            ]
+          }
         },
         "graph": "corr",
         "id": "GOOGL",
