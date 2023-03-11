@@ -3,18 +3,17 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2003-01-01",
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "1998-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2003-01-01",
+            "sources": [
+              "SEP"
+            ],
+            "start": "1998-01-01"
+          }
         },
         "graph": "corr",
         "id": "V>$1M 1998-2003",
@@ -24,18 +23,17 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2008-01-01",
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "2003-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2008-01-01",
+            "sources": [
+              "SEP"
+            ],
+            "start": "2003-01-01"
+          }
         },
         "graph": "corr",
         "id": "V>$1M 2003-2008",
@@ -45,18 +43,17 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2013-01-01",
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "2008-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2013-01-01",
+            "sources": [
+              "SEP"
+            ],
+            "start": "2008-01-01"
+          }
         },
         "graph": "corr",
         "id": "V>$1M 2008-2013",
@@ -66,18 +63,17 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2018-01-01",
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "2013-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2018-01-01",
+            "sources": [
+              "SEP"
+            ],
+            "start": "2013-01-01"
+          }
         },
         "graph": "corr",
         "id": "V>$1M 2013-2018",
@@ -87,18 +83,17 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "end": "2023-01-01",
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ],
-          "start": "2018-01-01"
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "end": "2023-01-01",
+            "sources": [
+              "SEP"
+            ],
+            "start": "2018-01-01"
+          }
         },
         "graph": "corr",
         "id": "V>$1M 2018-2023",

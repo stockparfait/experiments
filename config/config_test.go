@@ -89,7 +89,7 @@ func TestConfig(t *testing.T) {
       }]
     }},
     {"auto-correlation": {
-      "data": {"DB": "test"},
+      "data": {"DB": {"DB": "test"}},
       "graph": "r1"
     }},
     {"beta": {
@@ -238,11 +238,9 @@ func TestConfig(t *testing.T) {
 						Columns: []PortfolioColumn{{Kind: "ticker"}},
 					}},
 					{Config: &AutoCorrelation{
-						Reader:    &defaultReader,
-						Graph:     "r1",
-						MaxShift:  5,
-						Samples:   5000,
-						BatchSize: 5000,
+						Data:     &defaultSource,
+						Graph:    "r1",
+						MaxShift: 5,
 					}},
 					{Config: &Beta{
 						Reference: &defaultSource,

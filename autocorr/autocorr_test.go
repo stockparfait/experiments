@@ -82,7 +82,7 @@ func TestAutoCorrelation(t *testing.T) {
 				confJSON := fmt.Sprintf(`
 {
   "id": "testID",
-  "data": {"DB path": "%s", "DB": "%s"},
+  "data": {"DB": {"DB path": "%s", "DB": "%s"}},
   "graph": "g",
   "max shift": 2
 }`, tmpdir, dbName)
@@ -104,9 +104,11 @@ func TestAutoCorrelation(t *testing.T) {
 			confJSON := `
 {
   "id": "testID",
-  "analytical source": {"name": "t"},
-  "samples": 150,
-  "batch size": 100,
+  "data": {
+    "close": {"name": "t"},
+    "samples": 150,
+    "batch size": 100
+  },
   "graph": "g",
   "max shift": 2
 }`

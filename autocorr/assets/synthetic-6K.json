@@ -2,28 +2,29 @@
   "experiments": [
     {
       "auto-correlation": {
-        "analytical source": {
-          "name": "t"
+        "data": {
+          "close": {
+            "name": "t"
+          },
+          "samples": 6000
         },
         "graph": "corr",
         "id": "synthetic 6000 samples",
-        "max shift": 100,
-        "samples": 6000
+        "max shift": 100
       }
     },
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ]
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "sources": [
+              "SEP"
+            ]
+          }
         },
         "graph": "corr",
         "id": "V>$1M ",

@@ -3,16 +3,15 @@
     {
       "auto-correlation": {
         "data": {
-          "DB": "sharadar",
-          "cash volume": {
-            "min": 1000000
-          },
-          "exclude tickers": [
-            "JWACU"
-          ],
-          "sources": [
-            "SEP"
-          ]
+          "DB": {
+            "DB": "sharadar",
+            "cash volume": {
+              "min": 1000000
+            },
+            "sources": [
+              "SEP"
+            ]
+          }
         },
         "graph": "corr",
         "id": "V>$1M ",
