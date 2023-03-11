@@ -118,7 +118,9 @@ func (e *AutoCorrelation) processLogProfits(lps []experiments.LogProfits) *jobRe
 				lp.Ticker, len(lp.Timeseries.Data()))
 			continue
 		}
-		res.Add(lp.Timeseries.Data(), e.config.MaxShift)
+		if err := res.Add(lp.Timeseries.Data(), e.config.MaxShift); err != nil {
+			logging.Warningf(e.context, "skipping %s: %s", err.Error())
+		}
 	}
 	return res
 }
