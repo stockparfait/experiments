@@ -573,9 +573,9 @@ func priceRow(date db.Date, open, high, low, close float32) db.PriceRow {
 		Close:              close,
 		CloseSplitAdjusted: close,
 		CloseFullyAdjusted: close,
-		OpenFullyAdjusted:  open,
-		HighFullyAdjusted:  high,
-		LowFullyAdjusted:   low,
+		Open:               open,
+		High:               high,
+		Low:                low,
 		CashVolume:         1000,
 	}
 	p.SetActive(true)
@@ -597,9 +597,9 @@ func generatePrices(cfg tsConfig) Prices {
 	}
 	for i := 0; i < cfg.n; i++ {
 		close := float64(curr.Close) * math.Exp(rnd(cfg.close, 100.0))
-		open := float64(curr.OpenFullyAdjusted) * math.Exp(rnd(cfg.open, close))
-		high := float64(curr.HighFullyAdjusted) * math.Exp(rnd(cfg.high, close))
-		low := float64(curr.LowFullyAdjusted) * math.Exp(rnd(cfg.low, close))
+		open := float64(curr.Open) * math.Exp(rnd(cfg.open, close))
+		high := float64(curr.High) * math.Exp(rnd(cfg.high, close))
+		low := float64(curr.Low) * math.Exp(rnd(cfg.low, close))
 		if high < open {
 			high = open
 		}
