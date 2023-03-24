@@ -169,9 +169,12 @@ func TestBeta(t *testing.T) {
 			confJSON := fmt.Sprintf(`
 {
   "id": "testID",
-  "reference": {"close": {"name": "t"}, "samples": 10},
+  "reference": {
+    "daily distribution": {"name": "t"},
+    "samples": 10
+  },
   "data": {
-    "close": {"name": "t"},
+    "daily distribution": {"name": "t"},
     "tickers": 3,
     "samples": 10
   },

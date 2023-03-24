@@ -3,7 +3,7 @@
     {
       "auto-correlation": {
         "data": {
-          "close": {
+          "daily distribution": {
             "name": "t"
           },
           "samples": 25000000

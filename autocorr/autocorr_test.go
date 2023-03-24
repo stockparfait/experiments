@@ -105,7 +105,7 @@ func TestAutoCorrelation(t *testing.T) {
 {
   "id": "testID",
   "data": {
-    "close": {"name": "t"},
+    "daily distribution": {"name": "t"},
     "samples": 150,
     "batch size": 100
   },

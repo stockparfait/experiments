@@ -244,12 +244,13 @@ func TestExperiments(t *testing.T) {
 
 			Convey("using synthetic", func() {
 				var cfg config.Source
+				// Keep the number of intraday samples small for efficiency.
 				js := testutil.JSON(`
 {
-  "open": {"name": "t"},
-  "high": {"name": "t"},
-  "low": {"name": "t"},
-  "close": {"name": "t"},
+  "daily distribution": {"name": "t"},
+  "intraday distribution": {"name": "t"},
+  "intraday resolution": 30,
+  "intraday range": {"start": "12:00", "end": "13:00"},
   "tickers": 2,
   "samples": 11,
   "batch size": 1,
@@ -349,7 +350,10 @@ func TestExperiments(t *testing.T) {
 				var cfg2 config.Source
 				js2 := testutil.JSON(fmt.Sprintf(`
 {
-  "close": {"name": "t"},
+  "daily distribution": {"name": "t"},
+  "intraday distribution": {"name": "t"},
+  "intraday resolution": 30,
+  "intraday range": {"start": "12:00", "end": "13:00"},
   "lengths file": "%s"
 }
 `, lengthsFile))
