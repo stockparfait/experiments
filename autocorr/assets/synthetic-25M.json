@@ -6,7 +6,7 @@
           "daily distribution": {
             "name": "t"
           },
-          "samples": 25000000
+          "days": 25000000
         },
         "graph": "corr",
         "id": "synthetic 25000000 samples",

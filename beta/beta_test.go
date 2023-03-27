@@ -169,14 +169,11 @@ func TestBeta(t *testing.T) {
 			confJSON := fmt.Sprintf(`
 {
   "id": "testID",
-  "reference": {
-    "daily distribution": {"name": "t"},
-    "samples": 10
-  },
+  "reference": {"daily distribution": {"name": "t"}, "days": 10},
   "data": {
     "daily distribution": {"name": "t"},
     "tickers": 3,
-    "samples": 10
+    "days": 10
   },
   "file": "%s",
   "beta plot": {"graph": "beta"},

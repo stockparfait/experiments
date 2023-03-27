@@ -242,7 +242,31 @@ func TestExperiments(t *testing.T) {
 				return db.TestPrice(d(date), p, p, p, 1000.0, true)
 			}
 
-			Convey("using synthetic", func() {
+			Convey("using synthetic daily", func() {
+				var cfg config.Source
+				js := testutil.JSON(`
+{
+  "daily distribution": {"name": "t"},
+  "tickers": 2,
+  "days": 11,
+  "batch size": 1,
+  "start date": "2020-01-02"
+}`)
+				So(cfg.InitMessage(js), ShouldBeNil)
+
+				it, err := Source(ctx, &cfg)
+				So(err, ShouldBeNil)
+				lps := iterator.ToSlice[LogProfits](it)
+				it.Close()
+				So(len(lps), ShouldEqual, 2)
+				// Log-profits start one day after the first price.
+				So(len(lps[0].Timeseries.Data()), ShouldEqual, 10)
+				So(len(lps[1].Timeseries.Data()), ShouldEqual, 10)
+				So(lps[0].Timeseries.Dates()[0], ShouldResemble, d("2020-01-03"))
+				So(lps[1].Timeseries.Dates()[0], ShouldResemble, d("2020-01-03"))
+			})
+
+			Convey("using synthetic intraday", func() {
 				var cfg config.Source
 				// Keep the number of intraday samples small for efficiency.
 				js := testutil.JSON(`
@@ -252,23 +276,43 @@ func TestExperiments(t *testing.T) {
   "intraday resolution": 30,
   "intraday range": {"start": "12:00", "end": "13:00"},
   "tickers": 2,
-  "samples": 11,
+  "days": 11,
   "batch size": 1,
   "start date": "2020-01-02"
 }`)
 				So(cfg.InitMessage(js), ShouldBeNil)
 
-				Convey("LogProfits only", func() {
+				Convey("All LogProfits", func() {
 					it, err := Source(ctx, &cfg)
 					So(err, ShouldBeNil)
 					lps := iterator.ToSlice[LogProfits](it)
 					it.Close()
 					So(len(lps), ShouldEqual, 2)
-					// Log-profits start one day after the first price.
-					So(len(lps[0].Timeseries.Data()), ShouldEqual, 10)
-					So(len(lps[1].Timeseries.Data()), ShouldEqual, 10)
-					So(lps[0].Timeseries.Dates()[0], ShouldResemble, d("2020-01-03"))
-					So(lps[1].Timeseries.Dates()[0], ShouldResemble, d("2020-01-03"))
+					// 2 intraday samples + 1 inter-day per day, minus spurious one at the
+					// start, total = 11*3 - 1 = 32.
+					So(len(lps[0].Timeseries.Data()), ShouldEqual, 32)
+					So(len(lps[1].Timeseries.Data()), ShouldEqual, 32)
+					So(lps[0].Timeseries.Dates()[0], ShouldResemble,
+						db.NewDatetime(2020, 1, 2, 12, 30, 0, 0))
+					So(lps[1].Timeseries.Dates()[0], ShouldResemble,
+						db.NewDatetime(2020, 1, 2, 12, 30, 0, 0))
+				})
+
+				Convey("Intraday LogProfits only", func() {
+					c := cfg // local copy
+					c.IntradayOnly = true
+					it, err := Source(ctx, &c)
+					So(err, ShouldBeNil)
+					lps := iterator.ToSlice[LogProfits](it)
+					it.Close()
+					So(len(lps), ShouldEqual, 2)
+					// 2 intraday samples per day.
+					So(len(lps[0].Timeseries.Data()), ShouldEqual, 22)
+					So(len(lps[1].Timeseries.Data()), ShouldEqual, 22)
+					So(lps[0].Timeseries.Dates()[0], ShouldResemble,
+						db.NewDatetime(2020, 1, 2, 12, 30, 0, 0))
+					So(lps[1].Timeseries.Dates()[0], ShouldResemble,
+						db.NewDatetime(2020, 1, 2, 12, 30, 0, 0))
 				})
 
 				Convey("OHLC prices", func() {
@@ -351,9 +395,6 @@ func TestExperiments(t *testing.T) {
 				js2 := testutil.JSON(fmt.Sprintf(`
 {
   "daily distribution": {"name": "t"},
-  "intraday distribution": {"name": "t"},
-  "intraday resolution": 30,
-  "intraday range": {"start": "12:00", "end": "13:00"},
   "lengths file": "%s"
 }
 `, lengthsFile))
