@@ -315,6 +315,28 @@ func TestExperiments(t *testing.T) {
 						db.NewDatetime(2020, 1, 2, 12, 30, 0, 0))
 				})
 
+				Convey("Intraday 24/7, daily distribution not used", func() {
+					c := cfg // local copy
+					c.DailyDist = nil
+					// DailyDist required with non-trival intraday range.
+					_, err := Source(ctx, &c)
+					So(err, ShouldNotBeNil)
+
+					c.IntradayRange = &db.IntradayRange{}
+					it, err := Source(ctx, &c)
+					So(err, ShouldBeNil)
+					lps := iterator.ToSlice[LogProfits](it)
+					it.Close()
+					So(len(lps), ShouldEqual, 2)
+					// 48 intraday samples per day, minus the first one.
+					So(len(lps[0].Timeseries.Data()), ShouldEqual, 48*11-1)
+					So(len(lps[1].Timeseries.Data()), ShouldEqual, 48*11-1)
+					So(lps[0].Timeseries.Dates()[0], ShouldResemble,
+						db.NewDatetime(2020, 1, 2, 0, 30, 0, 0))
+					So(lps[1].Timeseries.Dates()[0], ShouldResemble,
+						db.NewDatetime(2020, 1, 2, 0, 30, 0, 0))
+				})
+
 				Convey("OHLC prices", func() {
 					it, err := SourceMapPrices(ctx, &cfg, func(ps []Prices) Prices {
 						if len(ps) != 1 {

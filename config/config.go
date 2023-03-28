@@ -218,15 +218,15 @@ type Source struct {
 	DailyDist *AnalyticalDistribution `json:"daily distribution"`
 	// Skip log-profits that span two days.
 	IntradayOnly bool `json:"intraday only"`
-	// Required for generating OHL prices or intraday series.
+	// Required for generating OHLC prices or intraday series.
 	IntradayDist *AnalyticalDistribution `json:"intraday distribution"`
 	// Default: 9:30am - 4pm.
 	IntradayRange *db.IntradayRange `json:"intraday range"`
 	// Resolution of the intraday samples in minutes: 1, 5, 15 or 30.
 	IntradayRes int `json:"intraday resolution" default:"1"`
 	// With DB, saves the start date and the number of days for each ticker as a
-	// JSON file.  With Synthetic, read this file and generate synthetic tickers
-	// accordingly, overwriting the other parameters.
+	// JSON file.  With synthetic distributions, read this file and generate
+	// synthetic tickers accordingly, overwriting the other parameters.
 	LengthsFile string `json:"lengths file"`
 	// Amount of synthetic data to generate. Note, that with intraday
 	// distribution, the number of samples is N*days where N is the number of

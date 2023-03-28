@@ -575,7 +575,8 @@ func openDist(cfg tsConfig) stats.Distribution {
 }
 
 // generateLogProfits generates a synthetic log-profit Timeseries. The first
-// log-profit is spurious and is generated only for its start date.
+// log-profit can be spurious (without "intraday only") and is generated only
+// for its start date.
 func generateLogProfits(cfg tsConfig) LogProfits {
 	days := generateDates(cfg.start, cfg.days)
 	var dates []db.Date
@@ -603,7 +604,7 @@ func generateIntraday(open float64, date db.Date, cfg tsConfig) *stats.Timeserie
 		return stats.NewTimeseries([]db.Date{date}, []float64{open})
 	}
 	openTime := 0
-	closeTime := 24*60*1000 - 1
+	closeTime := 24*3600*1000 - 1
 	if r := cfg.intradayRange; r != nil {
 		if r.Start != nil {
 			openTime = int(*r.Start)
@@ -612,7 +613,7 @@ func generateIntraday(open float64, date db.Date, cfg tsConfig) *stats.Timeserie
 			closeTime = int(*r.End)
 		}
 	}
-	samples := int(closeTime-openTime) / cfg.intradayRes / 60_000
+	samples := (closeTime - openTime) / cfg.intradayRes / 60_000
 	if samples <= 0 {
 		return stats.NewTimeseries([]db.Date{date}, []float64{open})
 	}
@@ -671,26 +672,26 @@ func priceRow(date db.Date, open, high, low, close float32) db.PriceRow {
 }
 
 // generatePrices generates and downsamples intraday series to daily OHLC prices
-// starting from an arbitrary artificial close of $100.
+// starting from an arbitrary artificial close of $100 prior to the first sample.
 func generatePrices(cfg tsConfig) Prices {
 	open := openDist(cfg)
 	days := generateDates(cfg.start, cfg.days)
 	rows := make([]db.PriceRow, cfg.days)
-	// Set the initial price row before the first date at an arbitrary price of
+	// Set the initial close before the first date at an arbitrary price of
 	// 100. All the analyses use relative price moves, so the initial value is not
 	// important.
-	curr := priceRow(cfg.start, 100.0, 100.0, 100.0, 100.0)
+	prevClose := 100.0
 	for i, day := range days {
 		ts := generateIntraday(open.Rand(), day, cfg)
 		open := ts.Data()[0]
 		high, low, close := getHLC(ts.Data())
 		rows[i] = priceRow(day,
-			curr.Open*float32(math.Exp(open)),
-			curr.High*float32(math.Exp(high)),
-			curr.Low*float32(math.Exp(low)),
-			curr.Close*float32(math.Exp(close)),
+			float32(prevClose*math.Exp(open)),
+			float32(prevClose*math.Exp(high)),
+			float32(prevClose*math.Exp(low)),
+			float32(prevClose*math.Exp(close)),
 		)
-		curr = rows[i]
+		prevClose = float64(rows[i].Close)
 	}
 	return Prices{
 		Ticker: "synthetic",
@@ -716,31 +717,33 @@ func (it *distIter) Next() (tsConfig, bool) {
 	if !ok {
 		return tsConfig{}, false
 	}
+	cp := func(d stats.Distribution) stats.Distribution {
+		if d == nil {
+			return nil
+		}
+		return d.Copy()
+	}
 	tsc := tsConfig{
+		daily:         cp(it.daily),
+		intraday:      cp(it.intraday),
 		start:         c.Start,
 		days:          c.Days,
 		intradayOnly:  it.intradayOnly,
 		intradayRes:   it.intradayRes,
 		intradayRange: it.intradayRange,
 	}
-	if it.daily != nil {
-		tsc.daily = it.daily.Copy()
-	}
-	if it.intraday != nil {
-		tsc.intraday = it.intraday.Copy()
-	}
 	return tsc, true
 }
 
 func sourceDistIter(ctx context.Context, c *config.Source) (iterator.Iterator[[]tsConfig], error) {
-	if c.DailyDist == nil {
-		return nil, errors.Reason("daily distribution is nil")
+	var daily, intraday stats.Distribution
+	var err error
+	if c.DailyDist != nil {
+		daily, _, err = AnalyticalDistribution(ctx, c.DailyDist)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to create daily distribution")
+		}
 	}
-	daily, _, err := AnalyticalDistribution(ctx, c.DailyDist)
-	if err != nil {
-		return nil, errors.Annotate(err, "failed to create synthetic distribution")
-	}
-	var intraday stats.Distribution
 	if c.IntradayDist != nil {
 		intraday, _, err = AnalyticalDistribution(ctx, c.IntradayDist)
 		if err != nil {
@@ -785,8 +788,8 @@ func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func([]LogP
 		var lps []LogProfits
 		for _, c := range cs {
 			lp := generateLogProfits(c)
-			// Skip the first spurious log-profit, unless "intraday only", in which
-			// case it is already skipped.
+			// Skip the first spurious log-profit, unless "intraday only" is true, in
+			// which case it is already skipped.
 			if !c.intradayOnly {
 				ts := lp.Timeseries
 				lp.Timeseries = stats.NewTimeseries(ts.Dates()[1:], ts.Data()[1:])
@@ -844,8 +847,7 @@ func Source(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogP
 //
 // Please remember to close the resulting iterator.
 func SourceMap[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
-	switch {
-	case c.DB != nil:
+	if c.DB != nil {
 		rowF := func(prices []Prices) T {
 			var lps []LogProfits
 			for _, p := range prices {
