@@ -209,23 +209,30 @@ func (d *CompoundDistribution) InitMessage(js any) error {
 // Source is a generic config for a set of price series that come either from
 // the actual price database or synthetically generated.
 type Source struct {
-	// Exactly one of DB or Close must be non-nil.
+	// Real price series database. When present, no synthetic distribution is
+	// allowed.
 	DB       *db.Reader `json:"DB"`
-	Intraday bool       `json:"intraday"` // skip log-profits that span two days.
 	Compound int        `json:"compound" default:"1"`
-	// Log-profit distributions for OHL prices relative to the previous close. By
-	// default they reuse the same closing price value, with high and low prices
-	// adjusted to include open and close in [low..high] range.
-	Open  *AnalyticalDistribution `json:"open"`
-	High  *AnalyticalDistribution `json:"high"`
-	Low   *AnalyticalDistribution `json:"low"`
-	Close *AnalyticalDistribution `json:"close"`
-	// With DB, saves the start date and the number of samples for each ticker as
-	// a JSON file.  With Synthetic, read this file and generate synthetic tickers
-	// accordingly, overwriting the other parameters.
+	// Log-profit distribution for close[t]/close[t-1] by default, or
+	// open[t+1]/close[t] when intraday distribution is present.
+	DailyDist *AnalyticalDistribution `json:"daily distribution"`
+	// Skip log-profits that span two days.
+	IntradayOnly bool `json:"intraday only"`
+	// Required for generating OHLC prices or intraday series.
+	IntradayDist *AnalyticalDistribution `json:"intraday distribution"`
+	// Default: 9:30am - 4pm.
+	IntradayRange *db.IntradayRange `json:"intraday range"`
+	// Resolution of the intraday samples in minutes: 1, 5, 15 or 30.
+	IntradayRes int `json:"intraday resolution" default:"1"`
+	// With DB, saves the start date and the number of days for each ticker as a
+	// JSON file.  With synthetic distributions, read this file and generate
+	// synthetic tickers accordingly, overwriting the other parameters.
 	LengthsFile string `json:"lengths file"`
-	Tickers     int    `json:"tickers" default:"1"`    // #synthetic tickers
-	Samples     int    `json:"samples" default:"5000"` // #synthetic prices per ticker
+	// Amount of synthetic data to generate. Note, that with intraday
+	// distribution, the number of samples is N*days where N is the number of
+	// intraday samples.
+	Tickers int `json:"tickers" default:"1"` // #synthetic tickers
+	Days    int `json:"days" default:"5000"` // #synthetic days per ticker
 	// All synthetic sequences start on this day; default:"1998-01-02".
 	StartDate db.Date `json:"start date"`
 	// Parallel processing parameters.
@@ -237,8 +244,32 @@ func (s *Source) InitMessage(js any) error {
 	if err := message.Init(s, js); err != nil {
 		return errors.Annotate(err, "failed to init Source")
 	}
-	if (s.DB == nil) == (s.Close == nil) {
-		return errors.Reason(`expected exactly one of "DB" or "synthetic"`)
+	if s.DB != nil {
+		if s.DailyDist != nil {
+			return errors.Reason(`cannot have both "DB" and "daily distribution"`)
+		}
+		if s.IntradayDist != nil {
+			return errors.Reason(`cannot have both "DB" and "intraday distribution"`)
+		}
+	}
+	if s.IntradayRange == nil {
+		start := db.NewTimeOfDay(9, 30, 0, 0)
+		end := db.NewTimeOfDay(16, 0, 0, 0)
+		s.IntradayRange = &db.IntradayRange{
+			Start: &start,
+			End:   &end,
+		}
+	}
+	intradayResValid := false
+	for _, v := range []int{1, 5, 15, 30} {
+		if s.IntradayRes == v {
+			intradayResValid = true
+			break
+		}
+	}
+	if !intradayResValid {
+		return errors.Reason(`"intraday resolution"=%d must be 1, 5, 15 or 30`,
+			s.IntradayRes)
 	}
 	if s.StartDate.IsZero() {
 		s.StartDate = db.NewDate(1998, 1, 2)
@@ -533,10 +564,6 @@ func (e *AutoCorrelation) InitMessage(js any) error {
 	}
 	if e.MaxShift <= 0 {
 		return errors.Reason("max shift = %d must be >= 1", e.MaxShift)
-	}
-	if e.Data.Samples <= e.MaxShift+2 {
-		return errors.Reason("data[samples]=%d must be >= max shift+2 = %d",
-			e.Data.Samples, e.MaxShift+2)
 	}
 	return nil
 }

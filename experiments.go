@@ -425,8 +425,8 @@ func CompoundDistribution(ctx context.Context, c *config.CompoundDistribution) (
 
 // synthConfig stores parameters for a single synthetic ticker sequence.
 type synthConfig struct {
-	Start  db.Date
-	Length int
+	Start db.Date
+	Days  int
 }
 
 func saveLengths(lengths []synthConfig, fileName string) error {
@@ -491,10 +491,18 @@ func sourceDBPrices[T any](ctx context.Context, c *config.Source, f func([]Price
 					ticker, err.Error())
 				continue
 			}
-			length := len(rows)
-			if length == 0 {
+			if len(rows) == 0 {
 				logging.Warningf(ctx, "%s has no prices, skipping", ticker)
 				continue
+			}
+			var days int
+			var currDay db.Date
+			for _, r := range rows {
+				day := r.Date.Date()
+				if day != currDay {
+					days++
+					currDay = day
+				}
 			}
 			p := Prices{
 				Ticker: ticker,
@@ -502,8 +510,8 @@ func sourceDBPrices[T any](ctx context.Context, c *config.Source, f func([]Price
 			}
 			prices = append(prices, p)
 			cs = append(cs, synthConfig{
-				Length: length,
-				Start:  rows[0].Date,
+				Days:  days,
+				Start: rows[0].Date.Date(),
 			})
 		}
 		return withConf[T]{v: f(prices), cs: cs}
@@ -531,12 +539,13 @@ func sourceDBPrices[T any](ctx context.Context, c *config.Source, f func([]Price
 // tsConfig configures synthetic OHLC Timeseries of length n starting from the
 // start date and using the corresponding distributions.
 type tsConfig struct {
-	open  stats.Distribution
-	high  stats.Distribution
-	low   stats.Distribution
-	close stats.Distribution
-	start db.Date
-	n     int
+	daily         stats.Distribution
+	intraday      stats.Distribution
+	intradayOnly  bool
+	start         db.Date
+	days          int
+	intradayRes   int // resolution in minutes
+	intradayRange *db.IntradayRange
 }
 
 func generateDates(start db.Date, n int) []db.Date {
@@ -554,17 +563,97 @@ func generateDates(start db.Date, n int) []db.Date {
 	return dates
 }
 
-// generateLogProfits generates a synthetic log-profit Timeseries.
-func generateLogProfits(d stats.Distribution, start db.Date, n int) LogProfits {
-	dates := generateDates(start, n)
-	data := make([]float64, n)
-	for i := 0; i < n; i++ {
-		data[i] = d.Rand()
+// openDist returns the distribution for the open[t+1]/close[t] log-profit.
+func openDist(cfg tsConfig) stats.Distribution {
+	d := cfg.daily
+	if cfg.intraday != nil {
+		if r := cfg.intradayRange; r == nil || (r.Start == nil && r.End == nil) {
+			d = cfg.intraday
+		}
+	}
+	return d
+}
+
+// generateLogProfits generates a synthetic log-profit Timeseries. The first
+// log-profit can be spurious (without "intraday only") and is generated only
+// for its start date.
+func generateLogProfits(cfg tsConfig) LogProfits {
+	days := generateDates(cfg.start, cfg.days)
+	var dates []db.Date
+	var data []float64
+	open := openDist(cfg)
+	for _, day := range days {
+		ts := generateIntraday(open.Rand(), day, cfg)
+		if cfg.intradayOnly {
+			ts = stats.NewTimeseries(ts.Dates()[1:], ts.Data()[1:])
+		}
+		dates = append(dates, ts.Dates()...)
+		data = append(data, ts.Data()...)
 	}
 	return LogProfits{
 		Ticker:     "synthetic",
 		Timeseries: stats.NewTimeseries(dates, data),
 	}
+}
+
+// generateIntraday log-profit series for a single day, from open to close,
+// including the supplied "open" log-profit relative to the previous day's
+// close. It always returns at least one-element Timeseries with the open value.
+func generateIntraday(open float64, date db.Date, cfg tsConfig) *stats.Timeseries {
+	if cfg.intraday == nil {
+		return stats.NewTimeseries([]db.Date{date}, []float64{open})
+	}
+	openTime := 0
+	closeTime := 24*3600*1000 - 1
+	if r := cfg.intradayRange; r != nil {
+		if r.Start != nil {
+			openTime = int(*r.Start)
+		}
+		if r.End != nil {
+			closeTime = int(*r.End)
+		}
+	}
+	samples := (closeTime - openTime) / cfg.intradayRes / 60_000
+	if samples <= 0 {
+		return stats.NewTimeseries([]db.Date{date}, []float64{open})
+	}
+	dates := make([]db.Date, samples+1)
+	data := make([]float64, samples+1)
+	t2d := func(t int) db.Date {
+		d := date
+		d.Time = db.TimeOfDay(t)
+		return d
+	}
+	for i := 0; i <= samples; i++ {
+		if i == 0 {
+			data[i] = open
+		} else {
+			data[i] = cfg.intraday.Rand()
+		}
+		dates[i] = t2d(openTime + 60_000*cfg.intradayRes*i)
+	}
+	return stats.NewTimeseries(dates, data)
+}
+
+// getHLC computes log-profits from open to high, low and close, respectiveliy,
+// given the series of log-profits from open to close.
+func getHLC(data []float64) (high, low, close float64) {
+	for i, d := range data {
+		if i == 0 {
+			high = d
+			low = d
+			close = d
+			continue
+		}
+		close += d
+		if high < close {
+			high = close
+		}
+		if low > close {
+			low = close
+		}
+	}
+	return
 }
 
 func priceRow(date db.Date, open, high, low, close float32) db.PriceRow {
@@ -582,39 +671,27 @@ func priceRow(date db.Date, open, high, low, close float32) db.PriceRow {
 	return p
 }
 
+// generatePrices generates and downsamples intraday series to daily OHLC prices
+// starting from an arbitrary artificial close of $100 prior to the first sample.
 func generatePrices(cfg tsConfig) Prices {
-	dates := generateDates(cfg.start, cfg.n)
-	rows := make([]db.PriceRow, cfg.n)
-	// Set the initial price row before the first date at an arbitrary price of
-	// 100. All the analysis uses relative price moves, so the initial value is
-	// not important.
-	curr := priceRow(cfg.start, 100.0, 100.0, 100.0, 100.0)
-	rnd := func(d stats.Distribution, x float64) float64 {
-		if d == nil {
-			return cfg.close.Rand()
-		}
-		return x
-	}
-	for i := 0; i < cfg.n; i++ {
-		close := float64(curr.Close) * math.Exp(rnd(cfg.close, 100.0))
-		open := float64(curr.Open) * math.Exp(rnd(cfg.open, close))
-		high := float64(curr.High) * math.Exp(rnd(cfg.high, close))
-		low := float64(curr.Low) * math.Exp(rnd(cfg.low, close))
-		if high < open {
-			high = open
-		}
-		if high < close {
-			high = close
-		}
-		if low > open {
-			low = open
-		}
-		if low > close {
-			low = close
-		}
-		rows[i] = priceRow(dates[i], float32(open), float32(high),
-			float32(low), float32(close))
-		curr = rows[i]
+	open := openDist(cfg)
+	days := generateDates(cfg.start, cfg.days)
+	rows := make([]db.PriceRow, cfg.days)
+	// Set the initial close before the first date at an arbitrary price of
+	// 100. All the analyses use relative price moves, so the initial value is not
+	// important.
+	prevClose := 100.0
+	for i, day := range days {
+		ts := generateIntraday(open.Rand(), day, cfg)
+		open := ts.Data()[0]
+		high, low, close := getHLC(ts.Data())
+		rows[i] = priceRow(day,
+			float32(prevClose*math.Exp(open)),
+			float32(prevClose*math.Exp(high)),
+			float32(prevClose*math.Exp(low)),
+			float32(prevClose*math.Exp(close)),
+		)
+		prevClose = float64(rows[i].Close)
 	}
 	return Prices{
 		Ticker: "synthetic",
@@ -625,11 +702,12 @@ func generatePrices(cfg tsConfig) Prices {
 // distIter generates tsConfig sequence based on the iterator for the sequence
 // lengths.
 type distIter struct {
-	open        stats.Distribution
-	high        stats.Distribution
-	low         stats.Distribution
-	close       stats.Distribution
-	lengthsIter iterator.Iterator[synthConfig]
+	daily         stats.Distribution
+	intraday      stats.Distribution
+	intradayOnly  bool
+	intradayRes   int // resolution in minutes
+	intradayRange *db.IntradayRange
+	lengthsIter   iterator.Iterator[synthConfig]
 }
 
 var _ iterator.Iterator[tsConfig] = &distIter{}
@@ -646,111 +724,107 @@ func (it *distIter) Next() (tsConfig, bool) {
 		return d.Copy()
 	}
 	tsc := tsConfig{
-		open:  cp(it.open),
-		high:  cp(it.high),
-		low:   cp(it.low),
-		close: cp(it.close),
-		start: c.Start,
-		n:     c.Length,
+		daily:         cp(it.daily),
+		intraday:      cp(it.intraday),
+		start:         c.Start,
+		days:          c.Days,
+		intradayOnly:  it.intradayOnly,
+		intradayRes:   it.intradayRes,
+		intradayRange: it.intradayRange,
 	}
 	return tsc, true
+}
+
+func sourceDistIter(ctx context.Context, c *config.Source) (iterator.Iterator[[]tsConfig], error) {
+	var daily, intraday stats.Distribution
+	var err error
+	if c.DailyDist != nil {
+		daily, _, err = AnalyticalDistribution(ctx, c.DailyDist)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to create daily distribution")
+		}
+	}
+	if c.IntradayDist != nil {
+		intraday, _, err = AnalyticalDistribution(ctx, c.IntradayDist)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to create intraday distribution")
+		}
+	}
+	var lengthsIter iterator.Iterator[synthConfig]
+	if c.LengthsFile != "" {
+		lengths, err := readLengths(c.LengthsFile)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to read lengths")
+		}
+		lengthsIter = iterator.FromSlice(lengths)
+	} else {
+		lengthsIter = iterator.Repeat(
+			synthConfig{Start: c.StartDate, Days: c.Days}, c.Tickers)
+	}
+	distIt := &distIter{
+		daily:         daily,
+		intraday:      intraday,
+		intradayOnly:  c.IntradayOnly,
+		intradayRes:   c.IntradayRes,
+		intradayRange: c.IntradayRange,
+		lengthsIter:   lengthsIter,
+	}
+	batchIt := iterator.Batch[tsConfig](distIt, c.BatchSize)
+	return batchIt, nil
 }
 
 // sourceSynthehtic directly generates LogProfits rather than using
 // sourceSyntheticPrices, for efficiency.
 func sourceSynthetic[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
-	d, _, err := AnalyticalDistribution(ctx, c.Close)
-	if err != nil {
-		return nil, errors.Annotate(err, "failed to create synthetic distribution")
-	}
-	var lengthsIter iterator.Iterator[synthConfig]
-	if c.LengthsFile != "" {
-		lengths, err := readLengths(c.LengthsFile)
-		if err != nil {
-			return nil, errors.Annotate(err, "failed to read lengths")
+	if c.IntradayDist != nil {
+		if r := c.IntradayRange; r != nil && (r.Start != nil || r.End != nil) {
+			if c.DailyDist == nil {
+				return nil, errors.Reason(
+					`"daily distribution" required with non-trivial intraday range`)
+			}
 		}
-		lengthsIter = iterator.FromSlice(lengths)
-	} else {
-		lengthsIter = iterator.Repeat(
-			synthConfig{Start: c.StartDate, Length: c.Samples}, c.Tickers)
 	}
-	distIt := &distIter{close: d, lengthsIter: lengthsIter}
-	batchIt := iterator.Batch[tsConfig](distIt, c.BatchSize)
 	pf := func(cs []tsConfig) T {
 		var lps []LogProfits
 		for _, c := range cs {
-			if c.n < 2 { // n = number of raw prices, need at least 2
-				continue
+			lp := generateLogProfits(c)
+			// Skip the first spurious log-profit, unless "intraday only" is true, in
+			// which case it is already skipped.
+			if !c.intradayOnly {
+				ts := lp.Timeseries
+				lp.Timeseries = stats.NewTimeseries(ts.Dates()[1:], ts.Data()[1:])
 			}
-			lp := generateLogProfits(c.close, c.start, c.n)
-			// Skip the first spurious log-profit.
-			ts := lp.Timeseries
-			lp.Timeseries = stats.NewTimeseries(ts.Dates()[1:], ts.Data()[1:])
 			lps = append(lps, lp)
 		}
 		return f(lps)
 	}
-	pm := iterator.ParallelMap[[]tsConfig, T](ctx, c.Workers, batchIt, pf)
+	it, err := sourceDistIter(ctx, c)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to create distribution iterator")
+	}
+	pm := iterator.ParallelMap[[]tsConfig, T](ctx, c.Workers, it, pf)
 	return pm, nil
 }
 
 func sourceSyntheticPrices[T any](ctx context.Context, c *config.Source, f func([]Prices) T) (iterator.IteratorCloser[T], error) {
-	if c.Close == nil {
-		return nil, errors.Reason("close distribution is nil")
+	if c.IntradayDist == nil {
+		return nil, errors.Reason(`"intraday distribution" required for OHLC prices`)
 	}
-	close, _, err := AnalyticalDistribution(ctx, c.Close)
-	if err != nil {
-		return nil, errors.Annotate(err, "failed to create close distribution")
-	}
-	var open, high, low stats.Distribution
-	if c.Open != nil {
-		open, _, err = AnalyticalDistribution(ctx, c.Open)
-		if err != nil {
-			return nil, errors.Annotate(err, "failed to create open distribution")
-		}
-	}
-	if c.High != nil {
-		high, _, err = AnalyticalDistribution(ctx, c.High)
-		if err != nil {
-			return nil, errors.Annotate(err, "failed to create high distribution")
-		}
-	}
-	if c.Low != nil {
-		low, _, err = AnalyticalDistribution(ctx, c.Low)
-		if err != nil {
-			return nil, errors.Annotate(err, "failed to create low distribution")
-		}
-	}
-	var lengthsIter iterator.Iterator[synthConfig]
-	if c.LengthsFile != "" {
-		lengths, err := readLengths(c.LengthsFile)
-		if err != nil {
-			return nil, errors.Annotate(err, "failed to read lengths")
-		}
-		lengthsIter = iterator.FromSlice(lengths)
-	} else {
-		lengthsIter = iterator.Repeat(
-			synthConfig{Start: c.StartDate, Length: c.Samples}, c.Tickers)
-	}
-	distIt := &distIter{
-		open:        open,
-		high:        high,
-		low:         low,
-		close:       close,
-		lengthsIter: lengthsIter,
-	}
-	batchIt := iterator.Batch[tsConfig](distIt, c.BatchSize)
 	pf := func(cs []tsConfig) T {
 		var prices []Prices
 		for _, c := range cs {
-			if c.n < 1 { // n = number of raw prices, need at least 1
+			if c.days < 1 {
 				continue
 			}
 			prices = append(prices, generatePrices(c))
 		}
 		return f(prices)
 	}
-	pm := iterator.ParallelMap[[]tsConfig, T](ctx, c.Workers, batchIt, pf)
+	it, err := sourceDistIter(ctx, c)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to create distribution iterator")
+	}
+	pm := iterator.ParallelMap[[]tsConfig, T](ctx, c.Workers, it, pf)
 	return pm, nil
 }
 
@@ -773,13 +847,12 @@ func Source(ctx context.Context, c *config.Source) (iterator.IteratorCloser[LogP
 //
 // Please remember to close the resulting iterator.
 func SourceMap[T any](ctx context.Context, c *config.Source, f func([]LogProfits) T) (iterator.IteratorCloser[T], error) {
-	switch {
-	case c.DB != nil:
+	if c.DB != nil {
 		rowF := func(prices []Prices) T {
 			var lps []LogProfits
 			for _, p := range prices {
 				ts := stats.NewTimeseriesFromPrices(p.Rows, stats.PriceCloseFullyAdjusted)
-				ts = ts.LogProfits(c.Compound, c.Intraday)
+				ts = ts.LogProfits(c.Compound, c.IntradayOnly)
 				lp := LogProfits{
 					Ticker:     p.Ticker,
 					Timeseries: ts,
@@ -793,20 +866,16 @@ func SourceMap[T any](ctx context.Context, c *config.Source, f func([]LogProfits
 			return f(lps)
 		}
 		return SourceMapPrices[T](ctx, c, rowF)
-	case c.Close != nil:
-		return sourceSynthetic[T](ctx, c, f)
 	}
-	return nil, errors.Reason(`one of "DB" or "close" must be configured`)
+	return sourceSynthetic[T](ctx, c, f)
 }
 
 func SourceMapPrices[T any](ctx context.Context, c *config.Source, f func([]Prices) T) (iterator.IteratorCloser[T], error) {
 	switch {
 	case c.DB != nil:
 		return sourceDBPrices[T](ctx, c, f)
-	case c.Close != nil:
-		return sourceSyntheticPrices[T](ctx, c, f)
 	}
-	return nil, errors.Reason(`one of "DB" or "close" must be configured`)
+	return sourceSyntheticPrices[T](ctx, c, f)
 }
 
 // DeriveAlpha estimates the degrees of freedom parameter for a Student's T
