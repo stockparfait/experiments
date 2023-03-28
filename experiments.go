@@ -813,7 +813,7 @@ func sourceSyntheticPrices[T any](ctx context.Context, c *config.Source, f func(
 	pf := func(cs []tsConfig) T {
 		var prices []Prices
 		for _, c := range cs {
-			if c.days < 1 { // n = number of raw prices, need at least 1
+			if c.days < 1 {
 				continue
 			}
 			prices = append(prices, generatePrices(c))
