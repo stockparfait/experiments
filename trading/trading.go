@@ -17,6 +17,7 @@ package trading
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/stockparfait/errors"
 	"github.com/stockparfait/experiments"
@@ -75,17 +76,52 @@ func (e *Trading) processData(ctx context.Context) error {
 			return errors.Annotate(err, "failed to plot close/open")
 		}
 	}
-	// TODO: finish the other plots.
+	if e.config.OpenPlot != nil {
+		err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(res.open),
+			e.config.OpenPlot, e.config.ID, "open")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot open")
+		}
+	}
+	if e.config.HighPlot != nil {
+		err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(res.high),
+			e.config.HighPlot, e.config.ID, "high")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot high")
+		}
+	}
+	if e.config.LowPlot != nil {
+		err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(res.low),
+			e.config.LowPlot, e.config.ID, "low")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot low")
+		}
+	}
+	if e.config.ClosePlot != nil {
+		err := experiments.PlotDistribution(ctx, stats.NewHistogramDistribution(res.close),
+			e.config.ClosePlot, e.config.ID, "close")
+		if err != nil {
+			return errors.Annotate(err, "failed to plot close")
+		}
+	}
+	if err := e.AddValue(ctx, "tickers", fmt.Sprintf("%d", res.tickers)); err != nil {
+		return errors.Annotate(err, "failed to add tickers value")
+	}
+	if err := e.AddValue(ctx, "samples", fmt.Sprintf("%d", res.samples)); err != nil {
+		return errors.Annotate(err, "failed to add samples value")
+	}
 	return nil
 }
 
 type jobRes struct {
-	ho    *stats.Histogram
-	co    *stats.Histogram
-	open  *stats.Histogram
-	high  *stats.Histogram
-	low   *stats.Histogram
-	close *stats.Histogram
+	ho      *stats.Histogram
+	co      *stats.Histogram
+	open    *stats.Histogram
+	high    *stats.Histogram
+	low     *stats.Histogram
+	close   *stats.Histogram
+	tickers int
+	samples int
 }
 
 // Merge j2 into j and return it.
@@ -120,6 +156,8 @@ func (j *jobRes) Merge(j2 *jobRes) *jobRes {
 			panic(errors.Annotate(err, "failed to merge close histogram"))
 		}
 	}
+	j.tickers += j2.tickers
+	j.samples += j2.samples
 	return j
 }
 
@@ -164,13 +202,15 @@ func (e *Trading) processPrices(prices []experiments.Prices) *jobRes {
 		open := stats.NewTimeseriesFromPrices(p.Rows, stats.PriceOpenFullyAdjusted)
 		high := stats.NewTimeseriesFromPrices(p.Rows, stats.PriceHighFullyAdjusted)
 		close := stats.NewTimeseriesFromPrices(p.Rows, stats.PriceCloseFullyAdjusted)
-		// closePrev := close.Shift(1)
+		closePrev := close.Shift(1)
 		lp := close.LogProfits(1, false)
 		mad := stats.NewSample(lp.Data()).MAD()
 		if mad == 0 {
 			logging.Warningf(e.context, "skipping %s: MAD = 0", p.Ticker)
 			continue
 		}
+		res.tickers++
+		res.samples += len(p.Rows)
 		var ho *stats.Timeseries
 		norm := func(c *config.DistributionPlot, n float64) float64 {
 			if c.Normalize {
@@ -187,10 +227,26 @@ func (e *Trading) processPrices(prices []experiments.Prices) *jobRes {
 				f := func(i int) bool { return ho.Data()[i] < *e.config.Threshold }
 				close = close.Filter(f)
 			}
-			co := logProfits(close, open, norm(e.config.CloseOpenPlot, mad))
-			res.co.Add(co.Data()...)
+			ts := logProfits(close, open, norm(e.config.CloseOpenPlot, mad))
+			res.co.Add(ts.Data()...)
 		}
-		// TODO: add the other plots.
+		if e.config.OpenPlot != nil {
+			ts := logProfits(open, closePrev, norm(e.config.OpenPlot, mad))
+			res.open.Add(ts.Data()...)
+		}
+		if e.config.HighPlot != nil {
+			ts := logProfits(high, closePrev, norm(e.config.HighPlot, mad))
+			res.high.Add(ts.Data()...)
+		}
+		if e.config.LowPlot != nil {
+			low := stats.NewTimeseriesFromPrices(p.Rows, stats.PriceLowFullyAdjusted)
+			ts := logProfits(low, closePrev, norm(e.config.LowPlot, mad))
+			res.low.Add(ts.Data()...)
+		}
+		if e.config.ClosePlot != nil {
+			ts := logProfits(close, closePrev, norm(e.config.ClosePlot, mad))
+			res.close.Add(ts.Data()...)
+		}
 	}
 	return res
 }

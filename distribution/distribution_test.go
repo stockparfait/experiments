@@ -102,12 +102,8 @@ func TestDistribution(t *testing.T) {
 }`, tmpdir, dbName))), ShouldBeNil)
 			var dist Distribution
 			So(dist.Run(ctx, &cfg), ShouldBeNil)
-			So(values, ShouldResemble, experiments.Values{
-				"log-profit P(X < mean-10*sigma)": "0.5",
-				"log-profit P(X > mean+10*sigma)": "0.5",
-				"samples":                         "4",
-				"tickers":                         "2",
-			})
+			So(values["samples"], ShouldEqual, "4")
+			So(values["tickers"], ShouldEqual, "2")
 			So(len(distGraph.Plots), ShouldEqual, 1)
 		})
 

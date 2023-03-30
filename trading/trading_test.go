@@ -60,6 +60,14 @@ func TestTrading(t *testing.T) {
 		So(err, ShouldBeNil)
 		COGraph, err := canvas.EnsureGraph(plot.KindXY, "co", "group")
 		So(err, ShouldBeNil)
+		OpenGraph, err := canvas.EnsureGraph(plot.KindXY, "open", "group")
+		So(err, ShouldBeNil)
+		HighGraph, err := canvas.EnsureGraph(plot.KindXY, "high", "group")
+		So(err, ShouldBeNil)
+		LowGraph, err := canvas.EnsureGraph(plot.KindXY, "low", "group")
+		So(err, ShouldBeNil)
+		CloseGraph, err := canvas.EnsureGraph(plot.KindXY, "close", "group")
+		So(err, ShouldBeNil)
 
 		dbName := "db"
 		tickers := map[string]db.TickerRow{
@@ -98,7 +106,11 @@ func TestTrading(t *testing.T) {
     "DB": "%s"
   }},
   "high/open plot": {"graph": "ho"},
-  "close/open plot": {"graph": "co"}
+  "close/open plot": {"graph": "co"},
+  "open plot": {"graph": "open"},
+  "high plot": {"graph": "high"},
+  "low plot": {"graph": "low"},
+  "close plot": {"graph": "close"}
 }`, tmpdir, dbName)
 			So(cfg.InitMessage(testutil.JSON(confJSON)), ShouldBeNil)
 			var tradingExp Trading
@@ -106,6 +118,10 @@ func TestTrading(t *testing.T) {
 
 			So(len(HOGraph.Plots), ShouldEqual, 1)
 			So(len(COGraph.Plots), ShouldEqual, 1)
+			So(len(OpenGraph.Plots), ShouldEqual, 1)
+			So(len(HighGraph.Plots), ShouldEqual, 1)
+			So(len(LowGraph.Plots), ShouldEqual, 1)
+			So(len(CloseGraph.Plots), ShouldEqual, 1)
 		})
 	})
 
