@@ -177,12 +177,6 @@ func PlotDistribution(ctx context.Context, dh stats.DistributionWithHistogram, c
 	if err := plotAnalytical(ctx, dh, c, prefix, legend); err != nil {
 		return errors.Annotate(err, "failed to plot '%s ref dist'", legend)
 	}
-	if err := AddValue(ctx, prefix, legend+" P(X < mean-10*sigma)", fmt.Sprintf("%.4g", dh.CDF(dh.Mean()-10*math.Sqrt(dh.Variance())))); err != nil {
-		return errors.Annotate(err, "failed to add value for '%s P(X < mean-10*sigma)'", legend)
-	}
-	if err := AddValue(ctx, prefix, legend+" P(X > mean+10*sigma)", fmt.Sprintf("%.4g", 1.0-dh.CDF(dh.Mean()+10*math.Sqrt(dh.Variance())))); err != nil {
-		return errors.Annotate(err, "failed to add value for '%s P(X > mean+10*sigma)'", legend)
-	}
 	return nil
 }
 
