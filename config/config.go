@@ -646,6 +646,7 @@ func (e *Trading) Name() string { return "trading" }
 type StrategyConfig interface {
 	message.Message
 	strategy() // no-op method to prevent instances outside this package
+	Name() string
 }
 
 // IntradaySell condition. Exactly one condition must be specified.
@@ -694,7 +695,8 @@ type BuySellIntradayStrategy struct {
 
 var _ StrategyConfig = &BuySellIntradayStrategy{}
 
-func (*BuySellIntradayStrategy) strategy() {}
+func (*BuySellIntradayStrategy) strategy()    {}
+func (*BuySellIntradayStrategy) Name() string { return "buy-sell intraday" }
 
 func (s *BuySellIntradayStrategy) InitMessage(js any) error {
 	if err := message.Init(s, js); err != nil {
@@ -718,13 +720,13 @@ func (s *Strategy) InitMessage(js any) error {
 	}
 	for name, jsConfig := range m {
 		switch name { // add specific experiment implementations here
-		case "buy-sell intraday":
-			s.Config = &BuySellIntradayStrategy{}
+		case new(BuySellIntradayStrategy).Name():
+			s.Config = new(BuySellIntradayStrategy)
 		default:
 			return errors.Reason("unknown strategy %s", name)
 		}
 		return errors.Annotate(s.Config.InitMessage(jsConfig),
-			"failed to parse strategy config")
+			`failed to parse "%s" strategy config`, s.Config.Name())
 	}
 	return nil
 }
