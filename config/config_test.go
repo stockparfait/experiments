@@ -101,6 +101,12 @@ func TestConfig(t *testing.T) {
     }},
     {"trading": {
       "data": {"DB": {"DB": "test"}}
+    }},
+    {"simulator": {
+      "data": {"DB": {"DB": "test"}},
+      "strategy": {"buy-sell intraday": {
+        "sell": [{"time": "close"}]
+      }}
     }}
   ]
 }`
@@ -259,6 +265,14 @@ func TestConfig(t *testing.T) {
 					}},
 					{Config: &Trading{
 						Data: &defaultSource,
+					}},
+					{Config: &Simulator{
+						Data:       &defaultSource,
+						StartValue: 1000,
+						Strategy: &Strategy{Config: &BuySellIntradayStrategy{
+							Buy:  "open",
+							Sell: []IntradaySell{{Time: "close"}},
+						}},
 					}},
 				},
 			})
