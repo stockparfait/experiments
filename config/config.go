@@ -28,6 +28,7 @@ import (
 // ExperimentConfig is a custom configuration for an experiment.
 type ExperimentConfig interface {
 	message.Message
+	experiment() // no-op method to contain implementations to this package
 	Name() string
 }
 
@@ -41,7 +42,7 @@ type TestExperimentConfig struct {
 
 var _ ExperimentConfig = &TestExperimentConfig{}
 
-// Name implements ExperimentConfig.
+func (t *TestExperimentConfig) experiment()  {}
 func (t *TestExperimentConfig) Name() string { return "test" }
 
 // InitMessage implements message.Message.
@@ -140,6 +141,7 @@ func (h *Hold) InitMessage(js any) error {
 	return errors.Annotate(message.Init(h, js), "failed to parse Hold config")
 }
 
+func (h *Hold) experiment()  {}
 func (h *Hold) Name() string { return "hold" }
 
 // AnalyticalDistribution configures the type and parameters of a distibution.
@@ -384,6 +386,7 @@ func (e *Distribution) InitMessage(js any) error {
 	return nil
 }
 
+func (e *Distribution) experiment()  {}
 func (e *Distribution) Name() string { return "distribution" }
 
 // CumulativeStatistic is a statistic that accumulates over the number of
@@ -473,6 +476,7 @@ func (e *PowerDist) InitMessage(js any) error {
 	return nil
 }
 
+func (e *PowerDist) experiment()  {}
 func (e *PowerDist) Name() string { return "power distribution" }
 
 // PortfolioPosition is a single position in a portfolio: a certain number of
@@ -546,6 +550,7 @@ func (e *Portfolio) InitMessage(js any) error {
 	return nil
 }
 
+func (e *Portfolio) experiment()  {}
 func (e *Portfolio) Name() string { return "portfolio" }
 
 // AutoCorrelation is a config for the auto-correlation experiment.
@@ -568,6 +573,7 @@ func (e *AutoCorrelation) InitMessage(js any) error {
 	return nil
 }
 
+func (e *AutoCorrelation) experiment()  {}
 func (e *AutoCorrelation) Name() string { return "auto-correlation" }
 
 // Beta experiment studies cross-correlation between stocks and/or an index.
@@ -612,6 +618,7 @@ func (e *Beta) InitMessage(js any) error {
 	return nil
 }
 
+func (e *Beta) experiment()  {}
 func (e *Beta) Name() string { return "beta" }
 
 // Trading experiment studies possibilities of exploiting volatility without the
@@ -640,6 +647,7 @@ func (e *Trading) InitMessage(js any) error {
 	return nil
 }
 
+func (e *Trading) experiment()  {}
 func (e *Trading) Name() string { return "trading" }
 
 // StrategyConfig is a custom configuration for a strategy.
@@ -741,6 +749,8 @@ type Simulator struct {
 	ProfitPlot *DistributionPlot `json:"profit plot"`
 }
 
+var _ ExperimentConfig = &Simulator{}
+
 func (e *Simulator) InitMessage(js any) error {
 	if err := message.Init(e, js); err != nil {
 		return errors.Annotate(err, "failed to init Simulator")
@@ -748,6 +758,7 @@ func (e *Simulator) InitMessage(js any) error {
 	return nil
 }
 
+func (e *Simulator) experiment()  {}
 func (e *Simulator) Name() string { return "simulator" }
 
 // ExpMap represents a Message which reads a single-element map {name:
@@ -766,24 +777,24 @@ func (e *ExpMap) InitMessage(js any) error {
 	}
 	for name, jsConfig := range m {
 		switch name { // add specific experiment implementations here
-		case "test":
-			e.Config = &TestExperimentConfig{}
-		case "hold":
-			e.Config = &Hold{}
-		case "distribution":
-			e.Config = &Distribution{}
-		case "power distribution":
-			e.Config = &PowerDist{}
-		case "portfolio":
-			e.Config = &Portfolio{}
-		case "auto-correlation":
-			e.Config = &AutoCorrelation{}
-		case "beta":
-			e.Config = &Beta{}
-		case "trading":
-			e.Config = &Trading{}
-		case "simulator":
-			e.Config = &Simulator{}
+		case new(TestExperimentConfig).Name():
+			e.Config = new(TestExperimentConfig)
+		case new(Hold).Name():
+			e.Config = new(Hold)
+		case new(Distribution).Name():
+			e.Config = new(Distribution)
+		case new(PowerDist).Name():
+			e.Config = new(PowerDist)
+		case new(Portfolio).Name():
+			e.Config = new(Portfolio)
+		case new(AutoCorrelation).Name():
+			e.Config = new(AutoCorrelation)
+		case new(Beta).Name():
+			e.Config = new(Beta)
+		case new(Trading).Name():
+			e.Config = new(Trading)
+		case new(Simulator).Name():
+			e.Config = new(Simulator)
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}

@@ -72,22 +72,22 @@ func parseFlags(args []string) (*Flags, error) {
 
 func runExperiment(ctx context.Context, ec config.ExperimentConfig) error {
 	var e experiments.Experiment
-	switch ec.Name() {
-	case "test":
+	switch ec.(type) {
+	case *config.TestExperimentConfig:
 		e = &experiments.TestExperiment{}
-	case "hold":
+	case *config.Hold:
 		e = &hold.Hold{}
-	case "distribution":
+	case *config.Distribution:
 		e = &distribution.Distribution{}
-	case "power distribution":
+	case *config.PowerDist:
 		e = &powerdist.PowerDist{}
-	case "portfolio":
+	case *config.Portfolio:
 		e = &portfolio.Portfolio{}
-	case "auto-correlation":
+	case *config.AutoCorrelation:
 		e = &autocorr.AutoCorrelation{}
-	case "beta":
+	case *config.Beta:
 		e = &beta.Beta{}
-	case "trading":
+	case *config.Trading:
 		e = &trading.Trading{}
 	default:
 		return errors.Reason("unsupported experiment '%s'", ec.Name())
