@@ -642,6 +642,114 @@ func (e *Trading) InitMessage(js any) error {
 
 func (e *Trading) Name() string { return "trading" }
 
+// StrategyConfig is a custom configuration for a strategy.
+type StrategyConfig interface {
+	message.Message
+	strategy() // no-op method to prevent instances outside this package
+	Name() string
+}
+
+// IntradaySell condition. Exactly one condition must be specified.
+type IntradaySell struct {
+	// Sell at market on open or close of the trading session.
+	Time string `json:"time" choice:",open,close"`
+	// When > 0, sell at or above this price.
+	Limit float64 `json:"limit"`
+	// When > 0, sell at market when the price drops to or below this value.
+	StopLoss float64 `json:"stop loss"`
+	// When > 0, sell at market when the price drops to or below peak price since
+	// buy minus this percentage.
+	StopLossPercent float64
+}
+
+func (s *IntradaySell) InitMessage(js any) error {
+	if err := message.Init(s, js); err != nil {
+		return errors.Annotate(err, "failed to init IntradaySell")
+	}
+	count := 0
+	if s.Time != "" {
+		count++
+	}
+	if s.Limit > 0 {
+		count++
+	}
+	if s.StopLoss > 0 {
+		count++
+	}
+	if s.StopLossPercent > 0 {
+		count++
+	}
+	if count != 1 {
+		return errors.Reason("exactly one condition must be specified")
+	}
+	return nil
+}
+
+// BuySellIntradayStrategy is a simple day trading strategy which buys either at
+// the previous day's close or current day's open and sells when one of the
+// conditions holds, checked in order.
+type BuySellIntradayStrategy struct {
+	Buy  string         `json:"buy" choices:"open,close" default:"open"`
+	Sell []IntradaySell `json:"sell"`
+}
+
+var _ StrategyConfig = &BuySellIntradayStrategy{}
+
+func (*BuySellIntradayStrategy) strategy()    {}
+func (*BuySellIntradayStrategy) Name() string { return "buy-sell intraday" }
+
+func (s *BuySellIntradayStrategy) InitMessage(js any) error {
+	if err := message.Init(s, js); err != nil {
+		return errors.Annotate(err, "failed to init BuySellIntradayStrategy")
+	}
+	return nil
+}
+
+// Strategy is a union of all strategy configurations. A specific strategy is
+// specified as a single-element map {"<strategy name>": {<strategy config>}}.
+type Strategy struct {
+	Config StrategyConfig
+}
+
+var _ message.Message = &Strategy{}
+
+func (s *Strategy) InitMessage(js any) error {
+	m, ok := js.(map[string]any)
+	if !ok || len(m) != 1 {
+		return errors.Reason("strategy must be a single-element map: %v", js)
+	}
+	for name, jsConfig := range m {
+		switch name { // add specific experiment implementations here
+		case new(BuySellIntradayStrategy).Name():
+			s.Config = new(BuySellIntradayStrategy)
+		default:
+			return errors.Reason("unknown strategy %s", name)
+		}
+		return errors.Annotate(s.Config.InitMessage(jsConfig),
+			`failed to parse "%s" strategy config`, s.Config.Name())
+	}
+	return nil
+}
+
+// Simulator experiment implements a strategy simulator with statistical
+// analysis of the results.
+type Simulator struct {
+	ID         string            `json:"id"`
+	Data       *Source           `json:"data"`
+	StartValue float64           `json:"start value" default:"1000"` // cost basis
+	Strategy   *Strategy         `json:"strategy"`
+	ProfitPlot *DistributionPlot `json:"profit plot"`
+}
+
+func (e *Simulator) InitMessage(js any) error {
+	if err := message.Init(e, js); err != nil {
+		return errors.Annotate(err, "failed to init Simulator")
+	}
+	return nil
+}
+
+func (e *Simulator) Name() string { return "simulator" }
+
 // ExpMap represents a Message which reads a single-element map {name:
 // Experiment} and knows how to populate specific implementations of the
 // Experiment interface.
@@ -674,6 +782,8 @@ func (e *ExpMap) InitMessage(js any) error {
 			e.Config = &Beta{}
 		case "trading":
 			e.Config = &Trading{}
+		case "simulator":
+			e.Config = &Simulator{}
 		default:
 			return errors.Reason("unknown experiment %s", name)
 		}
