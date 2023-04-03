@@ -38,8 +38,23 @@ func TestConfig(t *testing.T) {
 		So(tmpdirErr, ShouldBeNil)
 	})
 
-	Convey("Config works correctly", t, func() {
-		Convey("top-level config, the usual case", func() {
+	Convey("Configs work correctly", t, func() {
+		var defaultReader db.Reader
+		So(defaultReader.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
+		var defaultSource Source
+		So(defaultSource.InitMessage(testutil.JSON(`{"DB": {"DB": "test"}}`)), ShouldBeNil)
+		var defaultBuckets stats.Buckets
+		So(defaultBuckets.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
+		var defaultParallelSampling stats.ParallelSamplingConfig
+		So(defaultParallelSampling.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
+
+		conf := func(js string) (*Config, error) {
+			var c Config
+			err := c.InitMessage(testutil.JSON(js))
+			return &c, err
+		}
+
+		Convey("groups and test config loaded from file", func() {
 			confJSON := `
 {
   "groups": [
@@ -62,52 +77,7 @@ func TestConfig(t *testing.T) {
     }
   ],
   "experiments": [
-    {"test": {"passed": true, "graph": "r1"}},
-    {"hold": {"data": {"DB": "test"}}},
-    {"distribution": {
-      "data": {"DB": {"DB": "test"}},
-      "log-profits": {
-        "graph": "dist",
-        "normalize": true,
-        "reference distribution": {"analytical source": {"name": "t"}},
-        "derive alpha": {
-          "min x": 2,
-          "max x": 4
-        }
-      }
-    }},
-    {"power distribution": {
-      "distribution": {"analytical source": {"name": "normal"}},
-      "cumulative mean": {"graph": "cumul mean"}
-    }},
-    {"portfolio": {
-      "data": {"DB": "test"},
-      "positions": [{
-        "ticker": "ABCD",
-        "shares": 10,
-        "purchase date": "2020-01-01"
-      }]
-    }},
-    {"auto-correlation": {
-      "data": {"DB": {"DB": "test"}},
-      "graph": "r1"
-    }},
-    {"beta": {
-      "reference" : {"DB": {"DB": "test"}},
-      "data" : {"DB": {"DB": "test"}},
-      "beta ratios": {
-        "plot": {"graph": "ratios"}
-      }
-    }},
-    {"trading": {
-      "data": {"DB": {"DB": "test"}}
-    }},
-    {"simulator": {
-      "data": {"DB": {"DB": "test"}},
-      "strategy": {"buy-sell intraday": {
-        "sell": [{"time": "close"}]
-      }}
-    }}
+    {"test": {"passed": true, "graph": "r1"}}
   ]
 }`
 
@@ -116,15 +86,6 @@ func TestConfig(t *testing.T) {
 
 			c, err := Load(confPath)
 			So(err, ShouldBeNil)
-
-			var defaultReader db.Reader
-			So(defaultReader.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
-			var defaultSource Source
-			So(defaultSource.InitMessage(testutil.JSON(`{"DB": {"DB": "test"}}`)), ShouldBeNil)
-			var defaultBuckets stats.Buckets
-			So(defaultBuckets.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
-			var defaultParallelSampling stats.ParallelSamplingConfig
-			So(defaultParallelSampling.InitMessage(testutil.JSON(`{}`)), ShouldBeNil)
 
 			So(c, ShouldResemble, &Config{
 				Groups: []*plot.GroupConfig{
@@ -175,109 +136,8 @@ func TestConfig(t *testing.T) {
 						Passed: true,
 						Graph:  "r1",
 					}},
-					{Config: &Hold{
-						Reader:        &defaultReader,
-						PositionsAxis: "right",
-						TotalAxis:     "right",
-					}},
-					{Config: &Distribution{
-						Data: &defaultSource,
-						LogProfits: &DistributionPlot{
-							Graph:     "dist",
-							Buckets:   defaultBuckets,
-							ChartType: "line",
-							Normalize: true,
-							RefDist: &CompoundDistribution{
-								AnalyticalSource: &AnalyticalDistribution{
-									Name:  "t",
-									Mean:  0.0,
-									MAD:   1.0,
-									Alpha: 3.0,
-								},
-								N:            1,
-								CompoundType: "biased",
-								Params:       defaultParallelSampling,
-							},
-							DeriveAlpha: &DeriveAlpha{
-								MinX:          2.0,
-								MaxX:          4.0,
-								Epsilon:       0.01,
-								MaxIterations: 1000,
-								IgnoreCounts:  10,
-							},
-						},
-					}},
-					{Config: &PowerDist{
-						Dist: CompoundDistribution{
-							AnalyticalSource: &AnalyticalDistribution{
-								Name:  "normal",
-								MAD:   1.0,
-								Alpha: 3.0,
-							},
-							N:            1,
-							CompoundType: "biased",
-							Params:       defaultParallelSampling,
-						},
-						CumulMean: &CumulativeStatistic{
-							Graph:   "cumul mean",
-							Buckets: defaultBuckets,
-							Samples: 10000,
-							Points:  200,
-						},
-						AlphaParams: &DeriveAlpha{
-							MinX:          1.01,
-							MaxX:          100.0,
-							Epsilon:       0.01,
-							MaxIterations: 1000,
-							IgnoreCounts:  10,
-						},
-						CumulSamples: 10000,
-						StatSamples:  10000,
-					}},
-					{Config: &Portfolio{
-						Reader: &defaultReader,
-						Positions: []PortfolioPosition{{
-							Ticker:       "ABCD",
-							Shares:       10,
-							PurchaseDate: db.NewDate(2020, 1, 1),
-						}},
-						Columns: []PortfolioColumn{{Kind: "ticker"}},
-					}},
-					{Config: &AutoCorrelation{
-						Data:     &defaultSource,
-						Graph:    "r1",
-						MaxShift: 5,
-					}},
-					{Config: &Beta{
-						Reference: &defaultSource,
-						Data:      &defaultSource,
-						Beta:      1,
-						BetaRatios: &StabilityPlot{
-							Step:      1,
-							Window:    1,
-							Normalize: true,
-							Plot: &DistributionPlot{
-								Graph:     "ratios",
-								Buckets:   defaultBuckets,
-								ChartType: "line",
-							},
-						},
-					}},
-					{Config: &Trading{
-						Data: &defaultSource,
-					}},
-					{Config: &Simulator{
-						Data:       &defaultSource,
-						StartValue: 1000,
-						Strategy: &Strategy{Config: &BuySellIntradayStrategy{
-							Buy:  "open",
-							Sell: []IntradaySell{{Time: "close"}},
-						}},
-					}},
 				},
 			})
-
-			So(c.Experiments[0].Config.Name(), ShouldEqual, "test")
 		})
 
 		Convey("x log-scale for timeseries is an error", func() {
@@ -345,51 +205,260 @@ func TestConfig(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "unknown experiment foobar")
 		})
-	})
 
-	Convey("Individual Experiment configs work", t, func() {
-
-		Convey("Hold", func() {
-			Convey("normal case", func() {
-				var h Hold
-				js := `
+		Convey("Individual Experiment configs", func() {
+			Convey("Hold", func() {
+				Convey("normal case", func() {
+					c, err := conf(`
 {
-  "data": {"DB": "test"},
-  "positions": [
-    {"ticker": "A", "shares": 2.5},
-    {"ticker": "B", "start value": 1000.0}
-  ],
-  "positions graph": "positions",
-  "total graph": "total",
-  "total axis": "left"
-}`
-				So(h.InitMessage(testutil.JSON(js)), ShouldBeNil)
-				var data db.Reader
-				So(data.InitMessage(testutil.JSON(`{"DB": "test"}`)), ShouldBeNil)
-				So(h, ShouldResemble, Hold{
-					Reader: &data, // must be initialized with its default values
-					Positions: []HoldPosition{
-						{
-							Ticker: "A",
-							Shares: 2.5,
-						},
-						{
-							Ticker:     "B",
-							StartValue: 1000.0,
-						},
-					},
-					PositionsGraph: "positions",
-					PositionsAxis:  "right",
-					TotalGraph:     "total",
-					TotalAxis:      "left",
+	"experiments": [{"hold": {
+		"data": {"DB": "test"},
+		"positions": [
+			{"ticker": "A", "shares": 2.5},
+			{"ticker": "B", "start value": 1000.0}
+		],
+		"positions graph": "positions",
+		"total graph": "total",
+		"total axis": "left"
+	}}]
+}
+`)
+					So(err, ShouldBeNil)
+					So(c, ShouldResemble, &Config{Experiments: []*ExpMap{
+						{Config: &Hold{
+							Reader: &defaultReader,
+							Positions: []HoldPosition{
+								{
+									Ticker: "A",
+									Shares: 2.5,
+								},
+								{
+									Ticker:     "B",
+									StartValue: 1000.0,
+								},
+							},
+							PositionsGraph: "positions",
+							PositionsAxis:  "right",
+							TotalGraph:     "total",
+							TotalAxis:      "left",
+						}},
+					}})
+				})
+
+				Convey("shares and start value are checked", func() {
+					var p HoldPosition
+					So(p.InitMessage(testutil.JSON(`{"ticker": "A"}`)), ShouldNotBeNil)
+					So(p.InitMessage(testutil.JSON(
+						`{"ticker": "A", "shares": 1, "start value": 1}`)), ShouldNotBeNil)
 				})
 			})
 
-			Convey("shares and start value are checked", func() {
-				var p HoldPosition
-				So(p.InitMessage(testutil.JSON(`{"ticker": "A"}`)), ShouldNotBeNil)
-				So(p.InitMessage(testutil.JSON(
-					`{"ticker": "A", "shares": 1, "start value": 1}`)), ShouldNotBeNil)
+			Convey("Distribution", func() {
+				c, err := conf(`
+{
+  "experiments": [
+    {"distribution": {
+      "data": {"DB": {"DB": "test"}},
+      "log-profits": {
+        "graph": "dist",
+        "normalize": true,
+        "reference distribution": {"analytical source": {"name": "t"}},
+        "derive alpha": {
+          "min x": 2,
+          "max x": 4
+        }
+      }
+    }}]
+}`)
+				So(err, ShouldBeNil)
+				So(c, ShouldResemble, &Config{Experiments: []*ExpMap{
+					{Config: &Distribution{
+						Data: &defaultSource,
+						LogProfits: &DistributionPlot{
+							Graph:     "dist",
+							Buckets:   defaultBuckets,
+							ChartType: "line",
+							Normalize: true,
+							RefDist: &CompoundDistribution{
+								AnalyticalSource: &AnalyticalDistribution{
+									Name:  "t",
+									Mean:  0.0,
+									MAD:   1.0,
+									Alpha: 3.0,
+								},
+								N:            1,
+								CompoundType: "biased",
+								Params:       defaultParallelSampling,
+							},
+							DeriveAlpha: &DeriveAlpha{
+								MinX:          2.0,
+								MaxX:          4.0,
+								Epsilon:       0.01,
+								MaxIterations: 1000,
+								IgnoreCounts:  10,
+							},
+						},
+					}},
+				}})
+			})
+
+			Convey("Portfolio", func() {
+				c, err := conf(`
+{
+  "experiments": [
+    {"portfolio": {
+      "data": {"DB": "test"},
+      "positions": [{
+        "ticker": "ABCD",
+        "shares": 10,
+        "purchase date": "2020-01-01"
+      }]
+    }}]
+}`)
+				So(err, ShouldBeNil)
+				So(c, ShouldResemble, &Config{Experiments: []*ExpMap{
+					{Config: &Portfolio{
+						Reader: &defaultReader,
+						Positions: []PortfolioPosition{{
+							Ticker:       "ABCD",
+							Shares:       10,
+							PurchaseDate: db.NewDate(2020, 1, 1),
+						}},
+						Columns: []PortfolioColumn{{Kind: "ticker"}},
+					}},
+				}})
+			})
+
+			Convey("PowerDist", func() {
+				c, err := conf(`
+{
+  "experiments": [
+    {"power distribution": {
+      "distribution": {"analytical source": {"name": "normal"}},
+      "cumulative mean": {"graph": "cumul mean"}
+    }}]
+}`)
+				So(err, ShouldBeNil)
+				So(c, ShouldResemble, &Config{Experiments: []*ExpMap{
+					{Config: &PowerDist{
+						Dist: CompoundDistribution{
+							AnalyticalSource: &AnalyticalDistribution{
+								Name:  "normal",
+								MAD:   1.0,
+								Alpha: 3.0,
+							},
+							N:            1,
+							CompoundType: "biased",
+							Params:       defaultParallelSampling,
+						},
+						CumulMean: &CumulativeStatistic{
+							Graph:   "cumul mean",
+							Buckets: defaultBuckets,
+							Samples: 10000,
+							Points:  200,
+						},
+						AlphaParams: &DeriveAlpha{
+							MinX:          1.01,
+							MaxX:          100.0,
+							Epsilon:       0.01,
+							MaxIterations: 1000,
+							IgnoreCounts:  10,
+						},
+						CumulSamples: 10000,
+						StatSamples:  10000,
+					}},
+				}})
+			})
+
+			Convey("AutoCorrelation", func() {
+				c, err := conf(`
+{
+  "experiments": [
+    {"auto-correlation": {
+      "data": {"DB": {"DB": "test"}},
+      "graph": "r1"
+    }}]
+}`)
+				So(err, ShouldBeNil)
+				So(c, ShouldResemble, &Config{Experiments: []*ExpMap{
+					{Config: &AutoCorrelation{
+						Data:     &defaultSource,
+						Graph:    "r1",
+						MaxShift: 5,
+					}},
+				}})
+			})
+
+			Convey("Beta", func() {
+				c, err := conf(`
+{
+  "experiments": [
+    {"beta": {
+      "reference" : {"DB": {"DB": "test"}},
+      "data" : {"DB": {"DB": "test"}},
+      "beta ratios": {
+        "plot": {"graph": "ratios"}
+      }
+    }}]
+}`)
+				So(err, ShouldBeNil)
+				So(c, ShouldResemble, &Config{Experiments: []*ExpMap{
+					{Config: &Beta{
+						Reference: &defaultSource,
+						Data:      &defaultSource,
+						Beta:      1,
+						BetaRatios: &StabilityPlot{
+							Step:      1,
+							Window:    1,
+							Normalize: true,
+							Plot: &DistributionPlot{
+								Graph:     "ratios",
+								Buckets:   defaultBuckets,
+								ChartType: "line",
+							},
+						},
+					}},
+				}})
+			})
+
+			Convey("Trading", func() {
+				c, err := conf(`
+{
+  "experiments": [
+    {"trading": {
+      "data": {"DB": {"DB": "test"}}
+    }}]
+}`)
+				So(err, ShouldBeNil)
+				So(c, ShouldResemble, &Config{Experiments: []*ExpMap{
+					{Config: &Trading{
+						Data: &defaultSource,
+					}},
+				}})
+			})
+
+			Convey("Simulator", func() {
+				c, err := conf(`
+{
+  "experiments": [
+    {"simulator": {
+      "data": {"DB": {"DB": "test"}},
+      "strategy": {"buy-sell intraday": {
+        "sell": [{"time": "close"}]
+      }}
+    }}]
+}`)
+				So(err, ShouldBeNil)
+				So(c, ShouldResemble, &Config{Experiments: []*ExpMap{
+					{Config: &Simulator{
+						Data:       &defaultSource,
+						StartValue: 1000,
+						Strategy: &Strategy{Config: &BuySellIntradayStrategy{
+							Buy:  "open",
+							Sell: []IntradaySell{{Time: "close"}},
+						}},
+					}},
+				}})
 			})
 		})
 	})
