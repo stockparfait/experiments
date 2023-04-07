@@ -16,6 +16,7 @@ package simulator
 
 import (
 	"context"
+	"fmt"
 	"math"
 
 	"github.com/stockparfait/errors"
@@ -75,14 +76,19 @@ type strategyResult struct {
 	startDate    db.Date
 	endDate      db.Date
 	transactions []transaction // optional
+	numBuys      int
+	numSells     int
 }
 
 func (s strategyResult) IsZero() bool { return s.startDate.IsZero() }
 
 func (e *Simulator) reportResults(ctx context.Context, res []strategyResult) error {
 	profits := make([]float64, len(res))
+	var numBuys, numSells int
 	for i, r := range res {
 		profits[i] = r.logProfit
+		numBuys += r.numBuys
+		numSells += r.numSells
 	}
 	if e.config.Annualize {
 		for i := range profits {
@@ -101,10 +107,20 @@ func (e *Simulator) reportResults(ctx context.Context, res []strategyResult) err
 	}
 	if c := e.config.ProfitPlot; c != nil {
 		dist := stats.NewSampleDistribution(profits, &c.Buckets)
-		err := experiments.PlotDistribution(ctx, dist, c, e.config.ID, "log-profits")
+		name := "profits"
+		if e.config.LogProfit {
+			name = "log-profits"
+		}
+		err := experiments.PlotDistribution(ctx, dist, c, e.config.ID, name)
 		if err != nil {
 			return errors.Annotate(err, "failed to plot profits")
 		}
+	}
+	if err := e.AddValue(ctx, "num buys", fmt.Sprintf("%d", numBuys)); err != nil {
+		return errors.Annotate(err, "failed to add num buys value")
+	}
+	if err := e.AddValue(ctx, "num sells", fmt.Sprintf("%d", numSells)); err != nil {
+		return errors.Annotate(err, "failed to add num sells value")
 	}
 	return nil
 }

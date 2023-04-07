@@ -62,6 +62,7 @@ func (s BuySellIntraday) ExecuteTicker(ctx context.Context, lp experiments.LogPr
 				totalLogProfit += logProfit
 				logProfit = 0
 				maxLogProfit = 0
+				res.numSells++
 				if xactions {
 					res.transactions = append(res.transactions, transaction{
 						buy: false, date: date, amount: 1})
@@ -74,6 +75,7 @@ func (s BuySellIntraday) ExecuteTicker(ctx context.Context, lp experiments.LogPr
 			maxLogProfit = 0
 			bought = true
 			tradedToday = true
+			res.numBuys++
 			if xactions {
 				res.transactions = append(res.transactions, transaction{
 					buy: true, date: date, amount: 1})
