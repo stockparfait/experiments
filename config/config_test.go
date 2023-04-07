@@ -444,18 +444,22 @@ func TestConfig(t *testing.T) {
     {"simulator": {
       "data": {"DB": {"DB": "test"}},
       "strategy": {"buy-sell intraday": {
-        "sell": [{"time": "close"}]
+        "buy": "09:30",
+        "sell": [{"time": "15:55"}]
       }}
     }}]
 }`)
 				So(err, ShouldBeNil)
+				open := db.NewTimeOfDay(9, 30, 0, 0)
+				close := db.NewTimeOfDay(15, 55, 0, 0)
 				So(c, ShouldResemble, &Config{Experiments: []*ExpMap{
 					{Config: &Simulator{
 						Data:       &defaultSource,
 						StartValue: 1000,
+						Annualize:  true,
 						Strategy: &Strategy{Config: &BuySellIntradayStrategy{
-							Buy:  "open",
-							Sell: []IntradaySell{{Time: "close"}},
+							Buy:  open,
+							Sell: []IntradaySell{{Time: &close}},
 						}},
 					}},
 				}})

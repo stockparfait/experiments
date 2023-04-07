@@ -659,15 +659,15 @@ type StrategyConfig interface {
 
 // IntradaySell condition. Exactly one condition must be specified.
 type IntradaySell struct {
-	// Sell at market on open or close of the trading session.
-	Time string `json:"time" choice:",open,close"`
-	// When > 0, sell at or above this price.
-	Limit float64 `json:"limit"`
-	// When > 0, sell at market when the price drops to or below this value.
+	// Sell at market on or after this time.
+	Time *db.TimeOfDay `json:"time"`
+	// When > 1, sell at or above price*target.
+	Target float64 `json:"target"`
+	// When > 0 (and must be < 1), sell at market when the price drops <=price*X.
 	StopLoss float64 `json:"stop loss"`
-	// When > 0, sell at market when the price drops to or below peak price since
-	// buy minus this percentage.
-	StopLossPercent float64
+	// When > 0 (and must be < 1), sell at market when the price drops
+	// <=maxPrice*X where maxPrice is observed while holding the position.
+	StopLossTrailing float64 `json:"stop loss trailing"`
 }
 
 func (s *IntradaySell) InitMessage(js any) error {
@@ -675,16 +675,25 @@ func (s *IntradaySell) InitMessage(js any) error {
 		return errors.Annotate(err, "failed to init IntradaySell")
 	}
 	count := 0
-	if s.Time != "" {
+	if s.Time != nil {
 		count++
 	}
-	if s.Limit > 0 {
+	if s.Target > 0 {
+		if s.Target <= 1 {
+			return errors.Reason("target factor = %f must be > 1", s.Target)
+		}
 		count++
 	}
 	if s.StopLoss > 0 {
+		if s.StopLoss >= 1 {
+			return errors.Reason("stop loss = %f must be < 1", s.StopLoss)
+		}
 		count++
 	}
-	if s.StopLossPercent > 0 {
+	if s.StopLossTrailing > 0 {
+		if s.StopLossTrailing >= 1 {
+			return errors.Reason("stop loss trailing = %f must be < 1", s.StopLossTrailing)
+		}
 		count++
 	}
 	if count != 1 {
@@ -693,11 +702,12 @@ func (s *IntradaySell) InitMessage(js any) error {
 	return nil
 }
 
-// BuySellIntradayStrategy is a simple day trading strategy which buys either at
-// the previous day's close or current day's open and sells when one of the
-// conditions holds, checked in order.
+// BuySellIntradayStrategy is a simple day trading strategy which buys at
+// certain time of day (usually at open or near close) and sells when one of the
+// conditions holds, checked in order. It is restricted to at most one buy per
+// day, but may keep position overnight.
 type BuySellIntradayStrategy struct {
-	Buy  string         `json:"buy" choices:"open,close" default:"open"`
+	Buy  db.TimeOfDay   `json:"buy"`
 	Sell []IntradaySell `json:"sell"`
 }
 
@@ -739,14 +749,19 @@ func (s *Strategy) InitMessage(js any) error {
 	return nil
 }
 
+func (s *Strategy) Name() string { return s.Config.Name() }
+
 // Simulator experiment implements a strategy simulator with statistical
 // analysis of the results.
 type Simulator struct {
 	ID         string            `json:"id"`
 	Data       *Source           `json:"data"`
 	StartValue float64           `json:"start value" default:"1000"` // cost basis
-	Strategy   *Strategy         `json:"strategy"`
-	ProfitPlot *DistributionPlot `json:"profit plot"`
+	Strategy   *Strategy         `json:"strategy" required:"true"`
+	ProfitPlot *DistributionPlot `json:"profit plot"` // profit factor distribution
+	// Plot profit as annualized factor.
+	Annualize bool `json:"annualize" default:"true"`
+	LogProfit bool `json:"log-profit"` // plot as log-profit
 }
 
 var _ ExperimentConfig = &Simulator{}

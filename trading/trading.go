@@ -49,7 +49,7 @@ func (e *Trading) Run(ctx context.Context, cfg config.ExperimentConfig) error {
 		return errors.Reason("unexpected config type: %T", cfg)
 	}
 	if err := e.processData(ctx); err != nil {
-		return errors.Annotate(err, "failled to process prcie data")
+		return errors.Annotate(err, "failled to process price data")
 	}
 	return nil
 }
