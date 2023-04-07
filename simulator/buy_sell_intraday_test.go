@@ -54,10 +54,10 @@ func TestBuySellIntraday(t *testing.T) {
 				dt("2020-01-01 16:00:00"), // sell at close
 				dt("2020-01-02 09:00:00"), // buy at open
 				dt("2020-01-02 12:00:00"), // sell at target
-				dt("2020-01-02 16:00:00"), // close, should not by again
+				dt("2020-01-02 16:00:00"), // close, should not buy again
 				dt("2020-01-03 09:00:00"), // buy at open
 				dt("2020-01-03 12:00:00"), // sell on stop loss
-				dt("2020-01-03 16:00:00"), // close, should not by again
+				dt("2020-01-03 16:00:00"), // close, should not buy again
 			}
 			data := []float64{
 				0.02, 0.01, -0.04, // first day -0.03, no target, no stop loss
@@ -100,7 +100,7 @@ func TestBuySellIntraday(t *testing.T) {
 				dt("2020-01-01 16:00:00"), // close - no sell
 				dt("2020-01-02 09:00:00"), // buy at open
 				dt("2020-01-02 12:00:00"), // sell
-				dt("2020-01-02 16:00:00"), // close, should not by again
+				dt("2020-01-02 16:00:00"), // close, should not buy again
 				dt("2020-01-03 09:00:00"), // buy at open
 				dt("2020-01-03 12:00:00"), // no sell, but accounted in logProfit
 			}

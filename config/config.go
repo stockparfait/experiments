@@ -16,6 +16,7 @@
 package config
 
 import (
+	"math"
 	"runtime"
 
 	"github.com/stockparfait/errors"
@@ -662,13 +663,20 @@ type IntradaySell struct {
 	// Sell at market on or after this time.
 	Time *db.TimeOfDay `json:"time"`
 	// When > 1, sell at or above price*target.
-	Target float64 `json:"target"`
+	Target    float64 `json:"target"`
+	logTarget float64
 	// When > 0 (and must be < 1), sell at market when the price drops <=price*X.
-	StopLoss float64 `json:"stop loss"`
+	StopLoss    float64 `json:"stop loss"`
+	logStopLoss float64
 	// When > 0 (and must be < 1), sell at market when the price drops
 	// <=maxPrice*X where maxPrice is observed while holding the position.
-	StopLossTrailing float64 `json:"stop loss trailing"`
+	StopLossTrailing    float64 `json:"stop loss trailing"`
+	logStopLossTrailing float64
 }
+
+func (s *IntradaySell) LogTarget() float64           { return s.logTarget }
+func (s *IntradaySell) LogStopLoss() float64         { return s.logStopLoss }
+func (s *IntradaySell) LogStopLossTrailing() float64 { return s.logStopLossTrailing }
 
 func (s *IntradaySell) InitMessage(js any) error {
 	if err := message.Init(s, js); err != nil {
@@ -682,18 +690,21 @@ func (s *IntradaySell) InitMessage(js any) error {
 		if s.Target <= 1 {
 			return errors.Reason("target factor = %f must be > 1", s.Target)
 		}
+		s.logTarget = math.Log(s.Target)
 		count++
 	}
 	if s.StopLoss > 0 {
 		if s.StopLoss >= 1 {
 			return errors.Reason("stop loss = %f must be < 1", s.StopLoss)
 		}
+		s.logStopLoss = math.Log(s.StopLoss)
 		count++
 	}
 	if s.StopLossTrailing > 0 {
 		if s.StopLossTrailing >= 1 {
 			return errors.Reason("stop loss trailing = %f must be < 1", s.StopLossTrailing)
 		}
+		s.logStopLossTrailing = math.Log(s.StopLossTrailing)
 		count++
 	}
 	if count != 1 {

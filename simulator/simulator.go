@@ -27,8 +27,7 @@ import (
 )
 
 type Simulator struct {
-	config  *config.Simulator
-	context context.Context
+	config *config.Simulator
 }
 
 var _ experiments.Experiment = &Simulator{}
@@ -42,7 +41,6 @@ func (e *Simulator) AddValue(ctx context.Context, k, v string) error {
 }
 
 func (e *Simulator) Run(ctx context.Context, cfg config.ExperimentConfig) error {
-	e.context = ctx
 	var ok bool
 	if e.config, ok = cfg.(*config.Simulator); !ok {
 		return errors.Reason("unexpected config type: %T", cfg)
@@ -50,9 +48,7 @@ func (e *Simulator) Run(ctx context.Context, cfg config.ExperimentConfig) error 
 	var s Strategy
 	switch c := e.config.Strategy.Config.(type) {
 	case *config.BuySellIntradayStrategy:
-		s = &BuySellIntraday{
-			config: c,
-		}
+		s = &BuySellIntraday{config: c}
 	default:
 		return errors.Reason(`unsupported strategy "%s"`, c.Name())
 	}
@@ -84,27 +80,27 @@ type strategyResult struct {
 func (s strategyResult) IsZero() bool { return s.startDate.IsZero() }
 
 func (e *Simulator) reportResults(ctx context.Context, res []strategyResult) error {
-	samples := make([]float64, len(res))
+	profits := make([]float64, len(res))
 	for i, r := range res {
-		samples[i] = r.logProfit
+		profits[i] = r.logProfit
 	}
 	if e.config.Annualize {
-		for i := range samples {
+		for i := range profits {
 			y := res[i].startDate.YearsTill(res[i].endDate)
 			if y == 0 {
-				samples[i] = 0
+				profits[i] = 0
 			} else {
-				samples[i] /= y
+				profits[i] /= y
 			}
 		}
 	}
 	if !e.config.LogProfit {
-		for i, s := range samples {
-			samples[i] = math.Exp(s)
+		for i, s := range profits {
+			profits[i] = math.Exp(s)
 		}
 	}
 	if c := e.config.ProfitPlot; c != nil {
-		dist := stats.NewSampleDistribution(samples, &c.Buckets)
+		dist := stats.NewSampleDistribution(profits, &c.Buckets)
 		err := experiments.PlotDistribution(ctx, dist, c, e.config.ID, "log-profits")
 		if err != nil {
 			return errors.Annotate(err, "failed to plot profits")

@@ -16,7 +16,6 @@ package simulator
 
 import (
 	"context"
-	"math"
 
 	"github.com/stockparfait/experiments"
 	"github.com/stockparfait/experiments/config"
@@ -41,21 +40,22 @@ func (s BuySellIntraday) ExecuteTicker(ctx context.Context, lp experiments.LogPr
 	var tradedToday bool
 	// Cumulative log-profit and the max. observed log-profit for the current
 	// position, and the log-profit for the entire strategy.
-	var logProfit, totalLogProfit float64
-	maxLogProfit := math.Inf(-1)
-	var startDay, currDay db.Date
+	var logProfit, maxLogProfit, totalLogProfit float64
 	for i, p := range lp.Timeseries.Data() {
 		date := lp.Timeseries.Dates()[i]
 		day := date.Date()
 		if i == 0 {
-			startDay = day
+			res.startDate = day
 		}
-		if day != currDay {
+		if day != res.endDate {
 			tradedToday = false
 		}
-		currDay = day
+		res.endDate = day
 		if bought {
 			logProfit += p
+			if logProfit > maxLogProfit {
+				maxLogProfit = logProfit
+			}
 			if s.sell(date, logProfit, maxLogProfit) {
 				bought = false
 				tradedToday = true
@@ -66,10 +66,6 @@ func (s BuySellIntraday) ExecuteTicker(ctx context.Context, lp experiments.LogPr
 					res.transactions = append(res.transactions, transaction{
 						buy: false, date: date, amount: 1})
 				}
-				continue
-			}
-			if logProfit > maxLogProfit {
-				maxLogProfit = logProfit
 			}
 			continue
 		}
@@ -88,8 +84,6 @@ func (s BuySellIntraday) ExecuteTicker(ctx context.Context, lp experiments.LogPr
 		totalLogProfit += logProfit
 	}
 	res.logProfit = totalLogProfit
-	res.startDate = startDay
-	res.endDate = currDay
 	return res
 }
 
@@ -97,10 +91,6 @@ func (s BuySellIntraday) buy(date db.Date, tradedToday bool) bool {
 	return !tradedToday && s.config.Buy <= date.Time
 }
 
-// sell checks if a sell condition is met and computes the resulting log-profit
-// from the cost basis. It takes the current and previous day of the current
-// bar, the bar's log-profit, the remaining cumulative log-profit since buy, and
-// the maximum observed cumulative log-profit since buy.
 func (s BuySellIntraday) sell(date db.Date, logProfit, maxLogProfit float64) bool {
 	for _, c := range s.config.Sell {
 		switch {
@@ -109,15 +99,15 @@ func (s BuySellIntraday) sell(date db.Date, logProfit, maxLogProfit float64) boo
 				return true
 			}
 		case c.Target > 1:
-			if logProfit >= math.Log(c.Target) { // TODO: cache the log
+			if logProfit >= c.LogTarget() {
 				return true
 			}
 		case c.StopLoss > 0:
-			if logProfit <= math.Log(c.StopLoss) { // TODO: cache the log
+			if logProfit <= c.LogStopLoss() {
 				return true
 			}
 		case c.StopLossTrailing > 0:
-			if logProfit <= maxLogProfit+math.Log(c.StopLossTrailing) { // TODO: cache the log
+			if logProfit <= maxLogProfit+c.LogStopLossTrailing() {
 				return true
 			}
 		}
