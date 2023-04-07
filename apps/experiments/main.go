@@ -32,6 +32,7 @@ import (
 	"github.com/stockparfait/experiments/hold"
 	"github.com/stockparfait/experiments/portfolio"
 	"github.com/stockparfait/experiments/powerdist"
+	"github.com/stockparfait/experiments/simulator"
 	"github.com/stockparfait/experiments/trading"
 	"github.com/stockparfait/logging"
 	"github.com/stockparfait/stockparfait/plot"
@@ -89,6 +90,8 @@ func runExperiment(ctx context.Context, ec config.ExperimentConfig) error {
 		e = &beta.Beta{}
 	case *config.Trading:
 		e = &trading.Trading{}
+	case *config.Simulator:
+		e = &simulator.Simulator{}
 	default:
 		return errors.Reason("unsupported experiment '%s'", ec.Name())
 	}
