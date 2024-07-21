@@ -54,74 +54,78 @@ share will yield ten $100 shares, and if it fluctuated by around $10 a day
 before, the resulting 10 shares will continue to fluctuate by about $10 a day,
 or $1 per share after the split.
 
-This gives rise to an idea that a stock price series `P(t)` could be modeled as
+This gives rise to an idea that a stock price series $P(t)$ could be modeled as
 a _geometric random walk_:
 
-```
-P(t+1) = X * P(t)
-```
+$$
+P(t+1) = X \cdot P(t)
+$$
 
-where `X` is a random variable from `[0..+inf]` with a mean close to `1.0` and a
-mean absolute deviation (_MAD_) typically about `0.01` for daily series.
+where $X$ is a random variable from $[0..+\infty]$ with a mean close to $1.0$ and a
+mean absolute deviation (_MAD_) typically about $0.01$ for daily series.
 Though, for a multiplicative process a _geometric mean_ and similarly _geometric
 MAD_ are more appropriate measures (see later).
 
-Note: I tend to use MAD instead of the standard deviation a.k.a. "sigma" since
+Note: I tend to use MAD instead of the standard deviation a.k.a. $\sigma$ ("sigma") since
 it's more intuitive, and also for more practical reasons to be revealed later -
 another cliffhanger! Formally:
 
-```
-MAD(X) = E[ abs( E[X] - X ) ]
-```
+$$
+MAD(X) = E[ \ | E[X] - X |\ ]
+$$
 
-where `E[X]` denotes the mean of `X`:
+where $E[X]$ denotes the mean of $X$:
 
-```
-E[X] = (X1 + X2 + ... + Xn) / n   - for n samples  of X,
-E[X] = \integral [-inf..+inf] [ x * f(x) * dx ] - for a continuous X with the p.d.f. f(x).
-```
+$$
+\begin{array}{rcll}
+E[X] & = & (X_1 + X_2 + ... + X_n) / n & \mbox{for $n$ samples  of }X, \\
+E[X] & = & \int_{-\infty}^{+\infty} x f(x) dx & \mbox{for a continuous $X$ with the p.d.f. }f(x).\\
+\end{array}
+$$
 
 In practice, most statistical mathematics and machinery is developed for
-_additive_ processes and for distributions that range from `[-inf..+inf]`.
+_additive_ processes and for distributions that range from $[-\infty..+\infty]$.
 Therefore, it is more practical to consider an equivalent process over
 _log-prices_:
 
-```
-log(P(t+1)) = X + log(P(t))
-```
+$$
+\log P(t+1) = X + \log P(t)
+$$
 
-where `X` now ranges from `[-inf..+inf]` with a mean around `0` and MAD still
-around `0.01` for daily series. The reason MAD doesn't change much in this
-transformation is because `log(1+x) ~= x` for small `x`, and:
+where $X$ now ranges from $[-\infty..+\infty]$ with a mean around $0$ and MAD still
+around $0.01$ for daily series. The reason MAD doesn't change much in this
+transformation is because $\log(1+x) \approx x$ for small $x$, and:
 
-```
-log(x+delta) - log(x) = log( (x+delta)/x ) = log(1 + delta/x) ~= delta/x
-```
+$$
+\log(x+\delta) - \log(x) = \log( (x+\delta)/x ) = \log(1 + \frac{\delta}{x}) \approx \frac{\delta}{x}
+$$
 
-for small `delta`, which in this case represents a typical daily price change.
+for small $delta$, which in this case represents a typical daily price change.
 
 In particular, the _geometric mean and MAD_ can be defined as exponentiated
-regular (arithmetic) mean and MAD of `log(x)`:
+regular (arithmetic) mean and MAD of $\log x$:
 
-```
-GE[X] = exp(E[ log(x) ])
-GMAD[X] = exp( MAD[ log(x) ] )
-```
+$$
+\begin{array}{rcl}
+GE[X] & = & e^{E[ \log x ]} \\
+GMAD[X] & = & e^{ MAD[ \log x ] }
+\end{array}
+$$
 
 In the experiments we will often use the geometric versions for printing the
 values in the numerical experiments, since they are usually more intuitive than
 the logarithms. But internally, all the computations will be done in log-space.
 
-To be more specific, we are going to study `X` by defining it as:
+To be more specific, we are going to study $X$ by defining it as:
 
-```
-X(t+1) = log(P(t+1)) - log(P(t))
-```
+$$
+X(t+1) = \log P(t+1) - \log P(t)
+$$
 
 and call it a _log-profit_ (one of the standard terms used in the literature).
 
 From here on, whenever I refer to a "price series" and its properties, I will in
-fact be referring to its log-profit series `X`, unless explicitly stated
+fact be referring to its log-profit series $X$, unless explicitly stated
 otherwise.
 
  The intuitive advantage of log-profits (vs. the direct geometric version) is
@@ -132,29 +136,30 @@ time period.  In particular:
 - A mean of yearly log-profits is the average annualized log-growth; and
   exponentiating such a mean results in the classical average annualized
   growth - again, a very intuitive and familiar measure;
-- If a price ever goes to zero (or `-inf` in log-space), it will stay zero
-  thereafter, resulting in a zero geometric mean (since `-inf` will dominate the
+- If a price ever goes to zero (or $-\infty$ in log-space), it will stay zero
+  thereafter, resulting in a zero geometric mean (since $-\infty$ will dominate the
   sum). This correctly models the possibility of a total loss, after which there
   is obviously no recovery. On the contrary, an arithmetic mean in the original
   (non-log) space will gloss over such a catastrophic possibility and will tell
   you that a game of Russian roulette with one of the 6 chambers of the revolver
   loaded, and doubling the price on survival has a sure-fire (pun intended) 67%
-  average profit: `5/6 * 2 =~ 1.67`. Play it 27 times, and you'll turn your $1K
-  into $1B. I leave the probability of survival as an exercise to the reader.
+  average profit: $\frac{5}{6} \cdot 2 \approx 1.67$. Play it 27 times,
+  and you'll turn your $1K into $1B. I leave the probability of survival as an
+  exercise to the reader.
 
 There are, of course, still many questions about the validity of such modeling
 which we are going to ask and research further in this study, but as our first
 working hypothesis, we are going to assume that a price series can be modeled
-this way, and that `X` is in fact a random variable with a statistical
+this way, and that $X$ is in fact a random variable with a statistical
 distribution.
 
 ## Daily Closing Prices
 
-Note, that the formula for `X` is independent of the frequency of price
-sampling. That is, `t+1` can mean the next second, the next day, or the next
+Note, that the formula for $X$ is independent of the frequency of price
+sampling. That is, $t+1$ can mean the next second, the next day, or the next
 year, and the definition will still work (the typical mean and MAD will, of
 course, change). In this study, I'm going to use the daily frequency, and
-specifically, the daily closing prices as `P(t)` data points.
+specifically, the daily closing prices as $P(t)$ data points.
 
 One of the reasons is that daily prices is the highest possible frequency that
 may be relevant to an investor.  If we take any higher frequency, say, hourly
