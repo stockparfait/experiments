@@ -26,7 +26,7 @@ alternative hypothesis being $\alpha \ne 3$.
 
 In this case, we can construct the following experiment. Under the null
 hypothesis, we know the true value of $\theta$ for the distribution $f(X\mid \theta)$.
-Let's sample this distribution to obtain a sample $x=(x_1, ..., x_n)$, and use
+Let's sample this distribution to obtain a sample $x=(x_1, \ldots, x_n)$, and use
 an _estimator_ $s(x)$ to estimate the value of $\theta$ from $x$.  This
 estimator, in turn, can be viewed as a random variable $S=s(X)$ with its own
 distribution $g(S\mid\theta)$, which we assume to have a non-degenerate p.d.f.,
@@ -71,7 +71,7 @@ The above result gives us a way to approximate confidence intervals of various
 statistics and parameters of an analytical distribution computationally using a
 [Monte Carlo method]:
 
-- Sample $s(x)$ by sampling $x=(x_1, ..., x_n)$ from $f(X\mid\theta)$;
+- Sample $s(x)$ by sampling $x=(x_1, \ldots, x_n)$ from $f(X\mid\theta)$;
 - Construct a histogram of $s(x)$ samples to approximate the p.d.f. of $S$;
 - Compute the (approximation of the) interval $I$ from the histogram;
 - Define $CI(s(x))$ as above.
@@ -88,13 +88,13 @@ Gaussian.
 
 We start with the mean, MAD and stardand deviation $\sigma$ for several sample
 sizes denoted in the plot by $N$. That is, we draw $N$ samples from the source
-distribution $x=(x_1, ..., x_N)$ and compute the statistics using their
+distribution $x=(x_1, \ldots, x_N)$ and compute the statistics using their
 definitions (ignoring the "sample" vs. "population" distinction for $\sigma$):
 
 $$
 \begin{array}{rcl}
 E[x] & = & \frac{1}{N}\cdot\Sigma_{i=1}^N x_i \\
-MAD[x] & = & \frac{1}{N}\cdot\Sigma_{i=1}^N | E[x] - x_i| \\
+\mathrm{MAD}[x] & = & \frac{1}{N}\cdot\Sigma_{i=1}^N | E[x] - x_i| \\
 \sigma(x) & = & \sqrt{ \frac{1}{N} \cdot \Sigma_{i=1}^N (E[x] - x_i)^2} \\
 \end{array}
 $$
