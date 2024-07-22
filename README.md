@@ -39,7 +39,7 @@ section for details on how to use such configs with the tool.
   - [Theory](powerdist/theory.md)
   - [Normal distributinon](powerdist/normal.md)
   - [Student's t-distribution](powerdist/students.md)
-  - [The Tale of Fat Tails](powerdist/fat_tails.md) - finding `a` (alpha)
+  - [The Tale of Fat Tails](powerdist/fat_tails.md) - finding $\alpha$
 - [History and Market Timing: Auto-Correlation of Log-Profits](autocorr/)
 
 ## Installation
