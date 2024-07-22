@@ -18,7 +18,7 @@ A few random conventions throughout the study:
   choice. The distinction is somewhat arbitrary, but it explains why sometimes I
   write "we" and sometimes "I".
 
-- Important definitions or key moments will be _in italics_, while math and code
+- Important definitions or key moments will be _in italics_, while code
   fragments will be either an `inlined code` or in a
 
 ```
@@ -39,7 +39,7 @@ section for details on how to use such configs with the tool.
   - [Theory](powerdist/theory.md)
   - [Normal distributinon](powerdist/normal.md)
   - [Student's t-distribution](powerdist/students.md)
-  - [The Tale of Fat Tails](powerdist/fat_tails.md) - finding `a` (alpha)
+  - [The Tale of Fat Tails](powerdist/fat_tails.md) - finding $\alpha$
 - [History and Market Timing: Auto-Correlation of Log-Profits](autocorr/)
 
 ## Installation
