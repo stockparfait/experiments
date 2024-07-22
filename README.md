@@ -18,7 +18,7 @@ A few random conventions throughout the study:
   choice. The distinction is somewhat arbitrary, but it explains why sometimes I
   write "we" and sometimes "I".
 
-- Important definitions or key moments will be _in italics_, while math and code
+- Important definitions or key moments will be _in italics_, while code
   fragments will be either an `inlined code` or in a
 
 ```
